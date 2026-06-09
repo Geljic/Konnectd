@@ -110,6 +110,11 @@ function FriendRow({
       <View style={styles.rowRight}>
         <RelBadge label={item.relationshipLabel} colors={colors} />
         <View style={styles.rowMeta}>
+          {item.challengeStreak >= 2 && (
+            <View style={styles.streakPill}>
+              <Text style={styles.streakText}>🔥 {item.challengeStreak}</Text>
+            </View>
+          )}
           {item.coStreak >= 2 && (
             <View style={styles.streakPill}>
               <Text style={styles.streakText}>🤝 {item.coStreak}</Text>

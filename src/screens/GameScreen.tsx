@@ -408,9 +408,9 @@ function makeStyles(c: ColorTheme) {
     actions: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
     btnSecondary: { borderWidth: 1.5, borderColor: c.border, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 10 },
     btnSecondaryText: { fontSize: 14, fontFamily: FONTS.bold, color: c.text1 },
-    btnSubmit: { backgroundColor: c.text1, borderRadius: 24, paddingHorizontal: 24, paddingVertical: 10 },
+    btnSubmit: { backgroundColor: c.actionBg, borderRadius: 24, paddingHorizontal: 24, paddingVertical: 10 },
     btnSubmitDisabled: { backgroundColor: c.text3 },
-    btnSubmitText: { fontSize: 14, fontFamily: FONTS.extraBold, color: '#FFF' },
+    btnSubmitText: { fontSize: 14, fontFamily: FONTS.extraBold, color: c.actionText },
     btnHint: {
       alignSelf: 'center', borderWidth: 1.5, borderColor: c.border,
       borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,

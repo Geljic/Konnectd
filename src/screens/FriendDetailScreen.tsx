@@ -99,7 +99,9 @@ function MatchRow({ match, matchNumber, styles, colors }: { match: ChallengeMatc
         <Text style={styles.matchStat}>Them: {theirScoreStr}{theirMistakeStr}</Text>
       </View>
       <View style={styles.matchRowBottom}>
-        <Text style={styles.matchMode}>{modeLabel}</Text>
+        <View style={[styles.modePill, { backgroundColor: match.gameType === 'connections' ? colors.green : colors.blue }]}>
+          <Text style={styles.modePillText}>{modeLabel}</Text>
+        </View>
         <View
           style={[
             styles.winBadge,
@@ -455,7 +457,8 @@ function makeStyles(c: ColorTheme) {
       alignItems: 'center',
       justifyContent: 'space-between',
     },
-    matchMode: { fontSize: 11, fontFamily: FONTS.bold, color: c.text3 },
+    modePill: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+    modePillText: { fontSize: 11, fontFamily: FONTS.extraBold, color: '#162219' },
     winBadge: {
       borderRadius: 10,
       paddingHorizontal: 10,

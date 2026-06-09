@@ -21,6 +21,10 @@ export const LIGHT_COLORS = {
   text2: '#3D5C49',
   text3: '#7A9E8A',
 
+  // Primary action button — dark pill in light, green in dark (avoids white-on-white in dark mode)
+  actionBg:   '#162219',
+  actionText: '#FFFFFF',
+
   // Tile face
   tileEye:   '#162219',
   tileStrip: '#8EC4AA',
@@ -41,7 +45,7 @@ export const DARK_COLORS = {
   bgSurface: '#253029',
 
   tileDefault:  '#253029',
-  tileSelected: '#2E4A3A',
+  tileSelected: '#183040',
 
   yellow: '#F5C842',
   green:  '#3DBE8A',
@@ -53,6 +57,10 @@ export const DARK_COLORS = {
   text1: '#E4F0EB',
   text2: '#8BB09C',
   text3: '#526E5E',
+
+  // In dark mode, use green so the primary button is always visible (never white-on-white)
+  actionBg:   '#3DBE8A',
+  actionText: '#162219',
 
   tileEye:   '#E4F0EB',
   tileStrip: '#2E4A3A',

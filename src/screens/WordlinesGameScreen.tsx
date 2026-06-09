@@ -20,6 +20,7 @@ import { useSound } from '@/hooks/useSound';
 import { MistakeDots } from '@/components/MistakeDots';
 import { WordlinesHelpModal } from '@/components/WordlinesHelpModal';
 import { GameResultModal } from '@/components/GameResultModal';
+import { TrailReveal } from '@/components/TrailReveal';
 import { Confetti } from '@/components/Confetti';
 import { STRIP_CONFIG, useSettingsStore, type TileStripStyle } from '@/store/settingsStore';
 import type { AppStackParamList } from '../App';
@@ -352,7 +353,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
       setSolvedTrails(solved);
       setBoardWords(boardWords.filter(word => !exactTrail.words.includes(word)));
       setSelectedWords([]);
-      setMessage(exactTrail.label.toUpperCase());
+      setMessage('Tap four words in step order.');
       if (solved.length === 4) {
         sound.play('win');
         setStatus('won');
@@ -456,18 +457,15 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
           </View>
         </View>
 
-        {displayTrails.length > 0 && (
-          <View style={styles.solvedStack}>
-            {displayTrails.map((trail, index) => (
-              <View key={trail.label} style={[styles.solvedTrail, status === 'lost' && styles.solvedTrailRevealed, { borderLeftColor: trailColors[index] }]}>
-                <Text style={styles.solvedLabel}>{trail.label}</Text>
-                <Text style={styles.solvedWords} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>
-                  {trail.words.join(' -> ')}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
+        {displayTrails.map((trail, index) => (
+          <TrailReveal
+            key={trail.label}
+            label={trail.label}
+            words={trail.words}
+            color={trailColors[index]}
+            revealed={status === 'lost'}
+          />
+        ))}
 
         {status !== 'won' && (
           <View style={styles.messageBox}>
@@ -618,6 +616,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
           setResultVisible(false);
           navigation.navigate('Home');
         }}
+        onViewBoard={() => setResultVisible(false)}
         onPlayAgain={() => {
           setResultVisible(false);
           navigation.replace('WordlinesGame', { mode: 'random' });
@@ -644,16 +643,11 @@ function makeStyles(c: ColorTheme, compact: boolean) {
     headerCenter: { flex: 1, alignItems: 'center', gap: compact ? 3 : 5 },
     iconBtn: { width: compact ? 32 : 36, height: compact ? 32 : 36, alignItems: 'center', justifyContent: 'center' },
     eyebrow: { fontSize: compact ? 10 : 11, fontFamily: FONTS.extraBold, color: c.blue, letterSpacing: 1.5, textTransform: 'uppercase' },
-    title: { fontSize: compact ? 21 : 25, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
+    title: { fontSize: compact ? 22 : 26, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
     subtitle: { fontSize: compact ? 12 : 13, fontFamily: FONTS.bold, color: c.text2 },
     rightCluster: { flexDirection: 'row', alignItems: 'center', gap: 2 },
     timerBadge: { alignItems: 'flex-end', minWidth: 36 },
     timerText: { fontSize: compact ? 11 : 13, fontFamily: FONTS.bold, color: c.text2 },
-    solvedStack: { gap: compact ? 4 : 6, maxHeight: compact ? 132 : 154 },
-    solvedTrail: { backgroundColor: c.bgSurface, borderRadius: 8, paddingHorizontal: 10, paddingVertical: compact ? 6 : 8, borderLeftWidth: 5 },
-    solvedTrailRevealed: { backgroundColor: c.bgBase },
-    solvedLabel: { fontSize: compact ? 11 : 13, fontFamily: FONTS.extraBold, color: c.text1, textTransform: 'uppercase' },
-    solvedWords: { fontSize: compact ? 10 : 12, fontFamily: FONTS.bold, color: c.text2, marginTop: 1 },
     messageBox: { backgroundColor: c.bgBase, borderRadius: 8, paddingVertical: compact ? 7 : 9, paddingHorizontal: 12, alignItems: 'center' },
     messageText: { fontSize: compact ? 12 : 14, fontFamily: FONTS.bold, color: c.text2, textAlign: 'center' },
     hintBanner: {
@@ -692,15 +686,19 @@ function makeStyles(c: ColorTheme, compact: boolean) {
       shadowRadius: 5,
       shadowOffset: { width: 0, height: 3 },
     },
-    tileSelected: { borderColor: c.blue },
+    tileSelected: { borderColor: c.tileStrip },
     tileLost: { opacity: 0.88 },
     faceStrip: {
-      width: '100%',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
       height: compact ? 24 : 28,
       alignItems: 'center',
       justifyContent: 'center',
       borderBottomLeftRadius: 8,
       borderBottomRightRadius: 8,
+      zIndex: 1,
     },
     wordArea: {
       flex: 1,
@@ -709,10 +707,9 @@ function makeStyles(c: ColorTheme, compact: boolean) {
       justifyContent: 'center',
       paddingHorizontal: 6,
       paddingVertical: 6,
-      position: 'relative',
     },
     wordAreaSelected: { backgroundColor: c.tileSelected },
-    tileText: { fontSize: 12, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
+    tileText: { fontSize: 13, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center', letterSpacing: 0.8 },
     orderBadge: {
       position: 'absolute',
       top: compact ? 5 : 7,
@@ -720,7 +717,7 @@ function makeStyles(c: ColorTheme, compact: boolean) {
       width: 18,
       height: 18,
       borderRadius: 9,
-      backgroundColor: c.blue,
+      backgroundColor: c.tileStrip,
       textAlign: 'center',
       fontSize: 11,
       fontFamily: FONTS.extraBold,
@@ -738,13 +735,13 @@ function makeStyles(c: ColorTheme, compact: boolean) {
     },
     btnSecondaryText: { fontSize: compact ? 12 : 14, fontFamily: FONTS.bold, color: c.text1 },
     btnSubmit: {
-      backgroundColor: c.text1,
+      backgroundColor: c.actionBg,
       borderRadius: 24,
       paddingHorizontal: compact ? 18 : 24,
       paddingVertical: compact ? 8 : 10,
     },
     btnSubmitDisabled: { backgroundColor: c.text3 },
-    btnSubmitText: { fontSize: compact ? 12 : 14, fontFamily: FONTS.extraBold, color: '#FFF' },
+    btnSubmitText: { fontSize: compact ? 12 : 14, fontFamily: FONTS.extraBold, color: c.actionText },
     btnHint: {
       alignSelf: 'center',
       borderWidth: 1.5,

@@ -32,6 +32,7 @@ export interface FriendSummary {
   lastPlayedAt: string | null;
   relationshipLabel: string;
   coStreak: number;
+  challengeStreak: number;
 }
 
 export function computeRelationshipLabel(
@@ -73,6 +74,23 @@ function determineWinner(
   // Fallback: shorter duration wins
   if (myDuration !== theirDuration) return myDuration < theirDuration;
   return null;
+}
+
+function computeChallengeStreak(matchDates: string[]): number {
+  if (matchDates.length === 0) return 0;
+  const dateSet = new Set(matchDates.map(d => d.slice(0, 10)));
+  let streak = 0;
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  const today = cursor.toISOString().slice(0, 10);
+  if (!dateSet.has(today)) cursor.setDate(cursor.getDate() - 1);
+  while (true) {
+    const d = cursor.toISOString().slice(0, 10);
+    if (!dateSet.has(d)) break;
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
 }
 
 function computeCoStreak(myDates: Set<string>, friendDates: string[]): number {
@@ -164,6 +182,7 @@ export async function fetchFriendSummaries(friends: Friendship[]): Promise<Frien
     }
 
     const coStreak = computeCoStreak(myDates, sessionsByUser.get(friendId) ?? []);
+    const challengeStreak = computeChallengeStreak(completed.map(c => c.created));
 
     return {
       friendshipId: friendship.id,
@@ -178,6 +197,7 @@ export async function fetchFriendSummaries(friends: Friendship[]): Promise<Frien
       openChallengeId: open ? open.id : null,
       lastPlayedAt,
       coStreak,
+      challengeStreak,
     };
   });
 
@@ -189,7 +209,6 @@ export async function fetchFriendSummaries(friends: Friendship[]): Promise<Frien
 
   const summaries: FriendSummary[] = statsMap.map(s => ({
     ...s,
-    coStreak: s.coStreak,
     relationshipLabel: computeRelationshipLabel(
       s.myWins,
       s.theirWins,

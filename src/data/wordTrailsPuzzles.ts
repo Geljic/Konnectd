@@ -91,24 +91,24 @@ export const WORD_TRAILS_PUZZLES: WordTrailsPuzzle[] = [
   },
   {
     id: 'wt-007',
-    title: 'School Day',
+    title: 'Mixed Bag',
     difficulty: 1,
     trails: [
       { words: ['BELL', 'CLASS', 'LESSON', 'HOMEWORK'], label: 'school routine', relation: 'sequence' },
-      { words: ['QUESTION', 'ANSWER', 'MARK', 'GRADE'], label: 'assessment path', relation: 'process' },
-      { words: ['BOOK', 'PAGE', 'CHAPTER', 'STORY'], label: 'reading structure', relation: 'hierarchy' },
-      { words: ['PENCIL', 'ERASER', 'MISTAKE', 'CORRECTION'], label: 'fixing work', relation: 'process' },
+      { words: ['GRAPE', 'JUICE', 'FERMENT', 'WINE'], label: 'winemaking', relation: 'process' },
+      { words: ['WOOL', 'KNIT', 'JUMPER', 'WARDROBE'], label: 'clothing made', relation: 'process' },
+      { words: ['DOOR', 'HALL', 'STAIRS', 'BEDROOM'], label: 'path through a home', relation: 'place' },
     ],
   },
   {
     id: 'wt-008',
-    title: 'Sports Basics',
+    title: 'Kick Off',
     difficulty: 1,
     trails: [
       { words: ['WHISTLE', 'KICKOFF', 'PASS', 'GOAL'], label: 'football attack', relation: 'sequence' },
-      { words: ['BAT', 'PITCH', 'HIT', 'RUN'], label: 'baseball play', relation: 'sequence' },
-      { words: ['SERVE', 'RALLY', 'POINT', 'SET'], label: 'tennis scoring', relation: 'sequence' },
-      { words: ['TRAINING', 'SWEAT', 'STRENGTH', 'TROPHY'], label: 'athlete progress', relation: 'cause' },
+      { words: ['NEEDLE', 'THREAD', 'STITCH', 'PATCH'], label: 'sewing repair', relation: 'process' },
+      { words: ['RING', 'ANSWER', 'CHAT', 'GOODBYE'], label: 'phone call', relation: 'sequence' },
+      { words: ['CLOUD', 'LIGHTNING', 'THUNDER', 'RAIN'], label: 'storm sequence', relation: 'cause' },
     ],
   },
   {
@@ -146,24 +146,24 @@ export const WORD_TRAILS_PUZZLES: WordTrailsPuzzle[] = [
   },
   {
     id: 'wt-012',
-    title: 'Music Room',
+    title: 'Studio Session',
     difficulty: 2,
     trails: [
-      { words: ['NOTE', 'CHORD', 'MELODY', 'SONG'], label: 'music structure', relation: 'hierarchy' },
-      { words: ['STRING', 'BOW', 'VIOLIN', 'ORCHESTRA'], label: 'classical section', relation: 'association' },
-      { words: ['LYRIC', 'VERSE', 'CHORUS', 'HOOK'], label: 'songwriting pieces', relation: 'hierarchy' },
       { words: ['MIC', 'STUDIO', 'TRACK', 'ALBUM'], label: 'recording path', relation: 'process' },
+      { words: ['ROOT', 'TRUNK', 'BRANCH', 'LEAF'], label: 'tree structure', relation: 'growth' },
+      { words: ['INVOICE', 'PAYMENT', 'RECEIPT', 'FILING'], label: 'business admin', relation: 'process' },
+      { words: ['BRUISE', 'SWELL', 'ICE', 'HEAL'], label: 'minor injury', relation: 'process' },
     ],
   },
   {
     id: 'wt-013',
-    title: 'Weather Map',
+    title: 'Cause And Effect',
     difficulty: 2,
     trails: [
       { words: ['PRESSURE', 'WIND', 'STORM', 'DAMAGE'], label: 'storm formation', relation: 'cause' },
-      { words: ['SUN', 'HEAT', 'EVAPORATION', 'CLOUD'], label: 'water cycle start', relation: 'process' },
-      { words: ['FROST', 'ICE', 'SLIP', 'FALL'], label: 'winter hazard', relation: 'cause' },
-      { words: ['FORECAST', 'UMBRELLA', 'RAIN', 'PUDDLE'], label: 'prepared for rain', relation: 'sequence' },
+      { words: ['COIN', 'SLOT', 'PULL', 'PRIZE'], label: 'slot machine', relation: 'sequence' },
+      { words: ['MILK', 'HEAT', 'CURDLE', 'CHEESE'], label: 'cheesemaking', relation: 'process' },
+      { words: ['SUSPECT', 'INTERVIEW', 'CHARGE', 'BAIL'], label: 'police procedure', relation: 'sequence' },
     ],
   },
   {
@@ -179,13 +179,13 @@ export const WORD_TRAILS_PUZZLES: WordTrailsPuzzle[] = [
   },
   {
     id: 'wt-015',
-    title: 'Garden Work',
+    title: 'Busy Day',
     difficulty: 2,
     trails: [
-      { words: ['SOIL', 'SEED', 'SPROUT', 'HARVEST'], label: 'planting cycle', relation: 'growth' },
-      { words: ['WEED', 'TROWEL', 'BED', 'BORDER'], label: 'tidying a garden', relation: 'process' },
-      { words: ['COMPOST', 'NUTRIENT', 'ROOT', 'GROWTH'], label: 'feeding plants', relation: 'cause' },
       { words: ['BEE', 'POLLEN', 'FRUIT', 'PIE'], label: 'pollination payoff', relation: 'cause' },
+      { words: ['SKETCH', 'COLOUR', 'FRAME', 'WALL'], label: 'making artwork', relation: 'process' },
+      { words: ['LEASE', 'KEYS', 'UNPACK', 'HOME'], label: 'moving house', relation: 'sequence' },
+      { words: ['MIRROR', 'SIGNAL', 'TURN', 'PARK'], label: 'driving manoeuvre', relation: 'sequence' },
     ],
   },
   {
@@ -201,13 +201,13 @@ export const WORD_TRAILS_PUZZLES: WordTrailsPuzzle[] = [
   },
   {
     id: 'wt-017',
-    title: 'Hospital Route',
+    title: 'Four Paths',
     difficulty: 2,
     trails: [
       { words: ['SYMPTOM', 'DOCTOR', 'TEST', 'DIAGNOSIS'], label: 'medical assessment', relation: 'process' },
-      { words: ['PRESCRIPTION', 'PHARMACY', 'MEDICINE', 'RECOVERY'], label: 'treatment path', relation: 'process' },
-      { words: ['AMBULANCE', 'ER', 'TRIAGE', 'WARD'], label: 'emergency arrival', relation: 'sequence' },
-      { words: ['CAST', 'CRUTCH', 'PHYSIO', 'MOTION'], label: 'injury rehab', relation: 'process' },
+      { words: ['DRAFT', 'EDIT', 'PROOF', 'PRINT'], label: 'publishing path', relation: 'process' },
+      { words: ['QUEUE', 'COUNTER', 'ORDER', 'RECEIPT'], label: 'café ordering', relation: 'sequence' },
+      { words: ['IRON', 'FOLD', 'STACK', 'DRAWER'], label: 'laundry path', relation: 'process' },
     ],
   },
   {
@@ -223,13 +223,13 @@ export const WORD_TRAILS_PUZZLES: WordTrailsPuzzle[] = [
   },
   {
     id: 'wt-019',
-    title: 'Ocean Logic',
+    title: 'Starting Points',
     difficulty: 2,
     trails: [
-      { words: ['MOON', 'TIDE', 'WAVE', 'SURF'], label: 'lunar pull', relation: 'cause' },
       { words: ['REEF', 'FISH', 'NET', 'MARKET'], label: 'seafood path', relation: 'sequence' },
-      { words: ['COMPASS', 'SAIL', 'HARBOR', 'DOCK'], label: 'sailing home', relation: 'sequence' },
-      { words: ['SALT', 'WATER', 'CURRENT', 'DRIFT'], label: 'ocean movement', relation: 'association' },
+      { words: ['KNEAD', 'RISE', 'BAKE', 'LOAF'], label: 'bread making', relation: 'process' },
+      { words: ['SAVE', 'INVEST', 'GROW', 'RETIRE'], label: 'financial planning', relation: 'process' },
+      { words: ['DRAFT', 'SUBMIT', 'MARK', 'RETURN'], label: 'assignment cycle', relation: 'sequence' },
     ],
   },
   {
@@ -267,24 +267,24 @@ export const WORD_TRAILS_PUZZLES: WordTrailsPuzzle[] = [
   },
   {
     id: 'wt-023',
-    title: 'Tech Stack',
+    title: 'Follow Through',
     difficulty: 3,
     trails: [
       { words: ['IDEA', 'CODE', 'BUILD', 'RELEASE'], label: 'software shipping', relation: 'process' },
-      { words: ['BUG', 'LOG', 'PATCH', 'UPDATE'], label: 'debug path', relation: 'process' },
-      { words: ['USER', 'CLICK', 'REQUEST', 'SERVER'], label: 'web request', relation: 'process' },
-      { words: ['PASSWORD', 'TOKEN', 'SESSION', 'ACCOUNT'], label: 'login flow', relation: 'process' },
+      { words: ['GRAPE', 'CRUSH', 'FERMENT', 'BOTTLE'], label: 'winemaking', relation: 'process' },
+      { words: ['DROUGHT', 'CRACK', 'DRY', 'DUST'], label: 'dry spell consequence', relation: 'cause' },
+      { words: ['CLUE', 'SUSPECT', 'CONFRONT', 'CONFESSION'], label: 'detective story', relation: 'story' },
     ],
   },
   {
     id: 'wt-024',
-    title: 'Science Lab',
+    title: 'Step By Step',
     difficulty: 3,
     trails: [
       { words: ['QUESTION', 'HYPOTHESIS', 'EXPERIMENT', 'RESULT'], label: 'scientific method', relation: 'process' },
-      { words: ['ATOM', 'MOLECULE', 'CELL', 'TISSUE'], label: 'building biology', relation: 'hierarchy' },
-      { words: ['HEAT', 'EXPANSION', 'PRESSURE', 'BURST'], label: 'physics consequence', relation: 'cause' },
-      { words: ['SAMPLE', 'SLIDE', 'MICROSCOPE', 'OBSERVATION'], label: 'lab viewing', relation: 'process' },
+      { words: ['GRAIN', 'MILL', 'MASH', 'BARREL'], label: 'brewing process', relation: 'process' },
+      { words: ['ROPE', 'HARNESS', 'CLIMB', 'SUMMIT'], label: 'rock climbing', relation: 'sequence' },
+      { words: ['CANDIDATE', 'DEBATE', 'POLL', 'ELECTED'], label: 'election path', relation: 'sequence' },
     ],
   },
   {
@@ -311,13 +311,13 @@ export const WORD_TRAILS_PUZZLES: WordTrailsPuzzle[] = [
   },
   {
     id: 'wt-027',
-    title: 'Space Program',
+    title: 'Lift Off',
     difficulty: 3,
     trails: [
       { words: ['COUNTDOWN', 'ROCKET', 'ORBIT', 'SATELLITE'], label: 'launch path', relation: 'sequence' },
-      { words: ['STAR', 'PLANET', 'MOON', 'TIDE'], label: 'celestial influence', relation: 'hierarchy' },
-      { words: ['TELESCOPE', 'LIGHT', 'IMAGE', 'DISCOVERY'], label: 'astronomy work', relation: 'process' },
-      { words: ['ASTRONAUT', 'SUIT', 'AIRLOCK', 'SPACEWALK'], label: 'leaving the craft', relation: 'sequence' },
+      { words: ['WOOL', 'LOOM', 'CLOTH', 'TAILOR'], label: 'textile to garment', relation: 'process' },
+      { words: ['SKETCH', 'CHISEL', 'POLISH', 'STATUE'], label: 'sculpting process', relation: 'process' },
+      { words: ['AUDITION', 'REHEARSAL', 'OPENING', 'CURTAIN'], label: 'theatre production', relation: 'sequence' },
     ],
   },
   {

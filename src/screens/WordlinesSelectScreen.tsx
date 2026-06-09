@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WORD_TRAILS_PUZZLES, type WordTrailsPuzzle } from '@/data/wordTrailsPuzzles';
 import { getCompletedWordTrailsIds, getWordTrailsResult } from '@/utils/wordTrails';
 import { GameResultModal } from '@/components/GameResultModal';
+import { AdBanner } from '@/components/BannerAd';
 import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
@@ -105,7 +106,7 @@ export function WordlinesSelectScreen({ navigation }: Props) {
           <Text style={styles.rowTitle}>{item.title}</Text>
           <Text style={styles.rowMeta}>{item.trails.map(t => t.relation).slice(0, 3).join(' / ')}</Text>
         </View>
-        {done && <View style={styles.donePill}><Text style={styles.donePillText}>Done</Text></View>}
+        {done && <View style={styles.donePill}><Text style={styles.donePillText}>✓ Done</Text></View>}
       </Pressable>
     );
   };
@@ -113,6 +114,7 @@ export function WordlinesSelectScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
+        <AdBanner />
         <View style={styles.searchRow}>
           <TextInput
             style={styles.searchInput}
@@ -134,7 +136,7 @@ export function WordlinesSelectScreen({ navigation }: Props) {
           {DIFFICULTIES.map(level => (
             <Pressable
               key={level}
-              style={[styles.chip, difficulty === level && { backgroundColor: difficultyColours[level] }]}
+              style={[styles.chip, difficulty === level && { backgroundColor: difficultyColours[level], borderColor: difficultyColours[level] }]}
               onPress={() => setDifficulty(level)}
             >
               <Text style={[styles.chipText, difficulty === level && styles.chipTextActive]}>{DIFFICULTY_LABELS[level]}</Text>
@@ -167,35 +169,35 @@ export function WordlinesSelectScreen({ navigation }: Props) {
 function makeStyles(c: ColorTheme) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: c.bgScreen },
-    container: { flex: 1, padding: 16 },
-    searchRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+    container: { flex: 1 },
+    searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingBottom: 10 },
     searchInput: {
       flex: 1,
-      backgroundColor: c.bgSurface,
+      height: 38,
       borderRadius: 10,
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: c.border,
       paddingHorizontal: 12,
-      paddingVertical: 10,
       fontSize: 14,
       fontFamily: FONTS.bold,
       color: c.text1,
+      backgroundColor: c.bgSurface,
     },
-    sortBtn: { backgroundColor: c.bgBase, borderRadius: 10, paddingHorizontal: 12, justifyContent: 'center' },
-    sortBtnText: { fontSize: 12, fontFamily: FONTS.extraBold, color: c.text2 },
-    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-    chip: { minWidth: 42, alignItems: 'center', backgroundColor: c.bgBase, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9 },
-    chipActive: { backgroundColor: c.blue },
-    chipText: { fontSize: 13, fontFamily: FONTS.extraBold, color: c.text2 },
+    sortBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5, borderColor: c.border },
+    sortBtnText: { fontSize: 13, fontFamily: FONTS.bold, color: c.text2 },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20, paddingBottom: 12 },
+    chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: c.border },
+    chipActive: { backgroundColor: c.text1, borderColor: c.text1 },
+    chipText: { fontSize: 13, fontFamily: FONTS.bold, color: c.text2 },
     chipTextActive: { color: c.bgScreen },
-    list: { paddingBottom: 24 },
-    row: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: c.bgSurface, borderRadius: 8, padding: 12, marginBottom: 8 },
-    badge: { minWidth: 70, height: 34, borderRadius: 8, backgroundColor: c.blue, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
-    badgeText: { fontSize: 11, fontFamily: FONTS.extraBold, color: c.categoryText },
-    rowContent: { flex: 1, gap: 2 },
-    rowTitle: { fontSize: 15, fontFamily: FONTS.extraBold, color: c.text1 },
-    rowMeta: { fontSize: 11, fontFamily: FONTS.bold, color: c.text3, textTransform: 'capitalize' },
-    donePill: { backgroundColor: c.bgBase, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5 },
-    donePillText: { fontSize: 11, fontFamily: FONTS.extraBold, color: c.text2 },
+    list: { paddingHorizontal: 20, paddingBottom: 24 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: c.border },
+    badge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, minWidth: 70, alignItems: 'center' },
+    badgeText: { fontSize: 11, fontFamily: FONTS.extraBold, color: '#162219', letterSpacing: 0.3 },
+    rowContent: { flex: 1 },
+    rowTitle: { fontSize: 16, fontFamily: FONTS.bold, color: c.text1 },
+    rowMeta: { fontSize: 13, fontFamily: FONTS.bold, color: c.text3, textTransform: 'capitalize' },
+    donePill: { backgroundColor: c.green, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+    donePillText: { fontSize: 12, fontFamily: FONTS.extraBold, color: '#162219' },
   });
 }

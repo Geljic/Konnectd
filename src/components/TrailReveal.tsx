@@ -8,23 +8,23 @@ import Animated, {
   withSequence,
   Easing,
 } from 'react-native-reanimated';
-import { CATEGORY_COLOURS, type CategoryColour, LIGHT_COLORS } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
-import type { PuzzleCategory } from '@/api/puzzles';
+import { LIGHT_COLORS } from '@/constants/colors';
 
-interface CategoryRevealProps {
-  category: PuzzleCategory;
-  index: number;
-  showExplanation?: boolean;
+interface TrailRevealProps {
+  label: string;
+  words: string[];
+  color: string;
+  revealed?: boolean; // true when shown as solution on loss (no animation)
 }
 
-export function CategoryReveal({ category, index, showExplanation = false }: CategoryRevealProps) {
-  const translateY = useSharedValue(-40);
-  const scaleY     = useSharedValue(0.4);
-  const opacity    = useSharedValue(0);
+export function TrailReveal({ label, words, color, revealed = false }: TrailRevealProps) {
+  const translateY = useSharedValue(revealed ? 0 : -40);
+  const scaleY = useSharedValue(revealed ? 1 : 0.4);
+  const opacity = useSharedValue(revealed ? 1 : 0);
 
   useEffect(() => {
-    // No stagger delay — each banner is mounted fresh when tiles commit
+    if (revealed) return;
     translateY.value = withSpring(0, { damping: 13, stiffness: 160 });
     scaleY.value = withSequence(
       withTiming(1.06, { duration: 220, easing: Easing.out(Easing.quad) }),
@@ -38,21 +38,19 @@ export function CategoryReveal({ category, index, showExplanation = false }: Cat
     opacity: opacity.value,
   }));
 
-  const bg = CATEGORY_COLOURS[category.colour as CategoryColour];
-
   return (
-    <Animated.View style={[styles.banner, { backgroundColor: bg }, animStyle]}>
-      <Text style={styles.name}>{category.name.toUpperCase()}</Text>
-      <View style={styles.wordTiles}>
-        {category.words.map(word => (
-          <View key={word} style={styles.wordTile}>
-            <Text style={styles.wordTileText}>{word}</Text>
-          </View>
+    <Animated.View style={[styles.banner, { backgroundColor: color }, revealed && styles.bannerRevealed, animStyle]}>
+      <Text style={styles.name}>{label.toUpperCase()}</Text>
+      <View style={styles.wordRow}>
+        {words.map((word, i) => (
+          <React.Fragment key={word}>
+            <View style={styles.wordChip}>
+              <Text style={styles.wordText}>{word}</Text>
+            </View>
+            {i < words.length - 1 && <Text style={styles.arrow}>›</Text>}
+          </React.Fragment>
         ))}
       </View>
-      {showExplanation && category.explanation ? (
-        <Text style={styles.explanation}>{category.explanation}</Text>
-      ) : null}
     </Animated.View>
   );
 }
@@ -60,44 +58,44 @@ export function CategoryReveal({ category, index, showExplanation = false }: Cat
 const styles = StyleSheet.create({
   banner: {
     borderRadius: 12,
-    padding: 14,
-    marginVertical: 4,
-    marginHorizontal: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginHorizontal: 0,
     alignItems: 'center',
+    gap: 8,
+  },
+  bannerRevealed: {
+    opacity: 0.72,
   },
   name: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: FONTS.extraBold,
     color: LIGHT_COLORS.categoryText,
     letterSpacing: 1,
-    marginBottom: 4,
   },
-  wordTiles: {
+  wordRow: {
     flexDirection: 'row',
-    gap: 6,
+    alignItems: 'center',
+    gap: 5,
     flexWrap: 'wrap',
     justifyContent: 'center',
-    marginTop: 2,
   },
-  wordTile: {
+  wordChip: {
     backgroundColor: 'rgba(0,0,0,0.18)',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  wordTileText: {
+  wordText: {
     fontSize: 11,
     fontFamily: FONTS.extraBold,
     color: LIGHT_COLORS.categoryText,
     letterSpacing: 0.6,
   },
-  explanation: {
-    fontSize: 11,
+  arrow: {
+    fontSize: 16,
     fontFamily: FONTS.bold,
     color: LIGHT_COLORS.categoryText,
     opacity: 0.6,
-    marginTop: 6,
-    fontStyle: 'italic',
-    textAlign: 'center',
   },
 });

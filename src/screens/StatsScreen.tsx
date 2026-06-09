@@ -4,12 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import { fetchRecentSessions, type PlaySessionItem } from '@/api/puzzles';
+import {
+  fetchLocalWordTrailsSessions,
+  computeWordTrailsStreak,
+  type WordTrailsSessionItem,
+} from '@/utils/wordTrails';
 import { GameResultModal } from '@/components/GameResultModal';
 import { AdBanner } from '@/components/BannerAd';
 import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
-import { GAME_TYPE_LABELS, RULESET_LABELS, type GameType, type Ruleset } from '@/constants/gameModes';
 
 function formatTime(s: number) {
   const m = Math.floor(s / 60);
@@ -20,12 +24,8 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-type StatsFilter = { gameType: GameType; gameMode: Ruleset };
-const FILTERS: StatsFilter[] = [
-  { gameType: 'connections', gameMode: 'normal' },
-  { gameType: 'connections', gameMode: 'hard' },
-  { gameType: 'word_trails', gameMode: 'classic' },
-];
+type GameTab = 'connections' | 'word_trails';
+type ConnectionsMode = 'normal' | 'hard';
 
 export function StatsScreen() {
   const colors = useColors();
@@ -33,16 +33,23 @@ export function StatsScreen() {
 
   const user = useAuthStore(s => s.user);
   const [sessions, setSessions] = useState<PlaySessionItem[]>([]);
+  const [wtSessions, setWtSessions] = useState<WordTrailsSessionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState<PlaySessionItem | null>(null);
-  const [modeFilter, setModeFilter] = useState<StatsFilter>(FILTERS[0]);
+  const [gameTab, setGameTab] = useState<GameTab>('connections');
+  const [connectionsMode, setConnectionsMode] = useState<ConnectionsMode>('normal');
 
   useFocusEffect(
     React.useCallback(() => {
       setLoading(true);
       const { refreshProfile } = useAuthStore.getState();
-      Promise.all([fetchRecentSessions(500), refreshProfile()]).then(([all]) => {
+      Promise.all([
+        fetchRecentSessions(500),
+        fetchLocalWordTrailsSessions(),
+        refreshProfile(),
+      ]).then(([all, wt]) => {
         setSessions(all);
+        setWtSessions(wt);
         setLoading(false);
       });
     }, [])
@@ -58,24 +65,44 @@ export function StatsScreen() {
     );
   }
 
-  const filtered = sessions.filter(s => s.gameType === modeFilter.gameType && s.gameMode === modeFilter.gameMode);
-  const played = filtered.length;
-  const won = filtered.filter(s => s.completed).length;
+  // Connections stats (from PocketBase)
+  const filtered = sessions.filter(
+    s => s.gameType === 'connections' && s.gameMode === connectionsMode,
+  );
+
+  // Word trails stats (from local AsyncStorage)
+  const wtFiltered = wtSessions;
+
+  const activeList = gameTab === 'connections' ? filtered : wtFiltered;
+  const played = activeList.length;
+  const won = activeList.filter(s => s.completed).length;
   const losses = played - won;
   const winRate = played > 0 ? Math.round((won / played) * 100) : 0;
-  const wonWithTime = filtered.filter(s => s.completed && s.durationSeconds > 0);
+  const wonWithTime = activeList.filter(s => s.completed && s.durationSeconds > 0);
   const avgTimeSecs = wonWithTime.length > 0
     ? Math.round(wonWithTime.reduce((a, s) => a + s.durationSeconds, 0) / wonWithTime.length)
     : null;
+
+  let streakCurrent: number;
+  let streakBest: number;
+  if (gameTab === 'connections') {
+    streakCurrent = user.streakCurrent ?? 0;
+    streakBest = user.streakBest ?? 0;
+  } else {
+    const wtStreak = computeWordTrailsStreak(wtSessions);
+    streakCurrent = wtStreak.current;
+    streakBest = wtStreak.best;
+  }
+
   const scoredSessions = filtered.filter(s => s.completed && s.score !== undefined && s.score > 0);
   const bestScore = scoredSessions.length > 0
     ? Math.max(...scoredSessions.map(s => s.score!))
     : null;
-  const streakCurrent = user.streakCurrent ?? 0;
-  const streakBest = user.streakBest ?? 0;
-  const recentSessions = filtered.slice(0, 15);
 
-  function SessionRow({ item, index }: { item: PlaySessionItem; index: number }) {
+  const recentConnections = filtered.slice(0, 15);
+  const recentWt = wtFiltered.slice(0, 15);
+
+  function ConnectionsRow({ item, index }: { item: PlaySessionItem; index: number }) {
     return (
       <Pressable style={styles.sessionRow} onPress={item.completed ? () => setSelectedSession(item) : undefined}>
         <View style={[styles.sessionOutcome, { backgroundColor: item.completed ? colors.green : colors.purple }]}>
@@ -97,40 +124,77 @@ export function StatsScreen() {
     );
   }
 
+  function WtRow({ item, index }: { item: WordTrailsSessionItem; index: number }) {
+    return (
+      <View style={styles.sessionRow}>
+        <View style={[styles.sessionOutcome, { backgroundColor: item.completed ? colors.green : colors.purple }]}>
+          <Text style={styles.sessionOutcomeText}>{item.completed ? '✓' : '✗'}</Text>
+        </View>
+        <View style={styles.sessionMeta}>
+          <Text style={styles.sessionLabel}>{item.puzzle.toUpperCase()}</Text>
+          <Text style={styles.sessionDate}>{formatDate(item.created)}</Text>
+        </View>
+        <View style={styles.sessionStats}>
+          <Text style={styles.sessionTime}>{formatTime(item.durationSeconds)}</Text>
+          <Text style={styles.sessionMistakes}>{item.mistakes} mistake{item.mistakes !== 1 ? 's' : ''}</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <FlatList
-        data={recentSessions}
+        data={gameTab === 'connections' ? recentConnections : recentWt}
         keyExtractor={s => s.id}
-        renderItem={({ item, index }) => <SessionRow item={item} index={index} />}
+        renderItem={({ item, index }) =>
+          gameTab === 'connections'
+            ? <ConnectionsRow item={item as PlaySessionItem} index={index} />
+            : <WtRow item={item as WordTrailsSessionItem} index={index} />
+        }
         contentContainerStyle={styles.container}
         ListHeaderComponent={() => (
           <>
             <AdBanner />
             <Text style={styles.title}>Your Stats</Text>
 
-            <View style={styles.modeToggle}>
-              {FILTERS.map(filter => {
-                const active = modeFilter.gameType === filter.gameType && modeFilter.gameMode === filter.gameMode;
-                const label = filter.gameType === 'connections'
-                  ? RULESET_LABELS[filter.gameMode]
-                  : GAME_TYPE_LABELS[filter.gameType];
-                return (
-                  <Pressable
-                    key={`${filter.gameType}-${filter.gameMode}`}
-                    style={[
-                      styles.modeBtn,
-                      active && styles.modeBtnActive,
-                      active && filter.gameMode === 'hard' && styles.modeBtnHardActive,
-                      active && filter.gameType === 'word_trails' && styles.modeBtnWordTrailsActive,
-                    ]}
-                    onPress={() => setModeFilter(filter)}
-                  >
-                    <Text style={[styles.modeBtnText, active && styles.modeBtnTextActive]}>{label}</Text>
-                  </Pressable>
-                );
-              })}
+            {/* Game type selector — top level */}
+            <View style={styles.gameTypeRow}>
+              <Pressable
+                style={[styles.gameTypeBtn, gameTab === 'connections' && styles.gameTypeBtnActive]}
+                onPress={() => setGameTab('connections')}
+              >
+                <Text style={[styles.gameTypeBtnText, gameTab === 'connections' && styles.gameTypeBtnTextActive]}>
+                  Connections
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.gameTypeBtn, gameTab === 'word_trails' && styles.gameTypeBtnWtActive]}
+                onPress={() => setGameTab('word_trails')}
+              >
+                <Text style={[styles.gameTypeBtnText, gameTab === 'word_trails' && styles.gameTypeBtnTextActive]}>
+                  Next Steps
+                </Text>
+              </Pressable>
             </View>
+
+            {/* Connections sub-filter */}
+            {gameTab === 'connections' && (
+              <View style={styles.subToggle}>
+                <Pressable
+                  style={[styles.subBtn, connectionsMode === 'normal' && styles.subBtnActive]}
+                  onPress={() => setConnectionsMode('normal')}
+                >
+                  <Text style={[styles.subBtnText, connectionsMode === 'normal' && styles.subBtnTextActive]}>Normal</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.subBtn, connectionsMode === 'hard' && styles.subBtnHardActive]}
+                  onPress={() => setConnectionsMode('hard')}
+                >
+                  <Text style={[styles.subBtnText, connectionsMode === 'hard' && styles.subBtnTextActive]}>Hard</Text>
+                </Pressable>
+              </View>
+            )}
 
             <View style={styles.grid}>
               {([['Played', played], ['Win %', `${winRate}%`], ['Wins', won], ['Losses', losses]] as [string, string | number][]).map(([label, value]) => (
@@ -153,15 +217,13 @@ export function StatsScreen() {
               ))}
             </View>
 
-            {(avgTimeSecs !== null || bestScore !== null) && (
+            {avgTimeSecs !== null && (
               <View style={styles.secondaryRow}>
-                {avgTimeSecs !== null && (
-                  <View style={styles.avgTimeBox}>
-                    <Text style={styles.avgTimeValue}>{formatTime(avgTimeSecs)}</Text>
-                    <Text style={styles.avgTimeLabel}>Avg solve time</Text>
-                  </View>
-                )}
-                {bestScore !== null && (
+                <View style={styles.avgTimeBox}>
+                  <Text style={styles.avgTimeValue}>{formatTime(avgTimeSecs)}</Text>
+                  <Text style={styles.avgTimeLabel}>Avg solve time</Text>
+                </View>
+                {bestScore !== null && gameTab === 'connections' && (
                   <View style={styles.avgTimeBox}>
                     <Text style={styles.avgTimeValue}>⭐ {bestScore}</Text>
                     <Text style={styles.avgTimeLabel}>Best score</Text>
@@ -185,9 +247,9 @@ export function StatsScreen() {
                 </View>
               ) : (
                 <Text style={styles.emptyHint}>
-                  {modeFilter.gameType === 'word_trails'
+                  {gameTab === 'word_trails'
                     ? 'No Next Steps games yet.'
-                    : modeFilter.gameMode === 'hard'
+                    : connectionsMode === 'hard'
                       ? 'No hard mode games yet. Enable hard mode in Settings.'
                       : 'Play your first puzzle to see stats here.'}
                 </Text>
@@ -195,11 +257,11 @@ export function StatsScreen() {
             </View>
 
             <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Recent Games</Text>
-            {filtered.length === 0 && (
+            {activeList.length === 0 && (
               <Text style={styles.emptyHint}>
-                {modeFilter.gameType === 'word_trails'
+                {gameTab === 'word_trails'
                   ? 'No Next Steps games recorded yet.'
-                  : modeFilter.gameMode === 'hard'
+                  : connectionsMode === 'hard'
                     ? 'No hard mode games recorded yet.'
                     : 'No games recorded yet.'}
               </Text>
@@ -227,13 +289,29 @@ function makeStyles(c: ColorTheme) {
     safe: { flex: 1, backgroundColor: c.bgScreen },
     container: { padding: 20, paddingBottom: 40 },
     title: { fontSize: 26, fontFamily: FONTS.extraBold, color: c.text1, marginVertical: 16 },
-    modeToggle: { flexDirection: 'row', backgroundColor: c.bgBase, borderRadius: 12, padding: 4, marginBottom: 16, gap: 4 },
-    modeBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
-    modeBtnActive: { backgroundColor: c.text1 },
-    modeBtnHardActive: { backgroundColor: c.purple },
-    modeBtnWordTrailsActive: { backgroundColor: c.blue },
-    modeBtnText: { fontSize: 14, fontFamily: FONTS.bold, color: c.text2 },
-    modeBtnTextActive: { color: c.bgScreen },
+
+    gameTypeRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+    gameTypeBtn: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 14,
+      alignItems: 'center',
+      backgroundColor: c.bgSurface,
+      borderWidth: 1.5,
+      borderColor: c.border,
+    },
+    gameTypeBtnActive: { backgroundColor: c.text1, borderColor: c.text1 },
+    gameTypeBtnWtActive: { backgroundColor: c.blue, borderColor: c.blue },
+    gameTypeBtnText: { fontSize: 15, fontFamily: FONTS.extraBold, color: c.text2 },
+    gameTypeBtnTextActive: { color: c.bgScreen },
+
+    subToggle: { flexDirection: 'row', backgroundColor: c.bgBase, borderRadius: 10, padding: 3, marginBottom: 16, gap: 3 },
+    subBtn: { flex: 1, paddingVertical: 7, borderRadius: 8, alignItems: 'center' },
+    subBtnActive: { backgroundColor: c.text1 },
+    subBtnHardActive: { backgroundColor: c.purple },
+    subBtnText: { fontSize: 13, fontFamily: FONTS.bold, color: c.text2 },
+    subBtnTextActive: { color: c.bgScreen },
+
     grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
     statBox: { flex: 1, minWidth: '40%', backgroundColor: c.bgSurface, borderRadius: 12, padding: 18, alignItems: 'center', gap: 4 },
     statValue: { fontSize: 32, fontFamily: FONTS.extraBold, color: c.text1 },

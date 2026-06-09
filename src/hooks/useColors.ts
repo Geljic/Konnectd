@@ -8,7 +8,7 @@ const GARDEN_POP_LIGHT: ColorTheme = {
   bgScreen: '#F5F7FF',
   bgSurface: '#FFFFFF',
   tileDefault: '#FFFFFF',
-  tileSelected: '#D8F0E3',
+  tileSelected: '#FAEAF0',  // pale pink blush — matches strip hue
   tileStrip: '#F0A1B7',
   tileFoot: '#B8D4FF',
   text1: '#18223C',
@@ -24,7 +24,7 @@ const GARDEN_POP_DARK: ColorTheme = {
   bgScreen: '#101521',
   bgSurface: '#1B2235',
   tileDefault: '#232D44',
-  tileSelected: '#294237',
+  tileSelected: '#2D1525',  // deep plum — matches strip hue
   tileStrip: '#D8789A',
   tileFoot: '#314365',
   text1: '#F3F6FF',

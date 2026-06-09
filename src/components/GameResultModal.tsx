@@ -21,9 +21,10 @@ export interface GameResultModalProps {
   gameMode?: Ruleset | null;
   onClose: () => void;
   onPlayAgain?: () => void;
+  onViewBoard?: () => void;
 }
 
-export function GameResultModal({ visible, label, date, preloadedResult, puzzleId, score, gameMode, onClose, onPlayAgain }: GameResultModalProps) {
+export function GameResultModal({ visible, label, date, preloadedResult, puzzleId, score, gameMode, onClose, onPlayAgain, onViewBoard }: GameResultModalProps) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -98,6 +99,11 @@ export function GameResultModal({ visible, label, date, preloadedResult, puzzleI
             <Pressable style={styles.btnSecondary} onPress={onClose}>
               <Text style={styles.btnSecondaryText}>Close</Text>
             </Pressable>
+            {onViewBoard && (
+              <Pressable style={styles.btnSecondary} onPress={onViewBoard}>
+                <Text style={styles.btnSecondaryText}>View Board</Text>
+              </Pressable>
+            )}
             {onPlayAgain && (
               <Pressable style={styles.btnPrimary} onPress={onPlayAgain}>
                 <Text style={styles.btnPrimaryText}>Play Again</Text>
@@ -134,7 +140,7 @@ function makeStyles(c: ColorTheme) {
     actions: { flexDirection: 'row', gap: 10 },
     btnSecondary: { flex: 1, borderWidth: 1.5, borderColor: c.border, borderRadius: 12, padding: 14, alignItems: 'center' },
     btnSecondaryText: { fontSize: 15, fontFamily: FONTS.bold, color: c.text1 },
-    btnPrimary: { flex: 1, backgroundColor: c.text1, borderRadius: 12, padding: 14, alignItems: 'center' },
-    btnPrimaryText: { fontSize: 15, fontFamily: FONTS.extraBold, color: '#FFF' },
+    btnPrimary: { flex: 1, backgroundColor: c.green, borderRadius: 12, padding: 14, alignItems: 'center' },
+    btnPrimaryText: { fontSize: 15, fontFamily: FONTS.extraBold, color: '#162219' },
   });
 }
