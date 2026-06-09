@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 40" width="80" height="40">
+  <rect width="80" height="40" rx="8" fill="#8EC4AA"/>
+  <circle cx="26" cy="15" r="4.5" fill="#162219"/>
+  <circle cx="54" cy="15" r="4.5" fill="#162219"/>
+  <!-- open mouth -->
+  <path d="M25 24 Q40 35 55 24 Z" fill="#162219"/>
+  <path d="M28 24 Q40 31 52 24" fill="#ffffff"/>
+  <!-- left fang -->
+  <path d="M33 24 L31 30 L36 24 Z" fill="#162219"/>
+  <!-- right fang -->
+  <path d="M44 24 L47 30 L49 24 Z" fill="#162219"/>
+</svg>

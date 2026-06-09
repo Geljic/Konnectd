@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 40" width="80" height="40">
+  <rect width="80" height="40" rx="8" fill="#8EC4AA"/>
+  <!-- half-closed left eye: just the bottom dome -->
+  <path d="M21 18 A5 5 0 0 0 31 18 Z" fill="#162219"/>
+  <line x1="21" y1="18" x2="31" y2="18" stroke="#162219" stroke-width="2" stroke-linecap="round"/>
+  <!-- half-closed right eye -->
+  <path d="M49 18 A5 5 0 0 0 59 18 Z" fill="#162219"/>
+  <line x1="49" y1="18" x2="59" y2="18" stroke="#162219" stroke-width="2" stroke-linecap="round"/>
+  <!-- flat mouth -->
+  <line x1="33" y1="29" x2="47" y2="29" stroke="#162219" stroke-width="2" stroke-linecap="round"/>
+</svg>

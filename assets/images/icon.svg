@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Background — flat, OS clips to shape -->
+  <rect width="1024" height="1024" fill="#CAE0D5"/>
+
+  <!-- Yellow tile (top-left) — easy -->
+  <rect x="46" y="46" width="452" height="452" rx="100" fill="#F5C842"/>
+  <rect x="46" y="46" width="452" height="90" rx="100" fill="rgba(0,0,0,0.08)"/>
+  <rect x="46" y="91" width="452" height="45" fill="rgba(0,0,0,0.08)"/>
+  <circle cx="196" cy="286" r="36" fill="rgba(255,255,255,0.88)"/>
+  <circle cx="352" cy="286" r="36" fill="rgba(255,255,255,0.88)"/>
+  <path d="M182 370 Q274 428 366 370" stroke="rgba(255,255,255,0.88)" stroke-width="18" fill="none" stroke-linecap="round"/>
+
+  <!-- Green tile (top-right) — medium -->
+  <rect x="526" y="46" width="452" height="452" rx="100" fill="#3DBE8A"/>
+  <rect x="526" y="46" width="452" height="90" rx="100" fill="rgba(0,0,0,0.08)"/>
+  <rect x="526" y="91" width="452" height="45" fill="rgba(0,0,0,0.08)"/>
+  <circle cx="676" cy="286" r="36" fill="rgba(255,255,255,0.88)"/>
+  <circle cx="832" cy="286" r="36" fill="rgba(255,255,255,0.88)"/>
+  <path d="M662 370 Q754 428 846 370" stroke="rgba(255,255,255,0.88)" stroke-width="18" fill="none" stroke-linecap="round"/>
+
+  <!-- Blue tile (bottom-left) — tricky -->
+  <rect x="46" y="526" width="452" height="452" rx="100" fill="#4AAEC8"/>
+  <rect x="46" y="526" width="452" height="90" rx="100" fill="rgba(0,0,0,0.08)"/>
+  <rect x="46" y="571" width="452" height="45" fill="rgba(0,0,0,0.08)"/>
+  <circle cx="196" cy="766" r="36" fill="rgba(255,255,255,0.88)"/>
+  <circle cx="352" cy="766" r="36" fill="rgba(255,255,255,0.88)"/>
+  <path d="M182 850 Q274 908 366 850" stroke="rgba(255,255,255,0.88)" stroke-width="18" fill="none" stroke-linecap="round"/>
+
+  <!-- Purple tile (bottom-right) — hard -->
+  <rect x="526" y="526" width="452" height="452" rx="100" fill="#9D6EC8"/>
+  <rect x="526" y="526" width="452" height="90" rx="100" fill="rgba(0,0,0,0.08)"/>
+  <rect x="526" y="571" width="452" height="45" fill="rgba(0,0,0,0.08)"/>
+  <circle cx="676" cy="766" r="36" fill="rgba(255,255,255,0.88)"/>
+  <circle cx="832" cy="766" r="36" fill="rgba(255,255,255,0.88)"/>
+  <path d="M662 850 Q754 908 846 850" stroke="rgba(255,255,255,0.88)" stroke-width="18" fill="none" stroke-linecap="round"/>
+</svg>

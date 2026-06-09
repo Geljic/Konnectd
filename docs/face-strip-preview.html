@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Face Strip Preview — KonnectD Tiles</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #e8f4f1;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 32px 24px;
+    color: #162219;
+  }
+  h1 { font-size: 18px; font-weight: 800; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .subtitle { font-size: 13px; color: #666; margin-bottom: 36px; }
+  .section { margin-bottom: 48px; }
+  .section-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: #888; margin-bottom: 4px;
+  }
+  .section-desc { font-size: 13px; color: #444; margin-bottom: 16px; }
+  .tile-row { display: flex; gap: 8px; align-items: flex-end; }
+  .tile {
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+    border: 2px solid transparent;
+    width: 90px;
+    height: 90px;
+  }
+  .face-strip {
+    background: #7ecec4;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .word-area {
+    flex: 1;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: #162219;
+    text-transform: uppercase;
+    padding: 4px;
+    text-align: center;
+  }
+  .ref-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 10px;
+    border: 2px solid #ccc;
+    object-fit: cover;
+    opacity: 0.85;
+  }
+  .ref-label {
+    font-size: 10px; color: #888; text-align: center; margin-top: 4px;
+  }
+  .tile-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .tile-name { font-size: 10px; font-weight: 700; color: #555; letter-spacing: 0.5px; text-transform: uppercase; }
+  .divider { width: 1px; background: #ccc; height: 100px; margin: 0 8px; align-self: center; }
+</style>
+</head>
+<body>
+
+<h1>KonnectD — Face Strip Options</h1>
+<p class="subtitle">Open in browser. Resize to see tiles at approximate phone scale.</p>
+
+<!-- OPTION A: Current -->
+<div class="section">
+  <div class="section-label">Current — Option A</div>
+  <div class="section-desc">10px strip. Faces are there but barely visible — a subtle accent only.</div>
+  <div class="tile-row">
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:10px;">
+          <svg width="100%" height="10" viewBox="0 0 80 40" preserveAspectRatio="xMidYMid meet">
+            <circle cx="26" cy="18" r="4.5" fill="#162219"/>
+            <circle cx="54" cy="18" r="4.5" fill="#162219"/>
+            <path d="M32 29 Q40 34 48 29" stroke="#162219" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="word-area">APPLE</div>
+      </div>
+      <div class="tile-name">Current</div>
+    </div>
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:10px;">
+          <svg width="100%" height="10" viewBox="0 0 80 40" preserveAspectRatio="xMidYMid meet">
+            <line x1="19" y1="10" x2="31" y2="14" stroke="#162219" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="49" y1="14" x2="61" y2="10" stroke="#162219" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="26" cy="20" r="4.5" fill="#162219"/>
+            <circle cx="54" cy="20" r="4.5" fill="#162219"/>
+            <path d="M31 31 Q40 26 49 31" stroke="#162219" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="word-area">MANGO</div>
+      </div>
+      <div class="tile-name">Current</div>
+    </div>
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:10px;">
+          <svg width="100%" height="10" viewBox="0 0 80 40" preserveAspectRatio="xMidYMid meet">
+            <ellipse cx="15" cy="23" rx="6" ry="3.5" fill="#F4A0A0" opacity="0.55"/>
+            <ellipse cx="65" cy="23" rx="6" ry="3.5" fill="#F4A0A0" opacity="0.55"/>
+            <circle cx="26" cy="17" r="2.5" fill="#162219"/>
+            <circle cx="54" cy="17" r="2.5" fill="#162219"/>
+            <path d="M34 27 Q40 31 46 27" stroke="#162219" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="word-area">RIVER</div>
+      </div>
+      <div class="tile-name">Current</div>
+    </div>
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:10px;">
+          <svg width="100%" height="10" viewBox="0 0 80 40" preserveAspectRatio="xMidYMid meet">
+            <circle cx="26" cy="15" r="4.5" fill="#162219"/>
+            <circle cx="54" cy="15" r="4.5" fill="#162219"/>
+            <path d="M25 24 Q40 35 55 24 Z" fill="#162219"/>
+            <path d="M28 24 Q40 31 52 24" fill="#fff"/>
+            <path d="M33 24 L31 30 L36 24 Z" fill="#162219"/>
+            <path d="M44 24 L47 30 L49 24 Z" fill="#162219"/>
+          </svg>
+        </div>
+        <div class="word-area">CORAL</div>
+      </div>
+      <div class="tile-name">Current</div>
+    </div>
+  </div>
+</div>
+
+<!-- OPTION B: Taller strip, full face -->
+<div class="section">
+  <div class="section-label">Option B — Taller strip, full face</div>
+  <div class="section-desc">22px strip. Full face is clearly visible. More character, less word space.</div>
+  <div class="tile-row">
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:22px;">
+          <svg width="100%" height="22" viewBox="0 0 80 40" preserveAspectRatio="xMidYMid meet">
+            <circle cx="26" cy="18" r="4.5" fill="#162219"/>
+            <circle cx="54" cy="18" r="4.5" fill="#162219"/>
+            <path d="M32 29 Q40 34 48 29" stroke="#162219" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="word-area">APPLE</div>
+      </div>
+      <div class="tile-name">Taller</div>
+    </div>
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:22px;">
+          <svg width="100%" height="22" viewBox="0 0 80 40" preserveAspectRatio="xMidYMid meet">
+            <line x1="19" y1="10" x2="31" y2="14" stroke="#162219" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="49" y1="14" x2="61" y2="10" stroke="#162219" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="26" cy="20" r="4.5" fill="#162219"/>
+            <circle cx="54" cy="20" r="4.5" fill="#162219"/>
+            <path d="M31 31 Q40 26 49 31" stroke="#162219" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="word-area">MANGO</div>
+      </div>
+      <div class="tile-name">Taller</div>
+    </div>
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:22px;">
+          <svg width="100%" height="22" viewBox="0 0 80 40" preserveAspectRatio="xMidYMid meet">
+            <ellipse cx="15" cy="23" rx="6" ry="3.5" fill="#F4A0A0" opacity="0.55"/>
+            <ellipse cx="65" cy="23" rx="6" ry="3.5" fill="#F4A0A0" opacity="0.55"/>
+            <circle cx="26" cy="17" r="2.5" fill="#162219"/>
+            <circle cx="54" cy="17" r="2.5" fill="#162219"/>
+            <path d="M34 27 Q40 31 46 27" stroke="#162219" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="word-area">RIVER</div>
+      </div>
+      <div class="tile-name">Taller</div>
+    </div>
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:22px;">
+          <svg width="100%" height="22" viewBox="0 0 80 40" preserveAspectRatio="xMidYMid meet">
+            <circle cx="26" cy="15" r="4.5" fill="#162219"/>
+            <circle cx="54" cy="15" r="4.5" fill="#162219"/>
+            <path d="M25 24 Q40 35 55 24 Z" fill="#162219"/>
+            <path d="M28 24 Q40 31 52 24" fill="#fff"/>
+            <path d="M33 24 L31 30 L36 24 Z" fill="#162219"/>
+            <path d="M44 24 L47 30 L49 24 Z" fill="#162219"/>
+          </svg>
+        </div>
+        <div class="word-area">CORAL</div>
+      </div>
+      <div class="tile-name">Taller</div>
+    </div>
+  </div>
+</div>
+
+<!-- OPTION C: Threes-style peek -->
+<div class="section">
+  <div class="section-label">Option C — Threes-style peek (eyes only)</div>
+  <div class="section-desc">20px strip, viewBox cropped to top half — just eyes + forehead peek over the tile edge.</div>
+  <div class="tile-row">
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:20px;">
+          <svg width="100%" height="20" viewBox="0 0 80 28" preserveAspectRatio="xMidYMax meet">
+            <circle cx="26" cy="18" r="4.5" fill="#162219"/>
+            <circle cx="54" cy="18" r="4.5" fill="#162219"/>
+            <path d="M32 29 Q40 34 48 29" stroke="#162219" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="word-area">APPLE</div>
+      </div>
+      <div class="tile-name">Peek</div>
+    </div>
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:20px;">
+          <svg width="100%" height="20" viewBox="0 0 80 28" preserveAspectRatio="xMidYMax meet">
+            <line x1="19" y1="10" x2="31" y2="14" stroke="#162219" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="49" y1="14" x2="61" y2="10" stroke="#162219" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="26" cy="20" r="4.5" fill="#162219"/>
+            <circle cx="54" cy="20" r="4.5" fill="#162219"/>
+            <path d="M31 31 Q40 26 49 31" stroke="#162219" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="word-area">MANGO</div>
+      </div>
+      <div class="tile-name">Peek</div>
+    </div>
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:20px;">
+          <svg width="100%" height="20" viewBox="0 0 80 28" preserveAspectRatio="xMidYMax meet">
+            <ellipse cx="15" cy="23" rx="6" ry="3.5" fill="#F4A0A0" opacity="0.55"/>
+            <ellipse cx="65" cy="23" rx="6" ry="3.5" fill="#F4A0A0" opacity="0.55"/>
+            <circle cx="26" cy="17" r="2.5" fill="#162219"/>
+            <circle cx="54" cy="17" r="2.5" fill="#162219"/>
+            <path d="M34 27 Q40 31 46 27" stroke="#162219" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="word-area">RIVER</div>
+      </div>
+      <div class="tile-name">Peek</div>
+    </div>
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:20px;">
+          <svg width="100%" height="20" viewBox="0 0 80 28" preserveAspectRatio="xMidYMax meet">
+            <circle cx="26" cy="15" r="4.5" fill="#162219"/>
+            <circle cx="54" cy="15" r="4.5" fill="#162219"/>
+            <path d="M25 24 Q40 35 55 24 Z" fill="#162219"/>
+            <path d="M28 24 Q40 31 52 24" fill="#fff"/>
+          </svg>
+        </div>
+        <div class="word-area">CORAL</div>
+      </div>
+      <div class="tile-name">Peek</div>
+    </div>
+  </div>
+</div>
+
+<!-- OPTION D: Big peek — taller strip, more of the face -->
+<div class="section">
+  <div class="section-label">Option D — Big peek (eyes + top of mouth)</div>
+  <div class="section-desc">28px strip, face fills the whole strip — expressive and bold, Threes-adjacent.</div>
+  <div class="tile-row">
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:28px;">
+          <svg width="100%" height="28" viewBox="0 0 80 40" preserveAspectRatio="xMidYMid meet">
+            <circle cx="26" cy="18" r="4.5" fill="#162219"/>
+            <circle cx="54" cy="18" r="4.5" fill="#162219"/>
+            <path d="M32 29 Q40 34 48 29" stroke="#162219" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="word-area">APPLE</div>
+      </div>
+      <div class="tile-name">Big peek</div>
+    </div>
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:28px;">
+          <svg width="100%" height="28" viewBox="0 0 80 40" preserveAspectRatio="xMidYMid meet">
+            <line x1="19" y1="10" x2="31" y2="14" stroke="#162219" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="49" y1="14" x2="61" y2="10" stroke="#162219" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="26" cy="20" r="4.5" fill="#162219"/>
+            <circle cx="54" cy="20" r="4.5" fill="#162219"/>
+            <path d="M31 31 Q40 26 49 31" stroke="#162219" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="word-area">MANGO</div>
+      </div>
+      <div class="tile-name">Big peek</div>
+    </div>
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:28px;">
+          <svg width="100%" height="28" viewBox="0 0 80 40" preserveAspectRatio="xMidYMid meet">
+            <ellipse cx="15" cy="23" rx="6" ry="3.5" fill="#F4A0A0" opacity="0.55"/>
+            <ellipse cx="65" cy="23" rx="6" ry="3.5" fill="#F4A0A0" opacity="0.55"/>
+            <circle cx="26" cy="17" r="2.5" fill="#162219"/>
+            <circle cx="54" cy="17" r="2.5" fill="#162219"/>
+            <path d="M34 27 Q40 31 46 27" stroke="#162219" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="word-area">RIVER</div>
+      </div>
+      <div class="tile-name">Big peek</div>
+    </div>
+    <div class="tile-wrap">
+      <div class="tile">
+        <div class="face-strip" style="height:28px;">
+          <svg width="100%" height="28" viewBox="0 0 80 40" preserveAspectRatio="xMidYMid meet">
+            <circle cx="26" cy="15" r="4.5" fill="#162219"/>
+            <circle cx="54" cy="15" r="4.5" fill="#162219"/>
+            <path d="M25 24 Q40 35 55 24 Z" fill="#162219"/>
+            <path d="M28 24 Q40 31 52 24" fill="#fff"/>
+            <path d="M33 24 L31 30 L36 24 Z" fill="#162219"/>
+            <path d="M44 24 L47 30 L49 24 Z" fill="#162219"/>
+          </svg>
+        </div>
+        <div class="word-area">CORAL</div>
+      </div>
+      <div class="tile-name">Big peek</div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:40px; font-size:12px; color:#aaa;">All strips use tileStrip colour #7ecec4. Faces animate in the real app (blink, wink, bob, eye-shift).</p>
+
+</body>
+</html>

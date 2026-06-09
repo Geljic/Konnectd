@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 40" width="80" height="40">
+  <rect width="80" height="40" rx="8" fill="#8EC4AA"/>
+  <!-- upward arc eyes (^ ^) -->
+  <path d="M21 21 A5 5 0 0 1 31 21" stroke="#162219" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M49 21 A5 5 0 0 1 59 21" stroke="#162219" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- wide grin shell -->
+  <path d="M20 27 Q40 38 60 27 Z" fill="#162219"/>
+  <!-- teeth area -->
+  <path d="M23 27 Q40 35 57 27" fill="#ffffff"/>
+  <!-- tooth dividers -->
+  <line x1="30" y1="27" x2="29" y2="31" stroke="#162219" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="37" y1="27" x2="37" y2="32" stroke="#162219" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="43" y1="27" x2="43" y2="32" stroke="#162219" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="50" y1="27" x2="51" y2="31" stroke="#162219" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
