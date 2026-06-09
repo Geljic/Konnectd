@@ -2,6 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import pb from './pb';
 import type { CategoryColour } from '@/constants/colors';
 import { DAILY_PUZZLE_LAUNCH_DATE } from '@/constants/config';
+import {
+  DEFAULT_GAME_TYPE,
+  normaliseGameType,
+  normaliseRuleset,
+  type GameType,
+  type Ruleset,
+} from '@/constants/gameModes';
 
 export interface PuzzleCategory {
   name: string;
@@ -220,7 +227,8 @@ export interface PlaySessionItem {
   completed: boolean;
   mistakes: number;
   durationSeconds: number;
-  gameMode: 'normal' | 'hard';
+  gameType: GameType;
+  gameMode: Ruleset;
   score?: number;
   created: string;
 }
@@ -231,18 +239,22 @@ export async function fetchRecentSessions(limit = 15): Promise<PlaySessionItem[]
     const result = await pb.collection('play_sessions').getList(1, limit, {
       filter: `user = '${pb.authStore.model?.id}'`,
       sort: '-created',
-      fields: 'id,puzzle,completed,mistakes,duration_seconds,game_mode,score,created',
+      fields: 'id,puzzle,completed,mistakes,duration_seconds,game_type,game_mode,score,created',
     });
-    return result.items.map((r: any) => ({
-      id: r.id,
-      puzzle: r.puzzle,
-      completed: r.completed,
-      mistakes: r.mistakes,
-      durationSeconds: r.duration_seconds,
-      gameMode: (r.game_mode === 'hard' ? 'hard' : 'normal') as 'normal' | 'hard',
-      score: r.score != null ? (r.score as number) : undefined,
-      created: r.created,
-    }));
+    return result.items.map((r: any) => {
+      const gameType = normaliseGameType(r.game_type);
+      return {
+        id: r.id,
+        puzzle: r.puzzle,
+        completed: r.completed,
+        mistakes: r.mistakes,
+        durationSeconds: r.duration_seconds,
+        gameType,
+        gameMode: normaliseRuleset(r.game_mode, gameType),
+        score: r.score != null ? (r.score as number) : undefined,
+        created: r.created,
+      };
+    });
   } catch {
     return [];
   }
@@ -255,15 +267,18 @@ export async function recordPlaySession(params: {
   mistakes: number;
   durationSeconds: number;
   solvedOrder: CategoryColour[];
-  gameMode?: 'normal' | 'hard';
+  gameType?: GameType;
+  gameMode?: Ruleset;
   score?: number;
 }): Promise<void> {
   if (!pb.authStore.isValid) return;
+  const gameType = params.gameType ?? DEFAULT_GAME_TYPE;
+  const gameMode = normaliseRuleset(params.gameMode, gameType);
 
   // Don't record a repeat play of an already-completed puzzle
   try {
     const existing = await pb.collection('play_sessions').getFirstListItem(
-      `user = '${pb.authStore.model?.id}' && puzzle = '${params.puzzleId}' && completed = true`,
+      `user = '${pb.authStore.model?.id}' && puzzle = '${params.puzzleId}' && game_type = '${gameType}' && completed = true`,
       { fields: 'id' },
     );
     if (existing) return;
@@ -278,7 +293,8 @@ export async function recordPlaySession(params: {
     mistakes: params.mistakes,
     duration_seconds: params.durationSeconds,
     solved_order: params.solvedOrder,
-    game_mode: params.gameMode ?? 'normal',
+    game_type: gameType,
+    game_mode: gameMode,
     score: params.score ?? null,
   });
 
@@ -296,7 +312,7 @@ export async function ratePuzzle(puzzleId: string, rating: 1 | -1): Promise<void
   if (!pb.authStore.isValid) return;
   try {
     const session = await pb.collection('play_sessions').getFirstListItem(
-      `user = '${pb.authStore.model?.id}' && puzzle = '${puzzleId}'`,
+      `user = '${pb.authStore.model?.id}' && puzzle = '${puzzleId}' && game_type = 'connections'`,
       { fields: 'id' },
     );
     await pb.collection('play_sessions').update(session.id, { rating });
@@ -321,7 +337,7 @@ export async function fetchUserStats(): Promise<UserStats | null> {
     // Aggregate from play_sessions (source of truth for played/won)
     const [sessions, userRecord] = await Promise.all([
       pb.collection('play_sessions').getFullList({
-        filter: `user = '${userId}'`,
+        filter: `user = '${userId}' && game_type = 'connections'`,
         sort: 'created',
         fields: 'completed,duration_seconds,created',
       }),
@@ -357,7 +373,7 @@ export async function updateUserStats(won: boolean): Promise<void> {
     const [user, sessions] = await Promise.all([
       pb.collection('users').getOne(userId),
       pb.collection('play_sessions').getFullList({
-        filter: `user = '${userId}'`,
+        filter: `user = '${userId}' && game_type = 'connections'`,
         fields: 'completed,created',
         requestKey: null,
       }),
@@ -453,7 +469,7 @@ async function getRemoteCompletedIds(): Promise<Set<string>> {
   if (!pb.authStore.isValid) return new Set();
   try {
     const sessions = await pb.collection('play_sessions').getFullList({
-      filter: `user = '${pb.authStore.model?.id}' && completed = true`,
+      filter: `user = '${pb.authStore.model?.id}' && game_type = 'connections' && completed = true`,
       fields: 'puzzle',
     });
     return new Set(sessions.map((s: any) => s.puzzle as string));
@@ -466,7 +482,7 @@ export async function getRemotePuzzleResult(puzzleId: string): Promise<PuzzleRes
   if (!pb.authStore.isValid) return null;
   try {
     const result = await pb.collection('play_sessions').getFirstListItem(
-      `user = '${pb.authStore.model?.id}' && puzzle = '${puzzleId}' && completed = true`,
+      `user = '${pb.authStore.model?.id}' && puzzle = '${puzzleId}' && game_type = 'connections' && completed = true`,
       { fields: 'duration_seconds,mistakes,solved_order,created' },
     );
     return {

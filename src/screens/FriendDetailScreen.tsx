@@ -14,6 +14,7 @@ import { fetchActiveChallengesWithFriend, subscribeToChallengeChanges, type Chal
 import { removeFriendship } from '@/api/friends';
 import pb from '@/api/pb';
 import type { AppStackParamList } from '../App';
+import { GAME_TYPE_LABELS, RULESET_LABELS } from '@/constants/gameModes';
 
 type Props = {
   navigation: NativeStackNavigationProp<AppStackParamList, 'FriendDetail'>;
@@ -82,6 +83,9 @@ function MatchRow({ match, matchNumber, styles, colors }: { match: ChallengeMatc
   const theirScoreStr = match.theirScore !== null ? `${match.theirScore}pts · ` : '';
   const myMistakeStr = match.myMistakes === 1 ? '1 mistake' : `${match.myMistakes} mistakes`;
   const theirMistakeStr = match.theirMistakes === 1 ? '1 mistake' : `${match.theirMistakes} mistakes`;
+  const modeLabel = match.gameType === 'connections'
+    ? `${GAME_TYPE_LABELS.connections} · ${RULESET_LABELS[match.gameMode]}`
+    : GAME_TYPE_LABELS[match.gameType];
 
   return (
     <View style={styles.matchRow}>
@@ -95,6 +99,7 @@ function MatchRow({ match, matchNumber, styles, colors }: { match: ChallengeMatc
         <Text style={styles.matchStat}>Them: {theirScoreStr}{theirMistakeStr}</Text>
       </View>
       <View style={styles.matchRowBottom}>
+        <Text style={styles.matchMode}>{modeLabel}</Text>
         <View
           style={[
             styles.winBadge,
@@ -240,6 +245,9 @@ export function FriendDetailScreen({ navigation, route }: Props) {
         const statusLabel = isMyChallenge ? 'Waiting for them…' : 'Your turn! ⚡';
         const statusColor = isMyChallenge ? colors.text3 : colors.green;
         const dateStr = new Date(c.created).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        const modeLabel = c.gameType === 'connections'
+          ? `${GAME_TYPE_LABELS.connections} · ${RULESET_LABELS[c.gameMode]}`
+          : GAME_TYPE_LABELS[c.gameType];
         return (
           <Pressable
             style={styles.activeChallengeRow}
@@ -247,6 +255,7 @@ export function FriendDetailScreen({ navigation, route }: Props) {
           >
             <View style={styles.activeChallengeInfo}>
               <Text style={styles.activeChallengeLabel} numberOfLines={1}>{c.puzzleLabel}</Text>
+              <Text style={styles.activeChallengeMode}>{modeLabel}</Text>
               <Text style={[styles.activeChallengeStatus, { color: statusColor }]}>{statusLabel}</Text>
             </View>
             <Text style={styles.activeChallengeDate}>{dateStr} →</Text>
@@ -361,6 +370,7 @@ function makeStyles(c: ColorTheme) {
     },
     activeChallengeInfo: { flex: 1, gap: 3 },
     activeChallengeLabel: { fontSize: 15, fontFamily: FONTS.extraBold, color: c.text1 },
+    activeChallengeMode: { fontSize: 11, fontFamily: FONTS.bold, color: c.text3 },
     activeChallengeStatus: { fontSize: 12, fontFamily: FONTS.bold },
     activeChallengeDate: { fontSize: 12, fontFamily: FONTS.bold, color: c.text3 },
 
@@ -442,7 +452,10 @@ function makeStyles(c: ColorTheme) {
     },
     matchRowBottom: {
       flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
     },
+    matchMode: { fontSize: 11, fontFamily: FONTS.bold, color: c.text3 },
     winBadge: {
       borderRadius: 10,
       paddingHorizontal: 10,

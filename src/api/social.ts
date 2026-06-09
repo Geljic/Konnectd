@@ -1,10 +1,13 @@
 import pb from './pb';
 import { fetchMyChallenges, type Challenge } from './challenges';
 import type { Friendship } from './friends';
+import { normaliseGameType, normaliseRuleset, type GameType, type Ruleset } from '@/constants/gameModes';
 
 export interface ChallengeMatch {
   id: string;
   puzzleLabel: string;
+  gameType: GameType;
+  gameMode: Ruleset;
   myMistakes: number;
   myDuration: number;
   myScore: number | null;
@@ -102,7 +105,7 @@ export async function fetchFriendSummaries(friends: Friendship[]): Promise<Frien
   const [allChallenges, allSessions] = await Promise.all([
     fetchMyChallenges(),
     pb.collection('play_sessions').getFullList({
-      filter: `(${idFilter}) && completed = true`,
+      filter: `(${idFilter}) && game_type = 'connections' && completed = true`,
       fields: 'user,created',
       requestKey: null,
     }).catch(() => [] as { user: string; created: string }[]),
@@ -140,7 +143,7 @@ export async function fetchFriendSummaries(friends: Friendship[]): Promise<Frien
       const involves =
         (c.challenger === myId && (c.opponent === friendId || c.recipient === friendId)) ||
         (c.challenger === friendId && (c.opponent === myId || c.recipient === myId));
-      return involves;
+      return involves && c.gameType === 'connections';
     });
 
     const completed = relevant.filter(c => c.status === 'complete');
@@ -257,9 +260,12 @@ export async function fetchMatchHistory(friendId: string): Promise<ChallengeMatc
         iWon = myDuration < theirDuration;
       }
 
+      const gameType = normaliseGameType(rec['game_type']);
       return {
         id: rec['id'] as string,
         puzzleLabel: (rec['puzzle_label'] as string) || 'a puzzle',
+        gameType,
+        gameMode: normaliseRuleset(rec['game_mode'], gameType),
         myMistakes,
         myDuration,
         myScore,

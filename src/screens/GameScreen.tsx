@@ -175,6 +175,7 @@ export function GameScreen({ route, navigation }: Props) {
             durationSeconds: duration,
             solvedOrder,
             gameMode,
+            gameType: 'connections',
             score: score ?? undefined,
           });
           await updateUserStats(status === 'won');
@@ -210,6 +211,8 @@ export function GameScreen({ route, navigation }: Props) {
           durationSeconds: duration,
           solvedOrder,
           score: score ?? undefined,
+          gameType: 'connections',
+          gameMode,
           recipientId,
         }).then(challenge => {
           setTimeout(() => {

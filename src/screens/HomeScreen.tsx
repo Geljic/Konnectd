@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Animated, View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,6 +14,7 @@ import { fetchMyChallenges, subscribeToChallengeChanges, isMine } from '@/api/ch
 import type { AppStackParamList } from '../App';
 
 type Props = { navigation: NativeStackNavigationProp<AppStackParamList, 'Home'> };
+type HomeGameType = 'connections' | 'word_trails';
 
 function BarChartIcon({ color }: { color: string }) {
   return (
@@ -68,6 +69,8 @@ export function HomeScreen({ navigation }: Props) {
   const user = useAuthStore(s => s.user);
   const { isGuest, guardAction } = useGuestGuard();
   const [openChallengeCount, setOpenChallengeCount] = useState(0);
+  const [selectedGame, setSelectedGame] = useState<HomeGameType>('connections');
+  const actionAnim = useRef(new Animated.Value(1)).current;
 
   const refreshOpenChallengeCount = useCallback(() => {
     fetchMyChallenges().then(cs =>
@@ -95,6 +98,36 @@ export function HomeScreen({ navigation }: Props) {
     };
   }, [isGuest, refreshOpenChallengeCount]);
 
+  useEffect(() => {
+    actionAnim.setValue(0);
+    Animated.timing(actionAnim, {
+      toValue: 1,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  }, [selectedGame, actionAnim]);
+
+  const actionPanelStyle = {
+    opacity: actionAnim,
+    transform: [{
+      translateY: actionAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [12, 0],
+      }),
+    }],
+  };
+
+  const gameAccent = selectedGame === 'connections' ? colors.tileStrip : colors.blue;
+  const gamePrimaryBg = selectedGame === 'connections' ? colors.text1 : colors.blue;
+  const gameSecondaryBg = selectedGame === 'connections' ? colors.bgBase : colors.bgSurface;
+
+  function showWordlinesComingSoon() {
+    Alert.alert(
+      'Wordlines is next',
+      'The first 50 curated Wordlines puzzles are in. The playable board is the next piece to wire up.',
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
@@ -113,25 +146,88 @@ export function HomeScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.buttons}>
-          <Pressable style={styles.btnPrimary} onPress={() => navigation.navigate('Game', { mode: 'daily' })}>
-            <Text style={[styles.btnLabel, { color: colors.tileStrip }]}>DAILY PUZZLE</Text>
-            <Text style={styles.btnPrimaryText}>Play today's puzzle</Text>
-          </Pressable>
-
-          <View style={styles.btnRow}>
-            <Pressable style={[styles.btnSecondary, { flex: 1 }]} onPress={() => navigation.navigate('Game', { mode: 'nyt' })}>
-              <Text style={[styles.btnLabel, { color: colors.text2 }]}>NYT</Text>
-              <Text style={styles.btnSecondaryText}>Random puzzle</Text>
+          <View style={styles.gameSwitch}>
+            <Pressable
+              style={[
+                styles.gameSwitchBtn,
+                selectedGame === 'connections' && styles.gameSwitchBtnActive,
+              ]}
+              onPress={() => setSelectedGame('connections')}
+            >
+              <Text style={[
+                styles.gameSwitchText,
+                selectedGame === 'connections' && styles.gameSwitchTextActive,
+              ]}>
+                Connections
+              </Text>
             </Pressable>
-            <Pressable style={[styles.btnTertiary, { flex: 1 }]} onPress={() => navigation.navigate('PuzzleSelect')}>
-              <Text style={[styles.btnLabel, { color: colors.text2 }]}>FREE PLAY</Text>
-              <Text style={styles.btnSecondaryText}>Choose puzzle</Text>
+            <Pressable
+              style={[
+                styles.gameSwitchBtn,
+                selectedGame === 'word_trails' && styles.gameSwitchBtnWordlinesActive,
+              ]}
+              onPress={() => setSelectedGame('word_trails')}
+            >
+              <Text style={[
+                styles.gameSwitchText,
+                selectedGame === 'word_trails' && styles.gameSwitchTextActive,
+              ]}>
+                Wordlines
+              </Text>
             </Pressable>
           </View>
 
-          <Pressable style={styles.btnLeaderboard} onPress={() => guardAction(() => navigation.navigate('Leaderboard'))}>
-            <Text style={styles.btnLeaderboardText}>🏆  Leaderboard</Text>
-          </Pressable>
+          <Animated.View style={[styles.actionPanel, actionPanelStyle]}>
+            <Pressable
+              style={[styles.btnPrimary, { backgroundColor: gamePrimaryBg }]}
+              onPress={() => selectedGame === 'connections'
+                ? navigation.navigate('Game', { mode: 'daily' })
+                : showWordlinesComingSoon()}
+            >
+              <Text style={[styles.btnLabel, { color: selectedGame === 'connections' ? colors.tileStrip : colors.bgScreen }]}>
+                {selectedGame === 'connections' ? 'DAILY PUZZLE' : 'DAILY WORDLINE'}
+              </Text>
+              <Text style={styles.btnPrimaryText}>
+                {selectedGame === 'connections' ? "Play today's puzzle" : "Untangle today's trail"}
+              </Text>
+            </Pressable>
+
+            <View style={styles.btnRow}>
+              <Pressable
+                style={[styles.btnSecondary, { flex: 1, backgroundColor: gameSecondaryBg }]}
+                onPress={() => selectedGame === 'connections'
+                  ? navigation.navigate('Game', { mode: 'nyt' })
+                  : showWordlinesComingSoon()}
+              >
+                <Text style={[styles.btnLabel, { color: selectedGame === 'connections' ? colors.text2 : gameAccent }]}>
+                  {selectedGame === 'connections' ? 'NYT' : 'RANDOM'}
+                </Text>
+                <Text style={styles.btnSecondaryText}>Random puzzle</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.btnTertiary, { flex: 1, backgroundColor: gameSecondaryBg, borderColor: gameAccent }]}
+                onPress={() => selectedGame === 'connections'
+                  ? navigation.navigate('PuzzleSelect')
+                  : showWordlinesComingSoon()}
+              >
+                <Text style={[styles.btnLabel, { color: selectedGame === 'connections' ? colors.text2 : gameAccent }]}>
+                  FREE PLAY
+                </Text>
+                <Text style={styles.btnSecondaryText}>Choose puzzle</Text>
+              </Pressable>
+            </View>
+
+            <Pressable
+              style={[styles.btnLeaderboard, selectedGame === 'word_trails' && { borderColor: gameAccent }]}
+              onPress={() => selectedGame === 'connections'
+                ? guardAction(() => navigation.navigate('Leaderboard'))
+                : showWordlinesComingSoon()}
+            >
+              <Text style={styles.btnLeaderboardText}>
+                {selectedGame === 'connections' ? '🏆  Leaderboard' : 'Stats coming soon'}
+              </Text>
+            </Pressable>
+          </Animated.View>
         </View>
       </ScrollView>
 
@@ -178,12 +274,31 @@ function makeStyles(c: ColorTheme) {
     },
     guestBannerText: { fontSize: 12, fontFamily: FONTS.bold, color: c.text2, textAlign: 'center' },
     buttons: { gap: 12 },
+    gameSwitch: {
+      flexDirection: 'row',
+      backgroundColor: c.bgBase,
+      borderRadius: 16,
+      padding: 4,
+      gap: 4,
+    },
+    gameSwitchBtn: {
+      flex: 1,
+      minHeight: 42,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    gameSwitchBtnActive: { backgroundColor: c.text1 },
+    gameSwitchBtnWordlinesActive: { backgroundColor: c.blue },
+    gameSwitchText: { fontSize: 14, fontFamily: FONTS.extraBold, color: c.text2 },
+    gameSwitchTextActive: { color: c.bgScreen },
+    actionPanel: { gap: 12 },
     btnPrimary: { backgroundColor: c.text1, borderRadius: 16, padding: 20, gap: 4 },
     btnLabel: { fontSize: 11, fontFamily: FONTS.extraBold, letterSpacing: 2 },
     btnPrimaryText: { color: c.bgScreen, fontSize: 18, fontFamily: FONTS.extraBold },
     btnRow: { flexDirection: 'row', gap: 12 },
     btnSecondary: { backgroundColor: c.bgBase, borderRadius: 16, padding: 20, gap: 4 },
-    btnTertiary: { backgroundColor: c.bgBase, borderRadius: 16, padding: 20, gap: 4, opacity: 0.85 },
+    btnTertiary: { backgroundColor: c.bgBase, borderRadius: 16, padding: 20, gap: 4, opacity: 0.85, borderWidth: 1 },
     btnSecondaryText: { color: c.text1, fontSize: 16, fontFamily: FONTS.extraBold },
     btnLeaderboard: {
       backgroundColor: c.bgBase, borderRadius: 16,

@@ -9,6 +9,7 @@ import { AdBanner } from '@/components/BannerAd';
 import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
+import { GAME_TYPE_LABELS, RULESET_LABELS, type GameType, type Ruleset } from '@/constants/gameModes';
 
 function formatTime(s: number) {
   const m = Math.floor(s / 60);
@@ -19,7 +20,12 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-type ModeFilter = 'normal' | 'hard';
+type StatsFilter = { gameType: GameType; gameMode: Ruleset };
+const FILTERS: StatsFilter[] = [
+  { gameType: 'connections', gameMode: 'normal' },
+  { gameType: 'connections', gameMode: 'hard' },
+  { gameType: 'word_trails', gameMode: 'classic' },
+];
 
 export function StatsScreen() {
   const colors = useColors();
@@ -29,7 +35,7 @@ export function StatsScreen() {
   const [sessions, setSessions] = useState<PlaySessionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState<PlaySessionItem | null>(null);
-  const [modeFilter, setModeFilter] = useState<ModeFilter>('normal');
+  const [modeFilter, setModeFilter] = useState<StatsFilter>(FILTERS[0]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -52,7 +58,7 @@ export function StatsScreen() {
     );
   }
 
-  const filtered = sessions.filter(s => s.gameMode === modeFilter);
+  const filtered = sessions.filter(s => s.gameType === modeFilter.gameType && s.gameMode === modeFilter.gameMode);
   const played = filtered.length;
   const won = filtered.filter(s => s.completed).length;
   const losses = played - won;
@@ -104,12 +110,26 @@ export function StatsScreen() {
             <Text style={styles.title}>Your Stats</Text>
 
             <View style={styles.modeToggle}>
-              <Pressable style={[styles.modeBtn, modeFilter === 'normal' && styles.modeBtnActive]} onPress={() => setModeFilter('normal')}>
-                <Text style={[styles.modeBtnText, modeFilter === 'normal' && styles.modeBtnTextActive]}>Normal</Text>
-              </Pressable>
-              <Pressable style={[styles.modeBtn, modeFilter === 'hard' && styles.modeBtnHardActive]} onPress={() => setModeFilter('hard')}>
-                <Text style={[styles.modeBtnText, modeFilter === 'hard' && styles.modeBtnTextActive]}>🔥 Hard</Text>
-              </Pressable>
+              {FILTERS.map(filter => {
+                const active = modeFilter.gameType === filter.gameType && modeFilter.gameMode === filter.gameMode;
+                const label = filter.gameType === 'connections'
+                  ? RULESET_LABELS[filter.gameMode]
+                  : GAME_TYPE_LABELS[filter.gameType];
+                return (
+                  <Pressable
+                    key={`${filter.gameType}-${filter.gameMode}`}
+                    style={[
+                      styles.modeBtn,
+                      active && styles.modeBtnActive,
+                      active && filter.gameMode === 'hard' && styles.modeBtnHardActive,
+                      active && filter.gameType === 'word_trails' && styles.modeBtnWordTrailsActive,
+                    ]}
+                    onPress={() => setModeFilter(filter)}
+                  >
+                    <Text style={[styles.modeBtnText, active && styles.modeBtnTextActive]}>{label}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
             <View style={styles.grid}>
@@ -165,7 +185,11 @@ export function StatsScreen() {
                 </View>
               ) : (
                 <Text style={styles.emptyHint}>
-                  {modeFilter === 'hard' ? 'No hard mode games yet. Enable hard mode in Settings.' : 'Play your first puzzle to see stats here.'}
+                  {modeFilter.gameType === 'word_trails'
+                    ? 'No Wordlines games yet.'
+                    : modeFilter.gameMode === 'hard'
+                      ? 'No hard mode games yet. Enable hard mode in Settings.'
+                      : 'Play your first puzzle to see stats here.'}
                 </Text>
               )}
             </View>
@@ -173,7 +197,11 @@ export function StatsScreen() {
             <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Recent Games</Text>
             {filtered.length === 0 && (
               <Text style={styles.emptyHint}>
-                {modeFilter === 'hard' ? 'No hard mode games recorded yet.' : 'No games recorded yet.'}
+                {modeFilter.gameType === 'word_trails'
+                  ? 'No Wordlines games recorded yet.'
+                  : modeFilter.gameMode === 'hard'
+                    ? 'No hard mode games recorded yet.'
+                    : 'No games recorded yet.'}
               </Text>
             )}
           </>
@@ -203,6 +231,7 @@ function makeStyles(c: ColorTheme) {
     modeBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
     modeBtnActive: { backgroundColor: c.text1 },
     modeBtnHardActive: { backgroundColor: c.purple },
+    modeBtnWordTrailsActive: { backgroundColor: c.blue },
     modeBtnText: { fontSize: 14, fontFamily: FONTS.bold, color: c.text2 },
     modeBtnTextActive: { color: c.bgScreen },
     grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },

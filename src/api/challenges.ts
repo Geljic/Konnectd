@@ -3,6 +3,14 @@ import type { CategoryColour } from '@/constants/colors';
 import { WEB_BASE_URL } from '@/constants/config';
 import { sendPushToUser } from '@/utils/notifications';
 import { useSettingsStore } from '@/store/settingsStore';
+import {
+  DEFAULT_CONNECTIONS_RULESET,
+  DEFAULT_GAME_TYPE,
+  normaliseGameType,
+  normaliseRuleset,
+  type GameType,
+  type Ruleset,
+} from '@/constants/gameModes';
 
 export interface Challenge {
   id: string;
@@ -11,6 +19,8 @@ export interface Challenge {
   challengerMistakes: number;
   challengerDuration: number;
   challengerSolvedOrder: CategoryColour[];
+  gameType: GameType;
+  gameMode: Ruleset;
   puzzleId: string;
   puzzleCollection: 'puzzles' | 'nyt_puzzles';
   puzzleLabel: string;
@@ -28,6 +38,7 @@ export interface Challenge {
 }
 
 function mapChallenge(r: Record<string, unknown>): Challenge {
+  const gameType = normaliseGameType(r.game_type);
   return {
     id: r.id as string,
     challenger: r.challenger as string,
@@ -35,6 +46,8 @@ function mapChallenge(r: Record<string, unknown>): Challenge {
     challengerMistakes: (r.challenger_mistakes as number) ?? 0,
     challengerDuration: (r.challenger_duration as number) ?? 0,
     challengerSolvedOrder: (r.challenger_solved_order as CategoryColour[]) ?? [],
+    gameType,
+    gameMode: normaliseRuleset(r.game_mode, gameType),
     puzzleId: r.puzzle_id as string,
     puzzleCollection: r.puzzle_collection as 'puzzles' | 'nyt_puzzles',
     puzzleLabel: (r.puzzle_label as string) || 'a puzzle',
@@ -95,6 +108,8 @@ export async function createChallenge(params: {
   durationSeconds: number;
   solvedOrder: CategoryColour[];
   score?: number;
+  gameType?: GameType;
+  gameMode?: Ruleset;
   recipientId?: string;
 }): Promise<Challenge | null> {
   if (!pb.authStore.isValid) return null;
@@ -110,6 +125,8 @@ export async function createChallenge(params: {
       challenger_duration: params.durationSeconds,
       challenger_solved_order: params.solvedOrder,
       challenger_score: params.score ?? null,
+      game_type: params.gameType ?? DEFAULT_GAME_TYPE,
+      game_mode: normaliseRuleset(params.gameMode ?? DEFAULT_CONNECTIONS_RULESET, params.gameType ?? DEFAULT_GAME_TYPE),
       puzzle_id: params.puzzleId,
       puzzle_collection: params.puzzleCollection,
       puzzle_label: params.puzzleLabel,

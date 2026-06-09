@@ -109,7 +109,7 @@ export async function fetchHeadToHead(friendId: string): Promise<HeadToHead | nu
   const myId = pb.authStore.model?.id!;
   try {
     const challenges = await pb.collection('challenges').getFullList({
-      filter: `((challenger = '${myId}' && opponent = '${friendId}') || (challenger = '${friendId}' && opponent = '${myId}')) && status = 'complete'`,
+      filter: `((challenger = '${myId}' && opponent = '${friendId}') || (challenger = '${friendId}' && opponent = '${myId}')) && game_type = 'connections' && status = 'complete'`,
       sort: '-created',
       requestKey: null,
     });

@@ -4,6 +4,7 @@ import { getPuzzleResult, getRemotePuzzleResult, type PuzzleResult } from '@/api
 import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
+import type { Ruleset } from '@/constants/gameModes';
 
 function formatTime(s: number) {
   const m = Math.floor(s / 60);
@@ -17,7 +18,7 @@ export interface GameResultModalProps {
   preloadedResult?: { durationSeconds: number; mistakes: number } | null;
   puzzleId?: string | null;
   score?: number | null;
-  gameMode?: 'normal' | 'hard' | null;
+  gameMode?: Ruleset | null;
   onClose: () => void;
   onPlayAgain?: () => void;
 }

@@ -21,7 +21,7 @@ NYT Connections is a solo daily ritual with bolted-on sharing. KonnectD is socia
 | 4 | Hints system + push notifications | 🚧 In progress |
 | 5 | Monetisation — cosmetics, first puzzle pack, subscription | 🔲 Next |
 | 6 | Blitz Mode — 90-second speed round, daily leaderboard | 🔲 Planned |
-| 7 | Codenames Duet — async co-op mode using existing friends graph | 🔲 Planned |
+| 7 | Wordlines — ordered word-trail mode + mode-aware stats/matches | 🔲 Planned |
 
 ---
 
@@ -39,15 +39,16 @@ KonnectD already has strong retention hooks (daily habit, streaks, co-streaks, s
 - Rewarded video for hints (opt-in, not intrusive)
 
 ### New mode order
-1. **Blitz Mode first** — zero new content required, re-uses all existing puzzles and infrastructure, ships fast, adds a daily leaderboard hook
-2. **Codenames Duet second** — the big social differentiator; async turn-based so no WebSockets needed; AI-generated word grids fit the existing puzzle pipeline
+1. **Wordlines first** — original single-player word-trail mode, instant to play at launch, gives the app a second daily loop without requiring friends to be online
+2. **Async co-op Wordlines second** — use the friends graph after the solo mode has proven the mechanic and built shared vocabulary
+3. **Blitz Mode later** — paused for now because clock-based leaderboards invite cheating
 
-### Why Codenames Duet over other variants
-- Existing social graph (friends system) makes it immediately playable at launch
-- Async turn-based fits PocketBase without real-time infrastructure changes
-- Genuinely different feel from Connections — co-op rather than solo/competitive
-- Mobile UX on the web version is poor — real opportunity to own this space
-- Content (25-word grids + clue maps) can be AI-generated like Connections puzzles
+### Why Wordlines over Codenames Duet for launch
+- Single-player is easier to launch: users can install, play, understand, and share without needing a friend already in the app
+- The mechanic is familiar but ownable: Connections asks "what belongs together?", Wordlines asks "what order do these ideas flow in?"
+- Ordered paths differentiate it from word ladders, phrase chains, and Connections clones
+- Curated content can ship immediately; AI generation can follow once the structure is proven
+- Async co-op becomes a future extension of the same mechanic rather than a separate Codenames-shaped feature
 
 ---
 
@@ -195,50 +196,57 @@ Ship **one cosmetic pack** + **Reward Video for Hints** + **One time purhase to 
 
 ---
 
-## Phase 7 — Codenames Duet Mode 🔲
+## Phase 7 — Wordlines Mode 🔲
 
 ### Concept
-Async co-op word association game for 2 players, built on the existing friends graph. Based on Codenames Duet mechanics: both players share a 5×5 grid of 25 words, each has a secret map of which words their partner needs to guess. One player gives a one-word clue + number, the other guesses. Win together or lose together.
+Single-player ordered word-path puzzle. The player sees 16 mixed words and must untangle 4 hidden trails of 4 words. Each trail is ordered: every word connects to the next by meaning, cause/effect, phrase, hierarchy, process, place, or story logic.
 
-### Why this over other variants
-- Existing friends system means instant social context at launch
-- Async turn-based = no real-time server needed (PocketBase handles it)
-- Genuinely different feel from Connections — co-op not competitive
-- Current mobile UX for Codenames Duet online is poor — opportunity to own the space
-- AI-generated word grids fit the existing Claude puzzle pipeline
+Example:
+- `SEED -> ROOT -> TREE -> FOREST`
+- `MATCH -> SPARK -> FIRE -> SMOKE`
+- `SCRIPT -> ACTOR -> STAGE -> APPLAUSE`
+- `COURT -> JUDGE -> VERDICT -> SENTENCE`
 
-### Architecture (async turn-based)
-No WebSockets needed. Each game is a `duet_games` record with:
-- `grid`: 25 words
-- `map_a`, `map_b`: each player's secret map (which words their partner must find)
-- `turns`: array of `{ player, clue, number, guesses[], result }`
-- `status`: waiting / in_progress / won / lost
-- `current_turn`: whose turn it is
+Connections asks "what belongs together?" Wordlines asks "what order do these ideas flow in?"
 
-PocketBase subscriptions notify the other player when a turn is played (same pattern as challenges). Push notification on your turn.
-Requires notification menu / icon at top right of home screen -> show notications and have bell with badge number of notifications. Then show game turns, challenges, friend requests etc
+### Launch content
+- 50 curated puzzles added in `src/data/wordTrailsPuzzles.ts`
+- Reusable creator/validation helpers added in `src/utils/wordTrails.ts` so future generator scripts can share the same schema
+- Each puzzle has:
+  - `id`
+  - `title`
+  - `difficulty` from 1-5
+  - four ordered `trails`
+  - per-trail `label` and `relation`
+- Every puzzle should contain 16 unique visible words
 
-### Content pipeline
-- Claude generates 25-word grids grouped into loose themes
-- Each grid has 9 words assigned to Player A, 9 to Player B, 3 shared (both must find), 1 assassin (instant loss if guessed)
-- Admin review queue (same pattern as Connections puzzles)
-- Difficulty: number of shared words + assassin placement
+### Rules
+- Select 4 words, then arrange them into the intended trail order
+- Correct trail locks in and reveals its relation label
+- Wrong set or wrong order costs a mistake
+- Difficulty rises through ambiguity, cross-associations, and less literal path logic
+- Share result differentiates Wordlines from Connections
 
-### Feature spec
-- New "Duet" section in Social hub or dedicated Duet tab
-- Start a game: pick a friend → they get notified → both see the grid
-- Each turn: give a clue (text input) + number → opponent sees clue and guesses
-- Codename map is hidden — you can see your assignments, not your partner's
-- Win condition: all green words found without hitting the assassin
-- Result screen: co-op style celebration, shared score
-- Match history on Friend Detail screen includes Duet games
+### Mode-aware stats and matches
+From this phase onward, every play session and challenge must include:
+- `game_type`: `connections`, `word_trails`, etc.
+- `game_mode`: ruleset within that game type (`normal`, `hard`, `classic`, etc.)
 
-### Phased delivery
-1. Core game loop (grid, maps, turn submission, guess logic)
-2. Push notifications on your turn
-3. Scoring + result screen
-4. Content pipeline + first puzzle set
-5. Match history integration
+This keeps future stats, leaderboards, match history, and challenge inboxes from mixing unrelated modes.
+
+### Backend changes
+- `play_sessions.game_type`
+- `play_sessions.game_mode` remains ruleset, not product-level mode
+- `challenges.game_type`
+- `challenges.game_mode`
+- Existing records backfill as `connections` / `normal`
+
+### Future async co-op extension
+Once the solo mode is proven, add co-op Wordlines using the existing friends graph:
+- One friend gives a clue for a hidden trail
+- The other friend tries to complete the trail
+- PocketBase subscriptions notify when it is your turn
+- Notification hub / bell badge should collect turns, challenges, and friend requests
 
 ---
 
@@ -255,8 +263,9 @@ Requires notification menu / icon at top right of home screen -> show notication
 | Co-streaks | ❌ | ❌ | ✅ |
 | Hints system | ❌ | Partial | 🚧 |
 | Push notifications | ❌ | ❌ | 🚧 |
-| Blitz mode | ❌ | ❌ | 🔲 |
-| Codenames Duet mode | ❌ | ❌ | 🔲 |
+| Blitz mode | ❌ | ❌ | Paused |
+| Wordlines ordered-path mode | ❌ | ❌ | 🔲 |
+| Async co-op mode | ❌ | ❌ | 🔲 |
 | Cosmetics / themes | ❌ | ❌ | 🔲 |
 | Australian content pack | ❌ | ❌ | 🔲 |
 | Branded image share | ❌ | ❌ | 🔲 |
