@@ -7,18 +7,18 @@ export const ADMOB_IDS = {
   android: {
     banner: __DEV__
       ? 'ca-app-pub-3940256099942544/6300978111'  // test ID
-      : 'ca-app-pub-REPLACE/REPLACE',
+      : 'ca-app-pub-3782046166009217/9915761889',
     rewarded: __DEV__
       ? 'ca-app-pub-3940256099942544/5224354917'  // test ID
-      : 'ca-app-pub-REPLACE/REPLACE',
+      : 'ca-app-pub-3782046166009217/4670837357',
   },
   ios: {
     banner: __DEV__
       ? 'ca-app-pub-3940256099942544/2934735716'  // test ID
-      : 'ca-app-pub-REPLACE/REPLACE',
+      : 'ca-app-pub-3782046166009217/3548493229',
     rewarded: __DEV__
       ? 'ca-app-pub-3940256099942544/1712485313'  // test ID
-      : 'ca-app-pub-REPLACE/REPLACE',
+      : 'ca-app-pub-3782046166009217/3513129350',
   },
 };
 
