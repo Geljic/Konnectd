@@ -59,7 +59,7 @@ export function WordlinesHelpModal({ visible, onClose }: { visible: boolean; onC
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.body}>
             <View style={styles.section}>
               <Text style={styles.rule}>Find four hidden ordered paths.</Text>
-              <Text style={styles.rule}>Tap four words <Text style={styles.bold}>in order</Text>, then hit <Text style={styles.bold}>Submit Steps</Text>.</Text>
+              <Text style={styles.rule}>Tap four words <Text style={styles.bold}>in order</Text>, then hit <Text style={styles.bold}>Submit</Text>.</Text>
               <Text style={styles.rule}>You get <Text style={styles.bold}>4 mistakes</Text> before the path closes.</Text>
               <Text style={styles.rule}>Right words but wrong order? You'll be told to reorder them.</Text>
             </View>
@@ -77,7 +77,7 @@ export function WordlinesHelpModal({ visible, onClose }: { visible: boolean; onC
                   </View>
                   <View style={styles.trailText}>
                     <View style={styles.trailLabelRow}>
-                      <Text style={styles.trailLabel}>{trail.label}</Text>
+                      <Text style={styles.trailLabel}>{trail.label.toUpperCase()}</Text>
                       <Text style={[styles.trailType, { color: trail.colour }]}>Ordered</Text>
                     </View>
                     <Text style={styles.trailWords}>{trail.words.join(' -> ')}</Text>
@@ -145,7 +145,7 @@ function makeStyles(c: ColorTheme) {
     swatch: { width: 52, height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
     trailText: { flex: 1, gap: 3 },
     trailLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    trailLabel: { fontSize: 15, fontFamily: FONTS.extraBold, color: c.text1 },
+    trailLabel: { fontSize: 15, fontFamily: FONTS.extraBold, color: c.text1, textTransform: 'uppercase' },
     trailType: { fontSize: 12, fontFamily: FONTS.extraBold, letterSpacing: 0.5, textTransform: 'uppercase' },
     trailWords: { fontSize: 13, fontFamily: FONTS.bold, color: c.text3, lineHeight: 18 },
     tipCard: { backgroundColor: c.bgBase, borderRadius: 16, padding: 16, gap: 8 },

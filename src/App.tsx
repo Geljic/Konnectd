@@ -28,6 +28,7 @@ import { LeaderboardScreen } from '@/screens/LeaderboardScreen';
 import { WordlinesGameScreen } from '@/screens/WordlinesGameScreen';
 import { WordlinesSelectScreen } from '@/screens/WordlinesSelectScreen';
 import { useColors } from '@/hooks/useColors';
+import type { GameType } from '@/constants/gameModes';
 import { WEB_BASE_URL } from '@/constants/config';
 
 export type AuthStackParamList = {
@@ -56,7 +57,7 @@ export type AppStackParamList = {
   ChallengesInbox: undefined;
   Friends: undefined;
   FriendDetail: { friendshipId: string; friendId: string; friendHandle: string; friendDisplayName: string };
-  Leaderboard: undefined;
+  Leaderboard: { gameType?: GameType } | undefined;
   WordlinesGame: {
     mode: 'daily' | 'random' | 'freeplay';
     puzzleId?: string;

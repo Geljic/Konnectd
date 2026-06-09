@@ -8,14 +8,24 @@ import {
   fetchFriendsLeaderboard, fetchGlobalLeaderboard, fetchHeadToHead,
   type LeaderboardEntry, type HeadToHead,
 } from '@/api/leaderboard';
+import { GAME_TYPE_LABELS, type GameType } from '@/constants/gameModes';
 import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { AppStackParamList } from '../App';
 
 const MEDAL = ['🥇', '🥈', '🥉'];
 type Tab = 'friends' | 'global';
+type Props = NativeStackScreenProps<AppStackParamList, 'Leaderboard'>;
 
-export function LeaderboardScreen() {
+function formatTime(s: number) {
+  const m = Math.floor(s / 60);
+  return `${m}:${(s % 60).toString().padStart(2, '0')}`;
+}
+
+export function LeaderboardScreen({ route }: Props) {
+  const gameType: GameType = route.params?.gameType ?? 'connections';
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -27,11 +37,11 @@ export function LeaderboardScreen() {
   const [h2h, setH2H] = useState<HeadToHead | null>(null);
   const [h2hLoading, setH2HLoading] = useState(false);
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => { loadAll(); }, [gameType]);
 
   async function loadAll() {
     setLoading(true);
-    const [friends, global] = await Promise.all([fetchFriendsLeaderboard(), fetchGlobalLeaderboard()]);
+    const [friends, global] = await Promise.all([fetchFriendsLeaderboard(gameType), fetchGlobalLeaderboard(gameType)]);
     setFriendsData(friends);
     setGlobalData(global);
     setLoading(false);
@@ -42,13 +52,14 @@ export function LeaderboardScreen() {
     setSelectedEntry(entry);
     setH2H(null);
     setH2HLoading(true);
-    const result = await fetchHeadToHead(entry.userId);
+    const result = await fetchHeadToHead(entry.userId, gameType);
     setH2H(result);
     setH2HLoading(false);
   }
 
   const data = tab === 'friends' ? friendsData : globalData;
   const myEntry = friendsData.find(e => e.isMe);
+  const modeLabel = GAME_TYPE_LABELS[gameType];
 
   function EntryRow({ item }: { item: LeaderboardEntry }) {
     const medal = item.rank <= 3 ? MEDAL[item.rank - 1] : null;
@@ -66,7 +77,11 @@ export function LeaderboardScreen() {
           <Text style={[styles.rowHandle, item.isMe && styles.rowHandleMe]} numberOfLines={1}>
             {item.handle}{item.isMe ? ' (you)' : ''}
           </Text>
-          <Text style={styles.rowSub}>{item.puzzlesWon}W · 🔥{item.streakCurrent}</Text>
+          <Text style={styles.rowSub}>
+            {gameType === 'word_trails'
+              ? `${item.puzzlesWon} solved${item.streakCurrent > 0 ? ` · best ${formatTime(item.streakCurrent)}` : ''}`
+              : `${item.puzzlesWon}W · 🔥${item.streakCurrent}`}
+          </Text>
         </View>
         <View style={styles.rowRight}>
           <Text style={styles.winRateText}>{item.winRate}%</Text>
@@ -79,6 +94,7 @@ export function LeaderboardScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       {/* Tab bar */}
+      <Text style={styles.title}>{modeLabel} Leaderboard</Text>
       <View style={styles.tabBar}>
         {(['friends', 'global'] as Tab[]).map(t => (
           <Pressable key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t)}>
@@ -95,7 +111,7 @@ export function LeaderboardScreen() {
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>{tab === 'friends' ? 'No friends yet' : 'Not enough data'}</Text>
           <Text style={styles.emptyBody}>
-            {tab === 'friends' ? 'Add friends to see how you compare.' : 'Play 10+ puzzles to appear on the global board.'}
+            {tab === 'friends' ? 'Add friends to see how you compare.' : gameType === 'word_trails' ? 'Complete a Next Steps puzzle to appear here.' : 'Play 10+ puzzles to appear on the global board.'}
           </Text>
         </View>
       ) : (
@@ -179,6 +195,7 @@ export function LeaderboardScreen() {
 function makeStyles(c: ColorTheme) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: c.bgScreen },
+    title: { fontSize: 20, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center', marginTop: 14 },
     tabBar: { flexDirection: 'row', margin: 16, marginBottom: 8, backgroundColor: c.bgBase, borderRadius: 12, padding: 4 },
     tab: { flex: 1, paddingVertical: 9, alignItems: 'center', borderRadius: 9 },
     tabActive: { backgroundColor: c.bgScreen },

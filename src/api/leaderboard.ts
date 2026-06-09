@@ -1,4 +1,5 @@
 import pb from './pb';
+import type { GameType } from '@/constants/gameModes';
 
 export interface LeaderboardEntry {
   userId: string;
@@ -41,7 +42,65 @@ function mapEntry(r: Record<string, unknown>, myId: string, rank: number): Leade
   };
 }
 
-export async function fetchFriendsLeaderboard(): Promise<LeaderboardEntry[]> {
+function sortEntries(entries: LeaderboardEntry[]): LeaderboardEntry[] {
+  return entries
+    .sort((a, b) => {
+      if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+      if (b.puzzlesWon !== a.puzzlesWon) return b.puzzlesWon - a.puzzlesWon;
+      return b.streakCurrent - a.streakCurrent;
+    })
+    .map((e, i) => ({ ...e, rank: i + 1 }));
+}
+
+function mapSessionEntries(
+  sessions: Record<string, unknown>[],
+  users: Record<string, unknown>[],
+  myId: string,
+): LeaderboardEntry[] {
+  const stats = new Map<string, { played: number; won: number; bestTime: number }>();
+  sessions.forEach(session => {
+    const userId = session['user'] as string | undefined;
+    if (!userId) return;
+    const current = stats.get(userId) ?? { played: 0, won: 0, bestTime: Number.MAX_SAFE_INTEGER };
+    current.played += 1;
+    if (session['completed']) {
+      current.won += 1;
+      current.bestTime = Math.min(current.bestTime, (session['duration_seconds'] as number) || Number.MAX_SAFE_INTEGER);
+    }
+    stats.set(userId, current);
+  });
+
+  return sortEntries(users.map((user, index) => {
+    const displayName = (user['display_name'] as string) || (user['name'] as string) || 'Unknown';
+    const tag = (user['username_tag'] as number) || null;
+    const userStats = stats.get(user['id'] as string) ?? { played: 0, won: 0, bestTime: Number.MAX_SAFE_INTEGER };
+    return {
+      userId: user['id'] as string,
+      displayName,
+      handle: tag ? `${displayName}#${tag}` : displayName,
+      rank: index + 1,
+      winRate: userStats.played > 0 ? Math.round((userStats.won / userStats.played) * 100) : 0,
+      puzzlesWon: userStats.won,
+      puzzlesPlayed: userStats.played,
+      streakCurrent: userStats.bestTime === Number.MAX_SAFE_INTEGER ? 0 : userStats.bestTime,
+      streakBest: 0,
+      isMe: user['id'] === myId,
+    };
+  }).filter(entry => entry.puzzlesPlayed > 0 || entry.isMe));
+}
+
+async function fetchUserRecords(ids: string[]): Promise<Record<string, unknown>[]> {
+  if (ids.length === 0) return [];
+  const idFilter = ids.map(id => `id = '${id}'`).join(' || ');
+  const users = await pb.collection('users').getFullList({
+    filter: idFilter,
+    fields: 'id,display_name,name,username_tag,puzzles_played,puzzles_won,streak_current,streak_best',
+    requestKey: null,
+  });
+  return users as unknown as Record<string, unknown>[];
+}
+
+export async function fetchFriendsLeaderboard(gameType: GameType = 'connections'): Promise<LeaderboardEntry[]> {
   if (!pb.authStore.isValid) return [];
   const myId = pb.authStore.model?.id!;
   try {
@@ -57,32 +116,44 @@ export async function fetchFriendsLeaderboard(): Promise<LeaderboardEntry[]> {
     // Include myself in the leaderboard
     const allIds = [myId, ...friendIds];
     if (allIds.length === 0) return [];
+    if (gameType === 'word_trails') {
+      const idFilter = allIds.map(id => `user = '${id}'`).join(' || ');
+      const [sessions, users] = await Promise.all([
+        pb.collection('play_sessions').getFullList({
+          filter: `(${idFilter}) && game_type = 'word_trails'`,
+          fields: 'user,completed,duration_seconds,mistakes',
+          requestKey: null,
+        }),
+        fetchUserRecords(allIds),
+      ]);
+      return mapSessionEntries(sessions as unknown as Record<string, unknown>[], users, myId);
+    }
     // Fetch all user records in one query
-    const idFilter = allIds.map(id => `id = '${id}'`).join(' || ');
-    const users = await pb.collection('users').getFullList({
-      filter: idFilter,
-      fields: 'id,display_name,name,username_tag,puzzles_played,puzzles_won,streak_current,streak_best',
-      requestKey: null,
-    });
+    const users = await fetchUserRecords(allIds);
     // Sort by win rate desc, then total wins, then streak
-    const sorted = users
+    return sortEntries(users
       .map(u => mapEntry(u as unknown as Record<string, unknown>, myId, 0))
-      .sort((a, b) => {
-        if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-        if (b.puzzlesWon !== a.puzzlesWon) return b.puzzlesWon - a.puzzlesWon;
-        return b.streakCurrent - a.streakCurrent;
-      });
-    return sorted.map((e, i) => ({ ...e, rank: i + 1 }));
+    );
   } catch (e) {
     console.error('[fetchFriendsLeaderboard] error:', e);
     return [];
   }
 }
 
-export async function fetchGlobalLeaderboard(): Promise<LeaderboardEntry[]> {
+export async function fetchGlobalLeaderboard(gameType: GameType = 'connections'): Promise<LeaderboardEntry[]> {
   if (!pb.authStore.isValid) return [];
   const myId = pb.authStore.model?.id!;
   try {
+    if (gameType === 'word_trails') {
+      const sessions = await pb.collection('play_sessions').getFullList({
+        filter: `game_type = 'word_trails'`,
+        fields: 'user,completed,duration_seconds,mistakes',
+        requestKey: null,
+      });
+      const userIds = Array.from(new Set(sessions.map(s => s['user'] as string).filter(Boolean))).slice(0, 100);
+      const users = await fetchUserRecords(userIds);
+      return mapSessionEntries(sessions as unknown as Record<string, unknown>[], users, myId).slice(0, 100);
+    }
     // Fetch top 100 by wins with min 10 played — sort client-side by win rate
     const result = await pb.collection('users').getList(1, 100, {
       filter: 'puzzles_played >= 10',
@@ -90,26 +161,21 @@ export async function fetchGlobalLeaderboard(): Promise<LeaderboardEntry[]> {
       fields: 'id,display_name,name,username_tag,puzzles_played,puzzles_won,streak_current,streak_best',
       requestKey: null,
     });
-    const sorted = result.items
+    return sortEntries(result.items
       .map(u => mapEntry(u as unknown as Record<string, unknown>, myId, 0))
-      .sort((a, b) => {
-        if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-        if (b.puzzlesWon !== a.puzzlesWon) return b.puzzlesWon - a.puzzlesWon;
-        return b.streakCurrent - a.streakCurrent;
-      });
-    return sorted.map((e, i) => ({ ...e, rank: i + 1 }));
+    );
   } catch (e) {
     console.error('[fetchGlobalLeaderboard] error:', e);
     return [];
   }
 }
 
-export async function fetchHeadToHead(friendId: string): Promise<HeadToHead | null> {
+export async function fetchHeadToHead(friendId: string, gameType: GameType = 'connections'): Promise<HeadToHead | null> {
   if (!pb.authStore.isValid) return null;
   const myId = pb.authStore.model?.id!;
   try {
     const challenges = await pb.collection('challenges').getFullList({
-      filter: `((challenger = '${myId}' && opponent = '${friendId}') || (challenger = '${friendId}' && opponent = '${myId}')) && game_type = 'connections' && status = 'complete'`,
+      filter: `((challenger = '${myId}' && opponent = '${friendId}') || (challenger = '${friendId}' && opponent = '${myId}')) && game_type = '${gameType}' && status = 'complete'`,
       sort: '-created',
       requestKey: null,
     });

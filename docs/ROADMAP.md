@@ -298,3 +298,17 @@ Once the solo mode is proven, add co-op Next Steps using the existing friends gr
 # Known Bugs
 - When you click challenge again you then select a puzzle - it then loads the puzzle and looks like you can play before the screen changes too "Still waiting…
 Your opponent hasn't accepted yet."
+
+- I really like the garden pop theme you made- maybe it should be default instead - thoughts? the dark mode looks better than classic for sure
+
+- Next Steps game Logo - make a 4th node in the logo and use the colours from Groups for each step and apply that to free play difficulty filter button colours too - thoughts on this colour change? 
+
+- Next Steps - when you win a game buttons overlap on each other - follow groups/connections screen more closely
+- When you look at a completed game the modal is missing your score and the 'Play Again' button on dark mode is white on white text
+-When you finish a game of next steps the score goes down because the timer does not stop
+- next Steps game not saving in stats screen - no recent matches or wins etc
+- What game you select when you go home stay on that game
+
+- Friends screen - Match history should include both game types and have a pill so you know which game mode it was on the match itself - also if i have matches with that friend on consequtive days - that's a dtreak and should have fire icon on my friend. If we have the most matches played between each other then we are best friends, if they win more than me by 3 games they are my nemisis - 
+
+how hard would it be to implement challenge mode for next steps game mode?

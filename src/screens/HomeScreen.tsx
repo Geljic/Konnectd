@@ -10,11 +10,20 @@ import { useAuthStore } from '@/store/authStore';
 import { useGuestGuard } from '@/hooks/useGuestGuard';
 import { KonnectLogo } from '@/components/KonnectLogo';
 import { AdBanner } from '@/components/BannerAd';
+import { GameResultModal } from '@/components/GameResultModal';
 import { fetchMyChallenges, subscribeToChallengeChanges, isMine } from '@/api/challenges';
+import { fetchDailyPuzzle, getCompletedPuzzleIds } from '@/api/puzzles';
+import { WORD_TRAILS_PUZZLES } from '@/data/wordTrailsPuzzles';
+import { getDailyWordTrailsPuzzle, getWordTrailsResult } from '@/utils/wordTrails';
 import type { AppStackParamList } from '../App';
 
 type Props = { navigation: NativeStackNavigationProp<AppStackParamList, 'Home'> };
 type HomeGameType = 'connections' | 'word_trails';
+type CompletedDailyModal = {
+  label: string;
+  puzzleId?: string;
+  preloadedResult?: { durationSeconds: number; mistakes: number };
+};
 
 function BarChartIcon({ color }: { color: string }) {
   return (
@@ -70,6 +79,8 @@ export function HomeScreen({ navigation }: Props) {
   const { isGuest, guardAction } = useGuestGuard();
   const [openChallengeCount, setOpenChallengeCount] = useState(0);
   const [selectedGame, setSelectedGame] = useState<HomeGameType>('connections');
+  const [dailyDone, setDailyDone] = useState<Record<HomeGameType, boolean>>({ connections: false, word_trails: false });
+  const [completedDaily, setCompletedDaily] = useState<CompletedDailyModal | null>(null);
   const actionAnim = useRef(new Animated.Value(1)).current;
 
   const refreshOpenChallengeCount = useCallback(() => {
@@ -81,6 +92,23 @@ export function HomeScreen({ navigation }: Props) {
   useEffect(() => {
     refreshOpenChallengeCount();
   }, [refreshOpenChallengeCount]);
+
+  const refreshDailyDone = useCallback(async () => {
+    const groupsDaily = await fetchDailyPuzzle();
+    const groupsCompleted = groupsDaily ? (await getCompletedPuzzleIds()).has(groupsDaily.id) : false;
+    const stepsDaily = getDailyWordTrailsPuzzle(WORD_TRAILS_PUZZLES);
+    const stepsResult = await getWordTrailsResult(stepsDaily.id);
+    setDailyDone({
+      connections: groupsCompleted,
+      word_trails: !!stepsResult?.completed,
+    });
+  }, []);
+
+  useEffect(() => {
+    refreshDailyDone();
+    const unsubscribe = navigation.addListener('focus', refreshDailyDone);
+    return unsubscribe;
+  }, [navigation, refreshDailyDone]);
 
   useEffect(() => {
     if (isGuest) return;
@@ -120,6 +148,35 @@ export function HomeScreen({ navigation }: Props) {
   const gameAccent = selectedGame === 'connections' ? colors.tileStrip : colors.blue;
   const gamePrimaryBg = selectedGame === 'connections' ? colors.text1 : colors.blue;
   const gameSecondaryBg = selectedGame === 'connections' ? colors.bgBase : colors.bgSurface;
+  const selectedDailyDone = dailyDone[selectedGame];
+
+  async function handleDailyPress() {
+    if (selectedGame === 'connections') {
+      const daily = await fetchDailyPuzzle();
+      if (!daily) {
+        navigation.navigate('Game', { mode: 'daily' });
+        return;
+      }
+      const completed = (await getCompletedPuzzleIds()).has(daily.id);
+      if (completed) {
+        setCompletedDaily({ label: 'Daily Groups', puzzleId: daily.id });
+      } else {
+        navigation.navigate('Game', { mode: 'daily' });
+      }
+      return;
+    }
+
+    const daily = getDailyWordTrailsPuzzle(WORD_TRAILS_PUZZLES);
+    const result = await getWordTrailsResult(daily.id);
+    if (result?.completed) {
+      setCompletedDaily({
+        label: `Next Steps · ${daily.title}`,
+        preloadedResult: { durationSeconds: result.durationSeconds, mistakes: result.mistakes },
+      });
+    } else {
+      navigation.navigate('WordlinesGame', { mode: 'daily' });
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -220,15 +277,13 @@ export function HomeScreen({ navigation }: Props) {
           <Animated.View style={[styles.actionPanel, actionPanelStyle]}>
             <Pressable
               style={[styles.btnPrimary, { backgroundColor: gamePrimaryBg }]}
-              onPress={() => selectedGame === 'connections'
-                ? navigation.navigate('Game', { mode: 'daily' })
-                : navigation.navigate('WordlinesGame', { mode: 'daily' })}
+              onPress={handleDailyPress}
             >
               <Text style={[styles.btnLabel, { color: selectedGame === 'connections' ? colors.tileStrip : colors.bgScreen }]}>
-                {selectedGame === 'connections' ? 'DAILY GROUPS' : 'DAILY STEPS'}
+                {selectedDailyDone ? 'COMPLETED' : selectedGame === 'connections' ? 'DAILY GROUPS' : 'DAILY STEPS'}
               </Text>
               <Text style={styles.btnPrimaryText}>
-                {selectedGame === 'connections' ? "Play today's puzzle" : "Find today's path"}
+                {selectedDailyDone ? "View today's result" : selectedGame === 'connections' ? "Play today's puzzle" : "Find today's path"}
               </Text>
             </Pressable>
 
@@ -260,11 +315,11 @@ export function HomeScreen({ navigation }: Props) {
             <Pressable
               style={[styles.btnLeaderboard, selectedGame === 'word_trails' && { borderColor: gameAccent }]}
               onPress={() => selectedGame === 'connections'
-                ? guardAction(() => navigation.navigate('Leaderboard'))
-                : navigation.navigate('Stats')}
+                ? guardAction(() => navigation.navigate('Leaderboard', { gameType: 'connections' }))
+                : guardAction(() => navigation.navigate('Leaderboard', { gameType: 'word_trails' }))}
             >
               <Text style={styles.btnLeaderboardText}>
-                {selectedGame === 'connections' ? '🏆  Leaderboard' : 'Next Steps stats'}
+                🏆  Leaderboard
               </Text>
             </Pressable>
           </Animated.View>
@@ -297,6 +352,14 @@ export function HomeScreen({ navigation }: Props) {
         </View>
         <AdBanner />
       </View>
+      <GameResultModal
+        visible={!!completedDaily}
+        label={completedDaily?.label ?? ''}
+        puzzleId={completedDaily?.puzzleId ?? null}
+        preloadedResult={completedDaily?.preloadedResult ?? null}
+        gameMode={selectedGame === 'word_trails' ? 'classic' : null}
+        onClose={() => setCompletedDaily(null)}
+      />
     </SafeAreaView>
   );
 }

@@ -108,3 +108,14 @@ export async function getCompletedWordTrailsIds(): Promise<Set<string>> {
     return new Set();
   }
 }
+
+export async function getWordTrailsResult(puzzleId: string): Promise<WordTrailsResult | null> {
+  try {
+    const raw = await AsyncStorage.getItem(WORD_TRAILS_RESULTS_KEY);
+    if (!raw) return null;
+    const map: Record<string, WordTrailsResult> = JSON.parse(raw);
+    return map[puzzleId] ?? null;
+  } catch {
+    return null;
+  }
+}

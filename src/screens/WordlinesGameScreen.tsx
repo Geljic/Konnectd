@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import { Animated, View, Text, Pressable, StyleSheet, useWindowDimensions, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Line } from 'react-native-svg';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -19,11 +19,17 @@ import { MAX_MISTAKES } from '@/constants/config';
 import { useSound } from '@/hooks/useSound';
 import { MistakeDots } from '@/components/MistakeDots';
 import { WordlinesHelpModal } from '@/components/WordlinesHelpModal';
+import { GameResultModal } from '@/components/GameResultModal';
+import { Confetti } from '@/components/Confetti';
 import { STRIP_CONFIG, useSettingsStore, type TileStripStyle } from '@/store/settingsStore';
 import type { AppStackParamList } from '../App';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'WordlinesGame'>;
 type GameStatus = 'playing' | 'won' | 'lost';
+type StepHint = 'same_path' | 'next_step' | 'path_label';
+
+const MAX_STEP_HINTS = 3;
+const HINT_PENALTY = 75;
 
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60);
@@ -121,6 +127,7 @@ function WordlineTile({
   disabled,
   status,
   shuffleSignal,
+  shuffleDelay,
   onPress,
   colors,
   styles,
@@ -130,6 +137,7 @@ function WordlineTile({
   disabled: boolean;
   status: GameStatus;
   shuffleSignal: number;
+  shuffleDelay: number;
   onPress: () => void;
   colors: ColorTheme;
   styles: ReturnType<typeof makeStyles>;
@@ -139,6 +147,8 @@ function WordlineTile({
   const bob = useRef(new Animated.Value(0)).current;
   const faceScale = useRef(new Animated.Value(1)).current;
   const shuffleKick = useRef(new Animated.Value(0)).current;
+  const shuffleScale = useRef(new Animated.Value(1)).current;
+  const shuffleRotate = useRef(new Animated.Value(0)).current;
   const stripCfg = useSettingsStore((s: { tileStripStyle: TileStripStyle }) => STRIP_CONFIG[s.tileStripStyle]);
   const selected = selectedIndex >= 0;
 
@@ -183,11 +193,24 @@ function WordlineTile({
   useEffect(() => {
     if (shuffleSignal === 0) return;
     shuffleKick.setValue(0);
-    Animated.sequence([
-      Animated.timing(shuffleKick, { toValue: 1, duration: 85, useNativeDriver: true }),
-      Animated.spring(shuffleKick, { toValue: 0, useNativeDriver: true, friction: 5, tension: 140 }),
-    ]).start();
-  }, [shuffleKick, shuffleSignal]);
+    const timeout = setTimeout(() => {
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(shuffleKick, { toValue: 1, duration: 75, useNativeDriver: true }),
+          Animated.spring(shuffleKick, { toValue: 0, useNativeDriver: true, friction: 5, tension: 140 }),
+        ]),
+        Animated.sequence([
+          Animated.timing(shuffleScale, { toValue: 0.72, duration: 75, useNativeDriver: true }),
+          Animated.spring(shuffleScale, { toValue: 1, useNativeDriver: true, friction: 7, tension: 180 }),
+        ]),
+        Animated.sequence([
+          Animated.timing(shuffleRotate, { toValue: faceIndex % 2 === 0 ? 8 : -8, duration: 75, useNativeDriver: true }),
+          Animated.spring(shuffleRotate, { toValue: 0, useNativeDriver: true, friction: 8, tension: 180 }),
+        ]),
+      ]).start();
+    }, shuffleDelay);
+    return () => clearTimeout(timeout);
+  }, [faceIndex, shuffleDelay, shuffleKick, shuffleRotate, shuffleScale, shuffleSignal]);
 
   const expression = status === 'lost' ? 'sad' : selected ? 'selected' : 'idle';
   const faceColor = colors.categoryText;
@@ -199,6 +222,17 @@ function WordlineTile({
           styles.tile,
           selected && styles.tileSelected,
           status === 'lost' && styles.tileLost,
+          {
+            transform: [
+              { scale: shuffleScale },
+              {
+                rotate: shuffleRotate.interpolate({
+                  inputRange: [-8, 0, 8],
+                  outputRange: ['-8deg', '0deg', '8deg'],
+                }),
+              },
+            ],
+          },
         ]}
       >
         <View style={[styles.faceStrip, { backgroundColor: colors.tileStrip, height: stripCfg.height }]}>
@@ -227,7 +261,7 @@ function WordlineTile({
             adjustsFontSizeToFit
             minimumFontScale={0.72}
           >
-            {word}
+            {word.toUpperCase()}
           </Text>
         </View>
       </Animated.View>
@@ -254,6 +288,10 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
   const [message, setMessage] = useState('Tap four words in step order.');
   const [elapsed, setElapsed] = useState(0);
   const [helpVisible, setHelpVisible] = useState(false);
+  const [hintVisible, setHintVisible] = useState(false);
+  const [hintText, setHintText] = useState<string | null>(null);
+  const [hintsUsed, setHintsUsed] = useState(0);
+  const [resultVisible, setResultVisible] = useState(false);
   const [shuffleSignal, setShuffleSignal] = useState(0);
   const startedAt = useRef(Date.now());
   const recorded = useRef(false);
@@ -268,7 +306,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
     recorded.current = true;
     const durationSeconds = Math.max(1, Math.floor((Date.now() - startedAt.current) / 1000));
     const completed = status === 'won';
-    const score = completed ? Math.max(0, 1200 - mistakes * 100 - durationSeconds * 2) : undefined;
+    const score = completed ? Math.max(0, 1200 - mistakes * 100 - durationSeconds * 2 - hintsUsed * HINT_PENALTY) : undefined;
     void markWordTrailsCompleted(puzzle.id, {
       completed,
       mistakes,
@@ -285,7 +323,11 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
       gameMode: 'classic',
       score,
     }).catch(e => console.error('[WordlinesGameScreen] record session error:', e));
-  }, [mistakes, puzzle.id, solvedTrails, status]);
+    if (status === 'won') {
+      const timeout = setTimeout(() => setResultVisible(true), 700);
+      return () => clearTimeout(timeout);
+    }
+  }, [hintsUsed, mistakes, puzzle.id, solvedTrails, status]);
 
   function toggleWord(word: string) {
     if (status !== 'playing') return;
@@ -309,7 +351,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
       setSolvedTrails(solved);
       setBoardWords(boardWords.filter(word => !exactTrail.words.includes(word)));
       setSelectedWords([]);
-      setMessage(exactTrail.label);
+      setMessage(exactTrail.label.toUpperCase());
       if (solved.length === 4) {
         sound.play('win');
         setStatus('won');
@@ -328,6 +370,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
     setMessage(sameSetTrail ? 'Right words, wrong order.' : 'Those steps do not connect.');
     if (nextMistakes >= MAX_MISTAKES) {
       sound.play('lose');
+      setBoardWords([]);
       setStatus('lost');
     }
   }
@@ -340,7 +383,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
   function handleShuffle() {
     if (status !== 'playing') return;
     setShuffleSignal(s => s + 1);
-    setTimeout(() => setBoardWords(words => shuffle(words)), 110);
+    setTimeout(() => setBoardWords(words => shuffle(words)), 160);
   }
 
   function handleBack() {
@@ -348,11 +391,46 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
     else navigation.navigate('Home');
   }
 
+  function useStepHint(kind: StepHint) {
+    if (status !== 'playing' || hintsUsed >= MAX_STEP_HINTS) return;
+    const unsolved = puzzle.trails.filter(trail => !solvedTrails.includes(trail));
+    if (unsolved.length === 0) return;
+    let text = '';
+
+    if (kind === 'same_path') {
+      if (selectedWords.length === 0) {
+        text = 'Select a word first, then this hint will count how many selected words share a path.';
+      } else {
+        const best = Math.max(...unsolved.map(trail => selectedWords.filter(word => trail.words.includes(word)).length));
+        text = best === selectedWords.length
+          ? `All ${selectedWords.length} selected word${selectedWords.length === 1 ? '' : 's'} share one path.`
+          : `${best} of your selected words share one path.`;
+      }
+    } else if (kind === 'next_step') {
+      const selectedTrail = unsolved.find(trail => selectedWords.some(word => trail.words.includes(word))) ?? unsolved[0];
+      const anchor = selectedWords.find(word => selectedTrail.words.includes(word)) ?? selectedTrail.words[0];
+      const anchorIndex = selectedTrail.words.indexOf(anchor);
+      const next = selectedTrail.words[Math.min(anchorIndex + 1, selectedTrail.words.length - 1)];
+      text = anchor === next
+        ? `${anchor.toUpperCase()} is the final step in one path.`
+        : `${next.toUpperCase()} comes after ${anchor.toUpperCase()} in one path.`;
+    } else {
+      const trail = unsolved[0];
+      text = `One hidden path is: ${trail.label.toUpperCase()}.`;
+    }
+
+    setHintsUsed(count => count + 1);
+    setHintText(text);
+    setHintVisible(false);
+  }
+
   const remainingMistakes = Math.max(0, MAX_MISTAKES - mistakes);
+  const displayTrails = status === 'lost' ? puzzle.trails : solvedTrails;
   const rows: string[][] = [];
   for (let i = 0; i < boardWords.length; i += 4) {
     rows.push(boardWords.slice(i, i + 4));
   }
+  while (rows.length < 4) rows.push([]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -377,10 +455,10 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
           </Pressable>
         </View>
 
-        {solvedTrails.length > 0 && (
+        {displayTrails.length > 0 && (
           <View style={styles.solvedStack}>
-            {solvedTrails.map((trail, index) => (
-              <View key={trail.label} style={[styles.solvedTrail, { borderLeftColor: trailColors[index] }]}>
+            {displayTrails.map((trail, index) => (
+              <View key={trail.label} style={[styles.solvedTrail, status === 'lost' && styles.solvedTrailRevealed, { borderLeftColor: trailColors[index] }]}>
                 <Text style={styles.solvedLabel}>{trail.label}</Text>
                 <Text style={styles.solvedWords} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>
                   {trail.words.join(' -> ')}
@@ -394,74 +472,125 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
           <Text style={styles.messageText}>{status === 'won' ? 'All paths solved.' : status === 'lost' ? 'Path closed.' : message}</Text>
         </View>
 
-        {status === 'lost' && (
-          <View style={styles.answers}>
-            {puzzle.trails.filter(t => !solvedTrails.includes(t)).map(trail => (
-              <Text key={trail.label} style={styles.answerLine}>{trail.words.join(' -> ')}</Text>
+        {hintText && status === 'playing' && (
+          <Pressable style={styles.hintBanner} onPress={() => setHintText(null)}>
+            <Text style={styles.hintBannerText}>{hintText}</Text>
+            <Text style={styles.hintBannerSub}>Tap to dismiss</Text>
+          </Pressable>
+        )}
+
+        {status === 'playing' && (
+          <View style={styles.board}>
+            {rows.map((row, rowIndex) => (
+              <View key={rowIndex} style={styles.gridRow}>
+                {row.map((word, colIndex) => {
+                  const selectedIndex = selectedWords.indexOf(word);
+                  return (
+                    <WordlineTile
+                      key={word}
+                      word={word}
+                      selectedIndex={selectedIndex}
+                      disabled={status !== 'playing'}
+                      status={status}
+                      shuffleSignal={shuffleSignal}
+                      shuffleDelay={(rowIndex * 4 + colIndex) * 12}
+                      onPress={() => toggleWord(word)}
+                      colors={colors}
+                      styles={styles}
+                    />
+                  );
+                })}
+                {row.length < 4 && Array.from({ length: 4 - row.length }).map((_, fillerIndex) => (
+                  <View key={`empty-${rowIndex}-${fillerIndex}`} style={styles.tilePressable} />
+                ))}
+              </View>
             ))}
           </View>
         )}
 
-        <View style={styles.board}>
-          {rows.map((row, rowIndex) => (
-            <View key={rowIndex} style={styles.gridRow}>
-              {row.map(word => {
-                const selectedIndex = selectedWords.indexOf(word);
-                return (
-                  <WordlineTile
-                    key={word}
-                    word={word}
-                    selectedIndex={selectedIndex}
-                    disabled={status !== 'playing'}
-                    status={status}
-                    shuffleSignal={shuffleSignal}
-                    onPress={() => toggleWord(word)}
-                    colors={colors}
-                    styles={styles}
-                  />
-                );
-              })}
-              {row.length < 4 && Array.from({ length: 4 - row.length }).map((_, fillerIndex) => (
-                <View key={`empty-${rowIndex}-${fillerIndex}`} style={styles.tilePressable} />
-              ))}
-            </View>
-          ))}
-        </View>
-
         <View style={styles.mistakesWrap}>
           <MistakeDots mistakes={mistakes} />
+
+          {status === 'playing' ? (
+            <>
+              <View style={styles.actions}>
+                <Pressable style={styles.btnSecondary} onPress={handleShuffle} disabled={status !== 'playing'}>
+                  <Text style={styles.btnSecondaryText}>Shuffle</Text>
+                </Pressable>
+                <Pressable style={styles.btnSecondary} onPress={resetSelection} disabled={status !== 'playing'}>
+                  <Text style={styles.btnSecondaryText}>Deselect</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.btnSubmit, selectedWords.length !== 4 && styles.btnSubmitDisabled]}
+                  onPress={submitTrail}
+                  disabled={status !== 'playing' || selectedWords.length !== 4}
+                >
+                  <Text style={styles.btnSubmitText}>Submit</Text>
+                </Pressable>
+              </View>
+              <Pressable
+                style={[styles.btnHint, hintsUsed >= MAX_STEP_HINTS && styles.btnHintDisabled]}
+                onPress={() => setHintVisible(true)}
+                disabled={hintsUsed >= MAX_STEP_HINTS}
+              >
+                <Text style={styles.btnHintText}>Hint {MAX_STEP_HINTS - hintsUsed} left · -{HINT_PENALTY} pts</Text>
+              </Pressable>
+            </>
+          ) : (
+            <View style={styles.actions}>
+              <Pressable style={styles.btnSecondary} onPress={() => navigation.navigate('Home')}>
+                <Text style={styles.btnSecondaryText}>Home</Text>
+              </Pressable>
+              <Pressable style={styles.btnSubmit} onPress={() => navigation.replace('WordlinesGame', { mode: 'random' })}>
+                <Text style={styles.btnSubmitText}>Random Next</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
-
-        {status === 'playing' && (
-          <View style={styles.actions}>
-            <Pressable style={styles.secondaryBtn} onPress={handleShuffle}>
-              <Text style={styles.secondaryBtnText}>Shuffle</Text>
-            </Pressable>
-            <Pressable style={styles.secondaryBtn} onPress={resetSelection}>
-              <Text style={styles.secondaryBtnText}>Clear</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.primaryBtn, selectedWords.length !== 4 && styles.primaryBtnDisabled]}
-              onPress={submitTrail}
-              disabled={selectedWords.length !== 4}
-            >
-              <Text style={styles.primaryBtnText}>Submit Steps</Text>
-            </Pressable>
-          </View>
-        )}
-
-        {status !== 'playing' && (
-          <View style={styles.endActions}>
-            <Pressable style={styles.secondaryBtn} onPress={() => navigation.navigate('Home')}>
-              <Text style={styles.secondaryBtnText}>Home</Text>
-            </Pressable>
-            <Pressable style={styles.primaryBtn} onPress={() => navigation.replace('WordlinesGame', { mode: 'random' })}>
-              <Text style={styles.primaryBtnText}>Random Next</Text>
-            </Pressable>
-          </View>
-        )}
       </View>
+      <Confetti active={status === 'won'} />
       <WordlinesHelpModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
+      <Modal visible={hintVisible} transparent animationType="fade" onRequestClose={() => setHintVisible(false)}>
+        <Pressable style={styles.hintOverlay} onPress={() => setHintVisible(false)}>
+          <Pressable style={styles.hintSheet} onPress={e => e.stopPropagation()}>
+            <Text style={styles.hintTitle}>Use a Hint</Text>
+            <Text style={styles.hintSub}>{MAX_STEP_HINTS - hintsUsed} hint{MAX_STEP_HINTS - hintsUsed === 1 ? '' : 's'} remaining · -{HINT_PENALTY} pts each</Text>
+            <Pressable style={styles.hintOption} onPress={() => useStepHint('same_path')}>
+              <Text style={styles.hintOptionTitle}>Warm / Cold</Text>
+              <Text style={styles.hintOptionDesc}>Count how many selected words share a path.</Text>
+            </Pressable>
+            <Pressable style={styles.hintOption} onPress={() => useStepHint('next_step')}>
+              <Text style={styles.hintOptionTitle}>Next Step</Text>
+              <Text style={styles.hintOptionDesc}>Reveal one word that follows a selected word.</Text>
+            </Pressable>
+            <Pressable style={styles.hintOption} onPress={() => useStepHint('path_label')}>
+              <Text style={styles.hintOptionTitle}>Path Peek</Text>
+              <Text style={styles.hintOptionDesc}>Reveal one hidden path label.</Text>
+            </Pressable>
+            <Pressable style={styles.hintCancel} onPress={() => setHintVisible(false)}>
+              <Text style={styles.hintCancelText}>Cancel</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <GameResultModal
+        visible={resultVisible}
+        label={`Next Steps · ${puzzle.title}`}
+        preloadedResult={{
+          durationSeconds: Math.max(1, Math.floor((Date.now() - startedAt.current) / 1000)),
+          mistakes,
+        }}
+        score={status === 'won' ? Math.max(0, 1200 - mistakes * 100 - elapsed * 2 - hintsUsed * HINT_PENALTY) : null}
+        gameMode="classic"
+        onClose={() => {
+          setResultVisible(false);
+          navigation.navigate('Home');
+        }}
+        onPlayAgain={() => {
+          setResultVisible(false);
+          navigation.replace('WordlinesGame', { mode: 'random' });
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -494,14 +623,25 @@ function makeStyles(c: ColorTheme, compact: boolean) {
       paddingHorizontal: compact ? 7 : 10,
       paddingVertical: compact ? 3 : 5,
     },
-    solvedStack: { gap: compact ? 5 : 7, maxHeight: compact ? 104 : 134 },
+    solvedStack: { gap: compact ? 4 : 6, maxHeight: compact ? 132 : 154 },
     solvedTrail: { backgroundColor: c.bgSurface, borderRadius: 8, paddingHorizontal: 10, paddingVertical: compact ? 6 : 8, borderLeftWidth: 5 },
-    solvedLabel: { fontSize: compact ? 11 : 13, fontFamily: FONTS.extraBold, color: c.text1 },
+    solvedTrailRevealed: { backgroundColor: c.bgBase },
+    solvedLabel: { fontSize: compact ? 11 : 13, fontFamily: FONTS.extraBold, color: c.text1, textTransform: 'uppercase' },
     solvedWords: { fontSize: compact ? 10 : 12, fontFamily: FONTS.bold, color: c.text2, marginTop: 1 },
     messageBox: { backgroundColor: c.bgBase, borderRadius: 8, paddingVertical: compact ? 7 : 9, paddingHorizontal: 12, alignItems: 'center' },
     messageText: { fontSize: compact ? 12 : 14, fontFamily: FONTS.bold, color: c.text2, textAlign: 'center' },
-    answers: { backgroundColor: c.bgSurface, borderRadius: 8, padding: compact ? 8 : 10, gap: compact ? 3 : 5, maxHeight: compact ? 88 : 116 },
-    answerLine: { fontSize: compact ? 10 : 12, fontFamily: FONTS.bold, color: c.text2 },
+    hintBanner: {
+      backgroundColor: c.bgSurface,
+      borderRadius: 10,
+      borderWidth: 1.5,
+      borderColor: c.blue,
+      paddingHorizontal: 12,
+      paddingVertical: compact ? 7 : 9,
+      alignItems: 'center',
+      gap: 2,
+    },
+    hintBannerText: { fontSize: compact ? 12 : 13, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
+    hintBannerSub: { fontSize: 10, fontFamily: FONTS.bold, color: c.text3 },
     board: {
       flex: 1,
       minHeight: 0,
@@ -561,13 +701,52 @@ function makeStyles(c: ColorTheme, compact: boolean) {
       lineHeight: 18,
       color: c.categoryText,
     },
-    mistakesWrap: { marginTop: compact ? -1 : 0 },
-    actions: { flexDirection: 'row', gap: compact ? 7 : 10 },
-    endActions: { flexDirection: 'row', gap: compact ? 7 : 10 },
-    secondaryBtn: { flex: 1, backgroundColor: c.bgBase, borderRadius: 12, paddingVertical: compact ? 10 : 13, alignItems: 'center' },
-    secondaryBtnText: { fontSize: compact ? 12 : 14, fontFamily: FONTS.extraBold, color: c.text1 },
-    primaryBtn: { flex: 2, backgroundColor: c.blue, borderRadius: 12, paddingVertical: compact ? 10 : 13, alignItems: 'center' },
-    primaryBtnDisabled: { opacity: 0.45 },
-    primaryBtnText: { fontSize: compact ? 12 : 14, fontFamily: FONTS.extraBold, color: c.categoryText },
+    mistakesWrap: { marginTop: compact ? -1 : 0, gap: compact ? 7 : 10, zIndex: 10, elevation: 10 },
+    actions: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
+    btnSecondary: {
+      borderWidth: 1.5,
+      borderColor: c.border,
+      borderRadius: 24,
+      paddingHorizontal: compact ? 14 : 18,
+      paddingVertical: compact ? 8 : 10,
+    },
+    btnSecondaryText: { fontSize: compact ? 12 : 14, fontFamily: FONTS.bold, color: c.text1 },
+    btnSubmit: {
+      backgroundColor: c.text1,
+      borderRadius: 24,
+      paddingHorizontal: compact ? 18 : 24,
+      paddingVertical: compact ? 8 : 10,
+    },
+    btnSubmitDisabled: { backgroundColor: c.text3 },
+    btnSubmitText: { fontSize: compact ? 12 : 14, fontFamily: FONTS.extraBold, color: '#FFF' },
+    btnHint: {
+      alignSelf: 'center',
+      borderWidth: 1.5,
+      borderColor: c.border,
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      paddingVertical: compact ? 7 : 8,
+    },
+    btnHintDisabled: { opacity: 0.45 },
+    btnHintText: { fontSize: compact ? 11 : 13, fontFamily: FONTS.bold, color: c.text2 },
+    hintOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'flex-end',
+    },
+    hintSheet: {
+      backgroundColor: c.bgSurface,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      padding: 20,
+      gap: 10,
+    },
+    hintTitle: { fontSize: 20, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
+    hintSub: { fontSize: 13, fontFamily: FONTS.bold, color: c.text3, textAlign: 'center', marginBottom: 4 },
+    hintOption: { backgroundColor: c.bgBase, borderRadius: 12, padding: 14, gap: 3 },
+    hintOptionTitle: { fontSize: 15, fontFamily: FONTS.extraBold, color: c.text1 },
+    hintOptionDesc: { fontSize: 12, fontFamily: FONTS.bold, color: c.text3 },
+    hintCancel: { alignItems: 'center', padding: 14, borderRadius: 12, borderWidth: 1.5, borderColor: c.border, marginTop: 4 },
+    hintCancelText: { fontSize: 15, fontFamily: FONTS.bold, color: c.text2 },
   });
 }
