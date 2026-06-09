@@ -32,6 +32,22 @@ export function ChallengeScreen({ route, navigation }: Props) {
     });
   }, [challengeId]);
 
+  // Poll every 5s while challenger is waiting for opponent to play
+  useEffect(() => {
+    if (!challenge || !isMine(challenge) || challenge.status === 'complete') return;
+    const interval = setInterval(async () => {
+      const updated = await fetchChallenge(challengeId);
+      if (updated) {
+        setChallenge(updated);
+        if (updated.status === 'complete') {
+          clearInterval(interval);
+          navigation.replace('ChallengeResult', { challengeId });
+        }
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [challenge?.status, challengeId]);
+
   function handlePlay() {
     if (!challenge) return;
     navigation.replace('Game', {
@@ -46,9 +62,17 @@ export function ChallengeScreen({ route, navigation }: Props) {
     navigation.replace('ChallengeResult', { challengeId });
   }
 
+  function handleBack() {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('Home');
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
+        <Pressable style={styles.backBtn} onPress={handleBack} hitSlop={12}>
+          <Text style={styles.backText}>←</Text>
+        </Pressable>
         <ActivityIndicator style={{ flex: 1 }} color={colors.text2} />
       </SafeAreaView>
     );
@@ -57,6 +81,9 @@ export function ChallengeScreen({ route, navigation }: Props) {
   if (error || !challenge) {
     return (
       <SafeAreaView style={styles.safe}>
+        <Pressable style={styles.backBtn} onPress={handleBack} hitSlop={12}>
+          <Text style={styles.backText}>←</Text>
+        </Pressable>
         <View style={styles.center}>
           <Text style={styles.errorEmoji}>😕</Text>
           <Text style={styles.errorText}>{error || 'Something went wrong.'}</Text>
@@ -75,6 +102,9 @@ export function ChallengeScreen({ route, navigation }: Props) {
   if (mine && alreadyComplete) {
     return (
       <SafeAreaView style={styles.safe}>
+        <Pressable style={styles.backBtn} onPress={handleBack} hitSlop={12}>
+          <Text style={styles.backText}>←</Text>
+        </Pressable>
         <View style={styles.center}>
           <Text style={styles.emoji}>⚡</Text>
           <Text style={styles.title}>Challenge complete!</Text>
@@ -90,6 +120,9 @@ export function ChallengeScreen({ route, navigation }: Props) {
   if (mine) {
     return (
       <SafeAreaView style={styles.safe}>
+        <Pressable style={styles.backBtn} onPress={handleBack} hitSlop={12}>
+          <Text style={styles.backText}>←</Text>
+        </Pressable>
         <View style={styles.center}>
           <Text style={styles.emoji}>⏳</Text>
           <Text style={styles.title}>Waiting for opponent</Text>
@@ -115,6 +148,9 @@ export function ChallengeScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <Pressable style={styles.backBtn} onPress={handleBack} hitSlop={12}>
+        <Text style={styles.backText}>←</Text>
+      </Pressable>
       <View style={styles.center}>
         <Text style={styles.emoji}>⚡</Text>
         <Text style={styles.title}>{challenge.challengerName} challenged you!</Text>
@@ -154,6 +190,8 @@ export function ChallengeScreen({ route, navigation }: Props) {
 function makeStyles(c: ColorTheme) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: c.bgScreen },
+    backBtn: { position: 'absolute', top: 56, left: 20, zIndex: 10, padding: 8 },
+    backText: { fontSize: 24, color: c.text2, fontFamily: FONTS.bold },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16 },
     emoji: { fontSize: 64 },
     title: { fontSize: 24, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
@@ -168,8 +206,8 @@ function makeStyles(c: ColorTheme) {
     expiredHint: { fontSize: 14, fontFamily: FONTS.bold, color: c.text3, textAlign: 'center' },
     errorEmoji: { fontSize: 48 },
     errorText: { fontSize: 16, fontFamily: FONTS.bold, color: c.text2, textAlign: 'center' },
-    btnPrimary: { backgroundColor: c.text1, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 32, width: '100%', alignItems: 'center' },
-    btnPrimaryText: { fontSize: 17, fontFamily: FONTS.extraBold, color: '#FFF' },
+    btnPrimary: { backgroundColor: c.green, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 32, width: '100%', alignItems: 'center' },
+    btnPrimaryText: { fontSize: 17, fontFamily: FONTS.extraBold, color: '#162219' },
     btnSecondary: { borderWidth: 1.5, borderColor: c.border, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 32, alignItems: 'center' },
     btnSecondaryText: { fontSize: 15, fontFamily: FONTS.bold, color: c.text2 },
   });

@@ -20,5 +20,6 @@ export const ADMOB_IDS = {
 export const WEB_BASE_URL = process.env.EXPO_PUBLIC_WEB_BASE_URL ?? 'https://konnectd.xyz';
 
 export const MAX_MISTAKES = 4;
+export const MAX_HINTS = 3;
 export const GRID_SIZE = 16;
 export const GROUP_SIZE = 4;

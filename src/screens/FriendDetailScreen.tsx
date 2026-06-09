@@ -1,15 +1,16 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, Pressable, FlatList, StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
 import { fetchMatchHistory, type ChallengeMatch } from '@/api/social';
-import { fetchMyChallenges } from '@/api/challenges';
+import { fetchActiveChallengesWithFriend, type Challenge } from '@/api/challenges';
 import { removeFriendship } from '@/api/friends';
 import pb from '@/api/pb';
 import type { AppStackParamList } from '../App';
@@ -51,7 +52,7 @@ function Avatar({ name, size, colors }: { name: string; size: number; colors: Co
 
 // ─── MatchRow ────────────────────────────────────────────────────────────────
 
-function MatchRow({ match, styles, colors }: { match: ChallengeMatch; styles: ReturnType<typeof makeStyles>; colors: ColorTheme }) {
+function MatchRow({ match, matchNumber, styles, colors }: { match: ChallengeMatch; matchNumber: number; styles: ReturnType<typeof makeStyles>; colors: ColorTheme }) {
   const dateStr = useMemo(() => {
     const d = new Date(match.created);
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -86,7 +87,7 @@ function MatchRow({ match, styles, colors }: { match: ChallengeMatch; styles: Re
     <View style={styles.matchRow}>
       <View style={styles.matchRowTop}>
         <Text style={styles.matchPuzzleLabel} numberOfLines={1}>{match.puzzleLabel}</Text>
-        <Text style={styles.matchDate}>{dateStr}</Text>
+        <Text style={styles.matchDate}>#{matchNumber} · {dateStr}</Text>
       </View>
       <View style={styles.matchRowMid}>
         <Text style={styles.matchStat}>You: {myScoreStr}{myMistakeStr}</Text>
@@ -115,33 +116,33 @@ export function FriendDetailScreen({ navigation, route }: Props) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
+  const CHALLENGE_LIMIT = 5;
+
   const [matches, setMatches] = useState<ChallengeMatch[]>([]);
-  const [openChallengeId, setOpenChallengeId] = useState<string | null>(null);
+  const [activeChallenges, setActiveChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
 
   const myId = pb.authStore.model?.id as string | undefined;
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      const [history, challenges] = await Promise.all([
-        fetchMatchHistory(friendId),
-        fetchMyChallenges(),
-      ]);
-      setMatches(history);
-
-      // Find open challenge with this friend
-      const open = challenges.find(c => {
-        const involves =
-          (c.challenger === myId && c.opponent === friendId) ||
-          (c.challenger === friendId && c.opponent === myId);
-        return involves && c.status !== 'complete';
-      });
-      setOpenChallengeId(open ? open.id : null);
-      setLoading(false);
-    }
-    loadData();
-  }, [friendId, myId]);
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      async function loadData() {
+        setLoading(true);
+        const [history, challenges] = await Promise.all([
+          fetchMatchHistory(friendId),
+          fetchActiveChallengesWithFriend(friendId),
+        ]);
+        if (!cancelled) {
+          setMatches(history);
+          setActiveChallenges(challenges);
+          setLoading(false);
+        }
+      }
+      loadData();
+      return () => { cancelled = true; };
+    }, [friendId]),
+  );
 
   const totalGames = matches.length;
   const myWins = matches.filter(m => m.iWon === true).length;
@@ -165,32 +166,33 @@ export function FriendDetailScreen({ navigation, route }: Props) {
     );
   }
 
+  const atLimit = activeChallenges.length >= CHALLENGE_LIMIT;
+
   type ListItem =
     | { type: 'profile' }
-    | { type: 'openChallenge' }
-    | { type: 'noChallenge' }
-    | { type: 'sectionHeader' }
-    | { type: 'match'; match: ChallengeMatch }
+    | { type: 'challengesHeader' }
+    | { type: 'activeChallenge'; challenge: Challenge }
+    | { type: 'newChallengeBtn' }
+    | { type: 'matchesHeader' }
+    | { type: 'match'; match: ChallengeMatch; matchNumber: number }
     | { type: 'emptyMatches' }
     | { type: 'removeBtn' };
 
   const listData = useMemo<ListItem[]>(() => {
     const items: ListItem[] = [];
     items.push({ type: 'profile' });
-    if (openChallengeId) {
-      items.push({ type: 'openChallenge' });
-    } else {
-      items.push({ type: 'noChallenge' });
-    }
-    items.push({ type: 'sectionHeader' });
+    items.push({ type: 'challengesHeader' });
+    activeChallenges.forEach((c: Challenge) => items.push({ type: 'activeChallenge', challenge: c }));
+    items.push({ type: 'newChallengeBtn' });
+    items.push({ type: 'matchesHeader' });
     if (matches.length === 0) {
       items.push({ type: 'emptyMatches' });
     } else {
-      matches.forEach(m => items.push({ type: 'match', match: m }));
+      matches.forEach((m: ChallengeMatch, i: number) => items.push({ type: 'match', match: m, matchNumber: matches.length - i }));
     }
     items.push({ type: 'removeBtn' });
     return items;
-  }, [openChallengeId, matches]);
+  }, [activeChallenges, matches]);
 
   function renderItem({ item }: { item: ListItem }) {
     switch (item.type) {
@@ -214,33 +216,73 @@ export function FriendDetailScreen({ navigation, route }: Props) {
           </View>
         );
 
-      case 'openChallenge':
+      case 'challengesHeader':
+        return (
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionHeader}>Active Challenges</Text>
+            <Text style={styles.challengeCount}>{activeChallenges.length}/{CHALLENGE_LIMIT}</Text>
+          </View>
+        );
+
+      case 'activeChallenge': {
+        const c = item.challenge;
+        const isMyChallenge = c.challenger === myId;
+        const statusLabel = isMyChallenge ? 'Waiting for them…' : 'Your turn! ⚡';
+        const statusColor = isMyChallenge ? colors.text3 : colors.green;
+        const dateStr = new Date(c.created).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
         return (
           <Pressable
-            style={styles.openChallengeBtn}
-            onPress={() => navigation.navigate('Challenge', { challengeId: openChallengeId! })}
+            style={styles.activeChallengeRow}
+            onPress={() => navigation.navigate('Challenge', { challengeId: c.id })}
           >
-            <Text style={styles.openChallengeBtnText}>⚡ Open Challenge →</Text>
+            <View style={styles.activeChallengeInfo}>
+              <Text style={styles.activeChallengeLabel} numberOfLines={1}>{c.puzzleLabel}</Text>
+              <Text style={[styles.activeChallengeStatus, { color: statusColor }]}>{statusLabel}</Text>
+            </View>
+            <Text style={styles.activeChallengeDate}>{dateStr} →</Text>
+          </Pressable>
+        );
+      }
+
+      case 'newChallengeBtn':
+        return atLimit ? (
+          <Text style={styles.limitHint}>
+            5/5 active challenges — finish one to send more
+          </Text>
+        ) : (
+          <Pressable
+            style={styles.newChallengeBtn}
+            onPress={() =>
+              Alert.alert(
+                'Challenge ' + friendDisplayName,
+                'Win any puzzle, then tap "Challenge a Friend" on the result screen — you can pick ' + friendDisplayName + ' there to send the challenge.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Pick Puzzle',
+                    onPress: () => navigation.navigate('PuzzleSelect', {
+                      recipientId: friendId,
+                      recipientName: friendDisplayName,
+                    }),
+                  },
+                ],
+              )
+            }
+          >
+            <Text style={styles.newChallengeBtnText}>+ New Challenge</Text>
           </Pressable>
         );
 
-      case 'noChallenge':
-        return (
-          <Text style={styles.noChallengeHint}>
-            Win a puzzle to send them a challenge ⚡
-          </Text>
-        );
-
-      case 'sectionHeader':
-        return <Text style={styles.sectionHeader}>Match History</Text>;
+      case 'matchesHeader':
+        return <Text style={[styles.sectionHeader, { marginTop: 24 }]}>Match History</Text>;
 
       case 'match':
-        return <MatchRow match={item.match} styles={styles} colors={colors} />;
+        return <MatchRow match={item.match} matchNumber={item.matchNumber} styles={styles} colors={colors} />;
 
       case 'emptyMatches':
         return (
           <Text style={styles.emptyText}>
-            No matches yet — win a puzzle and challenge them from the result screen!
+            No completed matches yet — win a puzzle and challenge them from the result screen!
           </Text>
         );
 
@@ -296,22 +338,51 @@ function makeStyles(c: ColorTheme) {
     statsRow: { marginTop: 4 },
     statsText: { fontSize: 14, fontFamily: FONTS.bold, color: c.text2 },
 
-    openChallengeBtn: {
-      backgroundColor: c.purple,
-      borderRadius: 14,
-      paddingVertical: 14,
-      paddingHorizontal: 24,
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
       alignItems: 'center',
-      marginVertical: 8,
+      marginTop: 20,
+      marginBottom: 8,
     },
-    openChallengeBtnText: { fontSize: 16, fontFamily: FONTS.extraBold, color: '#FFF' },
+    challengeCount: {
+      fontSize: 12,
+      fontFamily: FONTS.bold,
+      color: c.text3,
+    },
 
-    noChallengeHint: {
+    activeChallengeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.bgSurface,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      marginBottom: 8,
+      gap: 12,
+    },
+    activeChallengeInfo: { flex: 1, gap: 3 },
+    activeChallengeLabel: { fontSize: 15, fontFamily: FONTS.extraBold, color: c.text1 },
+    activeChallengeStatus: { fontSize: 12, fontFamily: FONTS.bold },
+    activeChallengeDate: { fontSize: 12, fontFamily: FONTS.bold, color: c.text3 },
+
+    newChallengeBtn: {
+      borderWidth: 1.5,
+      borderColor: c.purple,
+      borderRadius: 12,
+      paddingVertical: 12,
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    newChallengeBtnText: { fontSize: 14, fontFamily: FONTS.extraBold, color: c.purple },
+
+    limitHint: {
       textAlign: 'center',
       fontSize: 13,
       fontFamily: FONTS.bold,
       color: c.text3,
-      marginVertical: 12,
+      marginTop: 4,
+      marginBottom: 4,
     },
 
     sectionHeader: {

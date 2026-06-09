@@ -2,16 +2,16 @@ import { useEffect, useRef } from 'react';
 import { useAudioPlayer } from 'expo-audio';
 
 const SOUND_FILES = {
-  tap:       require('../../assets/sounds/tap.mp3'),
-  deselect:  require('../../assets/sounds/deselect.mp3'),
-  wrong:     require('../../assets/sounds/wrong.mp3'),
-  oneaway:   require('../../assets/sounds/oneaway.mp3'),
-  correct_1: require('../../assets/sounds/correct_1.mp3'),
-  correct_2: require('../../assets/sounds/correct_2.mp3'),
-  correct_3: require('../../assets/sounds/correct_3.mp3'),
-  correct_4: require('../../assets/sounds/correct_4.mp3'),
-  win:       require('../../assets/sounds/win.mp3'),
-  lose:      require('../../assets/sounds/lose.mp3'),
+  tap:       require('../../assets/sounds/tap.m4a'),
+  deselect:  require('../../assets/sounds/deselect.m4a'),
+  wrong:     require('../../assets/sounds/wrong.m4a'),
+  oneaway:   require('../../assets/sounds/oneaway.m4a'),
+  correct_1: require('../../assets/sounds/correct_1.m4a'),
+  correct_2: require('../../assets/sounds/correct_2.m4a'),
+  correct_3: require('../../assets/sounds/correct_3.m4a'),
+  correct_4: require('../../assets/sounds/correct_4.m4a'),
+  win:       require('../../assets/sounds/win.m4a'),
+  lose:      require('../../assets/sounds/lose.m4a'),
 } as const;
 
 export type SoundName = keyof typeof SOUND_FILES;
@@ -47,6 +47,7 @@ export function useSound(enabled = true) {
     if (!enabled) return;
     const player = players.current[name];
     if (!player) return;
+    player.volume = 0.35;
     player.seekTo(0);
     player.play();
   }

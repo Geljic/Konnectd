@@ -3,13 +3,13 @@ import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Line, Circle } from 'react-native-svg';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useGameStore } from '@/store/gameStore';
+import { useGameStore, type HintTier, type HintResult } from '@/store/gameStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useAuthStore } from '@/store/authStore';
 import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { fetchDailyPuzzle, fetchPuzzleById, fetchNytPuzzleById, fetchRandomNytPuzzle, recordPlaySession, updateUserStats, markPuzzleCompleted, saveGameProgress, loadGameProgress, clearGameProgress, getCompletedPuzzleIds } from '@/api/puzzles';
-import { submitChallengeResult } from '@/api/challenges';
+import { submitChallengeResult, createChallenge } from '@/api/challenges';
 import { calculateScore } from '@/utils/scoring';
 import { DEV_PUZZLE } from '@/data/devPuzzle';
 import { GameBoard } from '@/components/GameBoard';
@@ -17,8 +17,10 @@ import { MistakeDots } from '@/components/MistakeDots';
 import { OneAwayToast } from '@/components/OneAwayToast';
 import { Confetti } from '@/components/Confetti';
 import { HelpModal } from '@/components/HelpModal';
+import { HintModal, HintResultBanner } from '@/components/HintModal';
 import { useSound } from '@/hooks/useSound';
 import { FONTS } from '@/constants/fonts';
+import { MAX_HINTS } from '@/constants/config';
 import type { AppStackParamList } from '../App';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Game'>;
@@ -53,7 +55,7 @@ function FireIcon({ color }: { color: string }) {
 }
 
 export function GameScreen({ route, navigation }: Props) {
-  const { mode, puzzleId, collection, challengeId } = route.params;
+  const { mode, puzzleId, collection, challengeId, recipientId, recipientName } = route.params;
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -62,13 +64,17 @@ export function GameScreen({ route, navigation }: Props) {
   const [shuffleSignal, setShuffleSignal] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [helpVisible, setHelpVisible] = useState(false);
+  const [hintModalVisible, setHintModalVisible] = useState(false);
+  const [hintResult, setHintResult] = useState<HintResult | null>(null);
 
   const hardMode = useSettingsStore(s => s.hardMode);
+  const isPremium = useAuthStore(s => s.user?.isPremium ?? false);
 
   const {
     loadPuzzle, restoreProgress, submitGuess, commitSolve, shuffleBoard, clearSelection, dismissToast, setScore,
+    useHint,
     status, mistakes, toastMessage, puzzle, selectedWords, startTime, currentMode, currentPuzzleId,
-    solvedCategories,
+    solvedCategories, currentCollection, hintsUsed, hintPenalty,
   } = useGameStore();
   const { play, playCorrect } = useSound();
 
@@ -149,7 +155,8 @@ export function GameScreen({ route, navigation }: Props) {
       const duration = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
       const solvedOrder = useGameStore.getState().solvedOrder;
       const gameMode = useGameStore.getState().gameMode;
-      const score = status === 'won' ? calculateScore(solvedOrder, mistakes, duration) : null;
+      const hintPenaltyFinal = useGameStore.getState().hintPenalty;
+      const score = status === 'won' ? calculateScore(solvedOrder, mistakes, duration, hintPenaltyFinal) : null;
       setScore(score);
 
       if (puzzle) {
@@ -157,6 +164,7 @@ export function GameScreen({ route, navigation }: Props) {
         (async () => {
           await recordPlaySession({
             puzzleId: puzzle.id,
+            collection: currentCollection ?? 'puzzles',
             completed: status === 'won',
             mistakes,
             durationSeconds: duration,
@@ -173,14 +181,40 @@ export function GameScreen({ route, navigation }: Props) {
         }
         clearGameProgress();
 
-        if (challengeId && status === 'won') {
+        if (challengeId) {
           submitChallengeResult(challengeId, { mistakes, durationSeconds: duration, solvedOrder, score: score ?? undefined });
         }
       }
 
       const delay = status === 'won' ? 1500 : 800;
+
+      if (recipientId && puzzle && !challengeId) {
+        const nytDate = puzzle.daily_date
+          ? new Date(puzzle.daily_date + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
+          : null;
+        const puzzleLabel = currentCollection === 'nyt_puzzles'
+          ? `NYT Puzzle${nytDate ? ` · ${nytDate}` : ''}`
+          : 'Curated Puzzle';
+        createChallenge({
+          puzzleId: puzzle.id,
+          puzzleCollection: currentCollection ?? 'puzzles',
+          puzzleLabel,
+          mistakes,
+          durationSeconds: duration,
+          solvedOrder,
+          score: score ?? undefined,
+          recipientId,
+        }).then(challenge => {
+          setTimeout(() => {
+            if (challenge) navigation.navigate('ChallengeResult', { challengeId: challenge.id });
+            else navigation.navigate('Result');
+          }, delay);
+        });
+        return;
+      }
+
       setTimeout(() => {
-        if (challengeId && status === 'won') {
+        if (challengeId) {
           navigation.navigate('ChallengeResult', { challengeId });
         } else {
           navigation.navigate('Result');
@@ -188,6 +222,12 @@ export function GameScreen({ route, navigation }: Props) {
       }, delay);
     }
   }, [status]);
+
+  function handleHintSelect(tier: HintTier) {
+    setHintModalVisible(false);
+    const result = useHint(tier, isPremium);
+    if (result) setHintResult(result);
+  }
 
   function handleShuffle() {
     setShuffleSignal(s => s + 1);
@@ -254,6 +294,13 @@ export function GameScreen({ route, navigation }: Props) {
 
         <View style={styles.footer}>
           <MistakeDots mistakes={mistakes} />
+          {hintResult && (
+            <HintResultBanner
+              result={hintResult}
+              categoryColour={hintResult.tier === 'wordreveal' ? colors[hintResult.colour] : undefined}
+              onDismiss={() => setHintResult(null)}
+            />
+          )}
           <View style={styles.actions}>
             <Pressable style={styles.btnSecondary} onPress={handleShuffle}>
               <Text style={styles.btnSecondaryText}>Shuffle</Text>
@@ -269,6 +316,18 @@ export function GameScreen({ route, navigation }: Props) {
               <Text style={styles.btnSubmitText}>Submit</Text>
             </Pressable>
           </View>
+          <Pressable
+            style={[styles.btnHint, (!isPremium && hintsUsed >= MAX_HINTS) && styles.btnHintDisabled]}
+            onPress={() => setHintModalVisible(true)}
+            disabled={status !== 'playing'}
+          >
+            <Text style={styles.btnHintText}>
+              {isPremium
+                ? `⭐ Hint${hintPenalty > 0 ? ` (−${hintPenalty} pts)` : ''}`
+                : `💡 Hint ${hintsUsed > 0 ? `(${MAX_HINTS - hintsUsed} left · −${hintPenalty} pts)` : `(${MAX_HINTS} free)`}`
+              }
+            </Text>
+          </Pressable>
         </View>
       </View>
 
@@ -279,6 +338,14 @@ export function GameScreen({ route, navigation }: Props) {
       />
       <Confetti active={status === 'won'} />
       <HelpModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
+      <HintModal
+        visible={hintModalVisible}
+        hintsUsed={hintsUsed}
+        hintPenalty={hintPenalty}
+        isPremium={isPremium}
+        onSelectTier={handleHintSelect}
+        onClose={() => setHintModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -311,5 +378,11 @@ function makeStyles(c: ColorTheme) {
     btnSubmit: { backgroundColor: c.text1, borderRadius: 24, paddingHorizontal: 24, paddingVertical: 10 },
     btnSubmitDisabled: { backgroundColor: c.text3 },
     btnSubmitText: { fontSize: 14, fontFamily: FONTS.extraBold, color: '#FFF' },
+    btnHint: {
+      alignSelf: 'center', borderWidth: 1.5, borderColor: c.border,
+      borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,
+    },
+    btnHintDisabled: { opacity: 0.4 },
+    btnHintText: { fontSize: 13, fontFamily: FONTS.bold, color: c.text2 },
   });
 }

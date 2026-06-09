@@ -213,6 +213,7 @@ export async function fetchRecentSessions(limit = 15): Promise<PlaySessionItem[]
 
 export async function recordPlaySession(params: {
   puzzleId: string;
+  collection?: 'puzzles' | 'nyt_puzzles';
   completed: boolean;
   mistakes: number;
   durationSeconds: number;
@@ -246,8 +247,9 @@ export async function recordPlaySession(params: {
 
   // Increment play count on the puzzle (best-effort, not critical)
   try {
-    const p = await pb.collection('puzzles').getOne(params.puzzleId, { fields: 'id,play_count' });
-    await pb.collection('puzzles').update(params.puzzleId, {
+    const collection = params.collection ?? 'puzzles';
+    const p = await pb.collection(collection).getOne(params.puzzleId, { fields: 'id,play_count' });
+    await pb.collection(collection).update(params.puzzleId, {
       play_count: ((p['play_count'] as number) || 0) + 1,
     });
   } catch { /* non-critical */ }

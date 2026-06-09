@@ -126,7 +126,7 @@ export function SettingsScreen() {
   const [soundOn, setSoundOn] = useState(true);
   const [hapticsOn, setHapticsOn] = useState(true);
 
-  const { hardMode, notificationsEnabled, darkMode, load, setHardMode, setNotificationsEnabled, setDarkMode } = useSettingsStore();
+  const { hardMode, notificationsEnabled, challengeNotificationsEnabled, darkMode, load, setHardMode, setNotificationsEnabled, setChallengeNotificationsEnabled, setDarkMode } = useSettingsStore();
 
   useEffect(() => {
     load();
@@ -196,6 +196,19 @@ export function SettingsScreen() {
             description="Reminds you at 8 pm to play today's puzzle"
             value={notificationsEnabled}
             onChange={toggleNotifications}
+            colors={colors}
+          />
+          <Row
+            label="Challenge alerts"
+            description="Notify when a friend challenges you or completes your challenge"
+            value={challengeNotificationsEnabled}
+            onChange={async (val) => {
+              if (val) {
+                const granted = await requestNotificationPermission();
+                if (!granted) return;
+              }
+              await setChallengeNotificationsEnabled(val);
+            }}
             colors={colors}
           />
         </View>

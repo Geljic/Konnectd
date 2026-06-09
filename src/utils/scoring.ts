@@ -14,6 +14,7 @@ export function calculateScore(
   solvedOrder: CategoryColour[],
   mistakes: number,
   durationSeconds: number,
+  hintPenalty = 0,
 ): number {
   const base = solvedOrder.reduce((sum, c) => sum + (DIFFICULTY_POINTS[c] ?? 0), 0);
 
@@ -34,8 +35,8 @@ export function calculateScore(
 
   const misPenalty = mistakes * 75;
 
-  // Generous decay: every 8s = 1 point, floor at 50 so long sessions still earn something
-  const timeBonus = Math.max(50, 400 - Math.floor(durationSeconds / 8));
+  // 2 pts/second decay — fast solves earn meaningfully more than slow ones
+  const timeBonus = Math.max(0, 400 - durationSeconds * 2);
 
-  return Math.max(0, base + orderBonus - misPenalty + timeBonus);
+  return Math.max(0, base + orderBonus - misPenalty - hintPenalty + timeBonus);
 }

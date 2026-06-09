@@ -16,10 +16,38 @@ NYT Connections is a solo daily ritual with bolted-on sharing. KonnectD is socia
 |---|---|---|
 | 0 | Core game loop — grid, tiles, animations, SFX | ✅ Done |
 | 1 | UX polish — dark mode, scoring, share, branding | ✅ Done |
-| 2 | Challenge a Friend | ✅ Done |
-| 3 | Social — usernames, friends, leaderboard, social hub | ✅ Done |
-| 4 | Hints, offline mode, notifications, growth | 🚧 In progress |
-| 5 | Monetisation — IAP, subscription, cosmetics | 🔲 Planned |
+| 2 | Challenge a Friend (in-app, friends-system) | ✅ Done |
+| 3 | Social — usernames, friends, leaderboard, social hub, co-streaks | ✅ Done |
+| 4 | Hints system + push notifications | 🚧 In progress |
+| 5 | Monetisation — cosmetics, first puzzle pack, subscription | 🔲 Next |
+| 6 | Blitz Mode — 90-second speed round, daily leaderboard | 🔲 Planned |
+| 7 | Codenames Duet — async co-op mode using existing friends graph | 🔲 Planned |
+
+---
+
+## Strategic Decisions
+
+These choices were made in June 2026 and should guide all feature prioritisation:
+
+### Retention
+KonnectD already has strong retention hooks (daily habit, streaks, co-streaks, social graph, nemesis/frenemy labels). The gap is **content variety** and **a second reason to open the app after the daily puzzle**. New modes solve this — not more social features.
+
+### Monetisation philosophy
+- Core game is always free — never gate the daily puzzle, friend challenges, or leaderboard
+- Sell **cosmetics** (tile themes, board colours, share card styles) and **extra content** (themed puzzle packs)
+- Subscription = convenience + cosmetics vault, never a content paywall
+- Rewarded video for hints (opt-in, not intrusive)
+
+### New mode order
+1. **Blitz Mode first** — zero new content required, re-uses all existing puzzles and infrastructure, ships fast, adds a daily leaderboard hook
+2. **Codenames Duet second** — the big social differentiator; async turn-based so no WebSockets needed; AI-generated word grids fit the existing puzzle pipeline
+
+### Why Codenames Duet over other variants
+- Existing social graph (friends system) makes it immediately playable at launch
+- Async turn-based fits PocketBase without real-time infrastructure changes
+- Genuinely different feel from Connections — co-op rather than solo/competitive
+- Mobile UX on the web version is poor — real opportunity to own this space
+- Content (25-word grids + clue maps) can be AI-generated like Connections puzzles
 
 ---
 
@@ -49,6 +77,7 @@ NYT Connections is a solo daily ritual with bolted-on sharing. KonnectD is socia
 - Mistake penalty: −75 per mistake
 - Scores stored on `play_sessions` and `challenges`
 - Score shown on ResultScreen, ChallengeResultScreen, StatsScreen (best score)
+- GameCompleted modal shows hard mode flag + score; match history includes both
 
 ### Social & Friends
 - `friendships` collection: send / accept / remove
@@ -58,6 +87,7 @@ NYT Connections is a solo daily ritual with bolted-on sharing. KonnectD is socia
   - Collapsible search bar, pull-to-refresh
 - Friend detail screen: profile card, open challenge button, match history, remove friend
 - User search by display name or `Name#tag`
+- Co-streaks: consecutive days both friends played the daily puzzle; badge shown on friend rows
 
 ### Leaderboard
 - Friends leaderboard: sorted by win rate → total wins → streak
@@ -66,16 +96,13 @@ NYT Connections is a solo daily ritual with bolted-on sharing. KonnectD is socia
 - Badge dot on Home screen Friends button when there are pending challenges
 
 ### Challenge a Friend
+- In-app challenge flow: pick a friend → challenge created → friend sees it in Social hub
 - First-solve only (no re-challenging to cheat)
 - Creates a challenge record in PocketBase
 - Deep link: `https://konnectd.xyz/challenge/:id`
 - Side-by-side result reveal with winner declaration
 - Score-based winner (falls back to mistakes → time)
-- Share text includes score and challenge link
-
-### Share
-- Emoji grid + score + game link or challenge link
-- Native share sheet on mobile, clipboard fallback on web
+- Share button (separate from Challenge): emoji grid + score + game link, native share sheet
 
 ### Stats Screen
 - Played / win % / wins / losses grid
@@ -87,13 +114,13 @@ NYT Connections is a solo daily ritual with bolted-on sharing. KonnectD is socia
 ### Dark Mode
 - Full app dark mode with `useColors()` hook + `makeStyles(colors)` pattern
 - Dark mode toggle in Settings
-- All buttons fixed for contrast (no white-on-white or white-on-light-green)
+- All buttons fixed for contrast
 
 ### Branding & UI
 - Animated KonnectD logo: 4 tiles that bob independently, blink, and wink
 - KonnectD wordmark on Home, Game screen, and all share text
 - Web layout: max 430px centred with dark `#0A120D` gutter
-- Home screen footer nav anchored below scroll (no overlap on short screens)
+- Home screen footer nav anchored below scroll
 
 ### Backend / Infrastructure
 - PocketBase on Docker (port 8092), nginx on 8080
@@ -104,56 +131,114 @@ NYT Connections is a solo daily ritual with bolted-on sharing. KonnectD is socia
 
 ---
 
-## What's Left 🔲
+## Phase 4 — Hints + Notifications 🚧
 
-### Phase 4 — Hints System
-Three tiers, cheapest hint first:
+### Hints System
+Three tiers, cheapest first:
 1. **Warm/cold** — "2 of your selected words belong together." No category revealed. Costs −100 pts.
 2. **Word reveal** — "KAYAK belongs in the purple group." Direct but not the full category. Costs −150 pts.
 3. **Category peek** — Reveals one category name (e.g., "PALINDROMES") without words. Costs −200 pts.
 
-Rules: max 2–3 hints per game, deducted from score, shown on result screen. Hint button in game header. Optional "watch ad for a hint" rewarded video hook for monetisation.
+Rules: max 2–3 hints per game, deducted from score, shown on result screen. Hint button in game header. Rewarded video hook for monetisation (opt-in).
 
-### Phase 4 — Offline Mode
-Infrastructure is partially there (AsyncStorage cache written, not yet wired as fallback):
+### Push Notifications
+- PocketBase subscriptions + `expo-notifications`
+- Notify when a friend sends you a challenge
+- Notify when a friend accepts/completes your challenge
+- Daily puzzle reminder (opt-in, user-set time)
+
+### Offline Mode _(lower priority, do after monetisation if needed)_
 - Cache puzzles after first fetch; serve from cache when network unavailable
 - Queue failed session writes and flush on reconnect
 - Show subtle "offline" indicator in game header
 
-### Phase 4 — In-App Challenge Notifications
-- Pick a friend from list → creates challenge → real-time push notification via PocketBase subscriptions + `expo-notifications`
-- Keep link sharing as fallback for non-friends
+---
 
-### Phase 4 — Co-Streaks
-- Track consecutive days both friends played the daily puzzle
-- Show co-streak badge on friend rows in Social hub
-- "Simon and you have a 🔥 12-day co-streak"
+## WHERE WE ARE AT - Phase 5 — Monetisation 🔲
 
-### Phase 1 Remaining
-| Feature | Description |
-|---|---|
-| Branded share image | Visual card via `react-native-view-shot` (grid + score + handle + app CTA) |
-| Streak freeze | Spend a freeze token to protect streak on a missed day |
-| Accessibility | Colour-blind patterns, high contrast toggle, font size slider |
+### Principles
+- Free players get: full daily puzzle, all challenges, leaderboard, social features, 3 hints/day
+- Paying players get: convenience, cosmetics, extra content — never exclusive gameplay
 
-### Phase 5 — Monetisation
+### Layers
 | Layer | Details |
 |---|---|
-| Premium subscription | ~$3–5/month: unlimited hints, streak freeze, custom puzzles, cosmetics |
-| Themed puzzle packs (IAP) | $1.99 each: 🇦🇺 Australian, 🏏 Sports, 🎵 90s Music, 🍕 Food, 📺 Reality TV, 🏫 Classroom |
-| Cosmetics | Board themes, tile colour schemes, share card styles |
-| Rewarded video | Opt-in ads for a hint token |
+| **Cosmetics (IAP)** | Board themes, tile colour schemes, share card styles — $0.99–$2.99 each or in bundles |
+| **Themed puzzle packs (IAP)** | $1.99 each: 🇦🇺 Australian, 🏏 Sports, 🎵 90s Music, 🍕 Food, 📺 Reality TV, 🏫 Classroom | PAUSED FOR NOW
+| **Premium subscription** | ~$3–5/month: unlimited hints, streak freeze, cosmetics vault, early access to new modes | or One time purchase
+| **Rewarded video** | Opt-in ad for a hint token (free players) |
+
+
+### First milestone
+Ship **one cosmetic pack** + **Reward Video for Hints** + **One time purhase to support development and hosting etc**
 
 ---
 
-## Phase 2 — Challenge a Friend ✅
+## Phase 6 — Blitz Mode 🔲 - PAUSED people will cheat for clock times 
 
-**Flow:**
-1. Complete a puzzle → tap "⚡ Challenge" on result screen (first solve only)
-2. App creates a challenge record with your result (hidden from opponent)
-3. Share link (WhatsApp, iMessage, etc.) or pick a friend in-app
-4. Friend opens link → plays the same puzzle independently
-5. Side-by-side results revealed — fewer mistakes wins, score as tiebreaker, time as final tiebreaker
+### Concept
+90-second solo speed round. Same daily puzzle, same rules, but the clock is the challenge. Daily leaderboard sorted by score (time bonus amplified in Blitz). No new content needed — re-uses the existing puzzle library.
+
+### Why first
+- Zero new infrastructure (no new collections, no new backend logic)
+- Re-uses all existing animations, scoring, and leaderboard components
+- Adds a second daily touchpoint (do the daily puzzle + do the daily Blitz)
+- Ships fast — estimate 1–2 weeks
+
+### Feature spec
+- Blitz tab or mode toggle on Home screen
+- Countdown timer (large, prominent) replacing the normal game header
+- Score multiplier applied at end for fast clears
+- Daily Blitz leaderboard (friends + global) — separate from standard leaderboard
+- "Blitz streak" tracked separately from normal streak
+- Share result includes Blitz badge to differentiate
+
+---
+
+## Phase 7 — Codenames Duet Mode 🔲
+
+### Concept
+Async co-op word association game for 2 players, built on the existing friends graph. Based on Codenames Duet mechanics: both players share a 5×5 grid of 25 words, each has a secret map of which words their partner needs to guess. One player gives a one-word clue + number, the other guesses. Win together or lose together.
+
+### Why this over other variants
+- Existing friends system means instant social context at launch
+- Async turn-based = no real-time server needed (PocketBase handles it)
+- Genuinely different feel from Connections — co-op not competitive
+- Current mobile UX for Codenames Duet online is poor — opportunity to own the space
+- AI-generated word grids fit the existing Claude puzzle pipeline
+
+### Architecture (async turn-based)
+No WebSockets needed. Each game is a `duet_games` record with:
+- `grid`: 25 words
+- `map_a`, `map_b`: each player's secret map (which words their partner must find)
+- `turns`: array of `{ player, clue, number, guesses[], result }`
+- `status`: waiting / in_progress / won / lost
+- `current_turn`: whose turn it is
+
+PocketBase subscriptions notify the other player when a turn is played (same pattern as challenges). Push notification on your turn.
+Requires notification menu / icon at top right of home screen -> show notications and have bell with badge number of notifications. Then show game turns, challenges, friend requests etc
+
+### Content pipeline
+- Claude generates 25-word grids grouped into loose themes
+- Each grid has 9 words assigned to Player A, 9 to Player B, 3 shared (both must find), 1 assassin (instant loss if guessed)
+- Admin review queue (same pattern as Connections puzzles)
+- Difficulty: number of shared words + assassin placement
+
+### Feature spec
+- New "Duet" section in Social hub or dedicated Duet tab
+- Start a game: pick a friend → they get notified → both see the grid
+- Each turn: give a clue (text input) + number → opponent sees clue and guesses
+- Codename map is hidden — you can see your assignments, not your partner's
+- Win condition: all green words found without hitting the assassin
+- Result screen: co-op style celebration, shared score
+- Match history on Friend Detail screen includes Duet games
+
+### Phased delivery
+1. Core game loop (grid, maps, turn submission, guess logic)
+2. Push notifications on your turn
+3. Scoring + result screen
+4. Content pipeline + first puzzle set
+5. Match history integration
 
 ---
 
@@ -161,20 +246,21 @@ Infrastructure is partially there (AsyncStorage cache written, not yet wired as 
 
 | Feature | NYT | Connections Unlimited | **KonnectD** |
 |---|---|---|---|
-| Challenge a friend | ❌ | ❌ | ✅ |
+| Challenge a friend (in-app) | ❌ | ❌ | ✅ |
 | Friends + social hub | ❌ | ❌ | ✅ |
 | Relationship labels (Nemesis, Frenemy…) | ❌ | ❌ | ✅ |
 | Scoring system | ❌ | ❌ | ✅ |
 | Dark mode | ❌ | Partial | ✅ |
 | Head-to-head stats | ❌ | ❌ | ✅ |
-| Daily co-streaks | ❌ | ❌ | 🚧 Planned |
-| Hints system | ❌ | Partial | 🚧 Planned |
-| Offline mode | ❌ | ❌ | 🚧 Planned |
-| Custom puzzle creation | Editorial only | Web only | 🔲 Planned |
-| Branded image share | ❌ | ❌ | 🔲 Planned |
-| iOS widget | ❌ | ❌ | 🔲 Planned |
-| Co-op mode | ❌ | ❌ | 🔲 Planned |
-| Australian content | ❌ | ❌ | 🔲 Planned |
+| Co-streaks | ❌ | ❌ | ✅ |
+| Hints system | ❌ | Partial | 🚧 |
+| Push notifications | ❌ | ❌ | 🚧 |
+| Blitz mode | ❌ | ❌ | 🔲 |
+| Codenames Duet mode | ❌ | ❌ | 🔲 |
+| Cosmetics / themes | ❌ | ❌ | 🔲 |
+| Australian content pack | ❌ | ❌ | 🔲 |
+| Branded image share | ❌ | ❌ | 🔲 |
+| Offline mode | ❌ | ❌ | 🔲 |
 
 ---
 
@@ -189,5 +275,10 @@ Infrastructure is partially there (AsyncStorage cache written, not yet wired as 
 | Backend | PocketBase (Docker, port 8092) |
 | Tunnel | Cloudflare → konnectd.xyz |
 | Deep links | `konnectd://` scheme + HTTPS URL |
-| Realtime | PocketBase subscriptions (friends/challenges) |
+| Realtime | PocketBase subscriptions (friends/challenges/duet turns) |
 | Notifications | `expo-notifications` (Phase 4) |
+| Puzzle AI | Claude API `claude-sonnet-4-6` (batch generation scripts) |
+
+# Known Bugs
+- When you click challenge again you then select a puzzle - it then loads the puzzle and looks like you can play before the screen changes too "Still waiting…
+Your opponent hasn't accepted yet."

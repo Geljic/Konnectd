@@ -135,11 +135,11 @@ export async function fetchFriendSummaries(friends: Friendship[]): Promise<Frien
   const statsMap: FriendStats[] = friends.map(friendship => {
     const friendId = friendship.friend.id;
 
-    // Challenges involving this friend
+    // Challenges involving this friend (includes directed challenges via recipient)
     const relevant = allChallenges.filter(c => {
       const involves =
-        (c.challenger === myId && c.opponent === friendId) ||
-        (c.challenger === friendId && c.opponent === myId);
+        (c.challenger === myId && (c.opponent === friendId || c.recipient === friendId)) ||
+        (c.challenger === friendId && (c.opponent === myId || c.recipient === myId));
       return involves;
     });
 
@@ -219,6 +219,7 @@ export async function fetchMatchHistory(friendId: string): Promise<ChallengeMatc
     const result = await pb.collection('challenges').getFullList({
       filter: `((challenger = '${myId}' && opponent = '${friendId}') || (challenger = '${friendId}' && opponent = '${myId}')) && status = 'complete'`,
       sort: '-created',
+      requestKey: `match-history-${friendId}`,
     });
 
     return result.map(r => {

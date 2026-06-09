@@ -30,7 +30,7 @@ export function ResultScreen({ navigation }: Props) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const { puzzle, status, mistakes, solvedOrder, reset, currentMode, currentPuzzleId, currentCollection, startTime, firstSolve, score } = useGameStore();
+  const { puzzle, status, mistakes, solvedOrder, reset, currentMode, currentPuzzleId, currentCollection, startTime, firstSolve, score, hintsUsed, hintPenalty } = useGameStore();
   const user = useAuthStore(s => s.user);
   const [showFriendPicker, setShowFriendPicker] = useState(false);
   const [sentToHandle, setSentToHandle] = useState<string | null>(null);
@@ -114,6 +114,11 @@ export function ResultScreen({ navigation }: Props) {
               <Text style={styles.scoreText}>⭐ {score} pts</Text>
             </View>
           )}
+          {won && hintsUsed > 0 && (
+            <Text style={styles.hintNote}>
+              💡 {hintsUsed} hint{hintsUsed > 1 ? 's' : ''} used · −{hintPenalty} pts
+            </Text>
+          )}
         </View>
 
         <View style={styles.categories}>
@@ -176,6 +181,7 @@ function makeStyles(c: ColorTheme) {
     subtitle: { fontSize: 16, fontFamily: FONTS.bold, color: c.text2 },
     scorePill: { backgroundColor: c.yellow, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 6, marginTop: 4 },
     scoreText: { fontSize: 18, fontFamily: FONTS.extraBold, color: '#162219' },
+    hintNote: { fontSize: 13, fontFamily: FONTS.bold, color: c.text3, marginTop: 2 },
     categories: { paddingHorizontal: 8, gap: 4 },
     ratingRow: {
       alignItems: 'center', gap: 10,

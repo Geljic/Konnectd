@@ -1,6 +1,8 @@
 import pb from './pb';
 import type { CategoryColour } from '@/constants/colors';
 import { WEB_BASE_URL } from '@/constants/config';
+import { sendPushToUser } from '@/utils/notifications';
+import { useSettingsStore } from '@/store/settingsStore';
 
 export interface Challenge {
   id: string;
@@ -63,11 +65,12 @@ export async function createChallenge(params: {
   if (!pb.authStore.isValid) return null;
   try {
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+    const challengerName = pb.authStore.model?.display_name
+      ? `${pb.authStore.model.display_name}#${pb.authStore.model.username_tag ?? '????'}`
+      : pb.authStore.model?.name || pb.authStore.model?.email;
     const record = await pb.collection('challenges').create({
       challenger: pb.authStore.model?.id,
-      challenger_name: pb.authStore.model?.display_name
-        ? `${pb.authStore.model.display_name}#${pb.authStore.model.username_tag ?? '????'}`
-        : pb.authStore.model?.name || pb.authStore.model?.email,
+      challenger_name: challengerName,
       challenger_mistakes: params.mistakes,
       challenger_duration: params.durationSeconds,
       challenger_solved_order: params.solvedOrder,
@@ -79,7 +82,16 @@ export async function createChallenge(params: {
       status: 'pending',
       expires_at: expiresAt,
     });
-    return mapChallenge(record as unknown as Record<string, unknown>);
+    const challenge = mapChallenge(record as unknown as Record<string, unknown>);
+    if (params.recipientId && useSettingsStore.getState().challengeNotificationsEnabled) {
+      sendPushToUser(
+        params.recipientId,
+        '⚡ New Challenge!',
+        `${challengerName} challenged you to ${params.puzzleLabel}`,
+        { screen: 'ChallengesInbox' },
+      );
+    }
+    return challenge;
   } catch (e) {
     console.error('[createChallenge] error:', e);
     return null;
@@ -108,16 +120,30 @@ export async function submitChallengeResult(
 ): Promise<Challenge | null> {
   if (!pb.authStore.isValid) return null;
   try {
+    const opponentName = pb.authStore.model?.name || pb.authStore.model?.email || 'Your opponent';
     const record = await pb.collection('challenges').update(challengeId, {
       opponent: pb.authStore.model?.id,
-      opponent_name: pb.authStore.model?.name || pb.authStore.model?.email,
+      opponent_name: opponentName,
       opponent_mistakes: result.mistakes,
       opponent_duration: result.durationSeconds,
       opponent_solved_order: result.solvedOrder,
       opponent_score: result.score ?? null,
       status: 'complete',
     });
-    return mapChallenge(record as unknown as Record<string, unknown>);
+    const challenge = mapChallenge(record as unknown as Record<string, unknown>);
+    if (
+      challenge.challenger &&
+      challenge.challenger !== pb.authStore.model?.id &&
+      useSettingsStore.getState().challengeNotificationsEnabled
+    ) {
+      sendPushToUser(
+        challenge.challenger,
+        '🏁 Challenge completed!',
+        `${opponentName} just finished your challenge — see who won!`,
+        { screen: 'ChallengesInbox', challengeId: challenge.id },
+      );
+    }
+    return challenge;
   } catch (e) {
     console.error('[submitChallengeResult] error:', e);
     return null;
@@ -150,6 +176,26 @@ export async function fetchPendingChallengesForMe(): Promise<Challenge[]> {
     return result.items.map(r => mapChallenge(r as unknown as Record<string, unknown>));
   } catch (e) {
     console.error('[fetchPendingChallengesForMe] error:', e);
+    return [];
+  }
+}
+
+export async function fetchActiveChallengesWithFriend(friendId: string): Promise<Challenge[]> {
+  if (!pb.authStore.isValid) return [];
+  const myId = pb.authStore.model?.id;
+  if (!myId) return [];
+  try {
+    const result = await pb.collection('challenges').getList(1, 20, {
+      filter: `status = 'pending' && (` +
+        `(challenger = '${myId}' && (opponent = '${friendId}' || recipient = '${friendId}')) ||` +
+        `(challenger = '${friendId}' && (opponent = '${myId}' || recipient = '${myId}'))` +
+        `)`,
+      sort: '-created',
+      requestKey: `active-challenges-${friendId}`,
+    });
+    return result.items.map(r => mapChallenge(r as unknown as Record<string, unknown>));
+  } catch (e) {
+    console.error('[fetchActiveChallengesWithFriend] error:', e);
     return [];
   }
 }

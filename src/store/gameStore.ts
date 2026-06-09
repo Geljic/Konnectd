@@ -2,10 +2,22 @@ import { create } from 'zustand';
 import type { Puzzle, PuzzleCategory } from '@/api/puzzles';
 import type { CategoryColour } from '@/constants/colors';
 import { CATEGORY_ORDER } from '@/constants/colors';
-import { MAX_MISTAKES } from '@/constants/config';
+import { MAX_MISTAKES, MAX_HINTS } from '@/constants/config';
 
 type GameStatus = 'idle' | 'playing' | 'won' | 'lost';
 export type GameMode = 'normal' | 'hard';
+
+export type HintTier = 'warmcold' | 'wordreveal' | 'categorypeek';
+export const HINT_COSTS: Record<HintTier, number> = {
+  warmcold: 100,
+  wordreveal: 150,
+  categorypeek: 200,
+};
+
+export type HintResult =
+  | { tier: 'warmcold'; matchCount: number }
+  | { tier: 'wordreveal'; word: string; colour: CategoryColour }
+  | { tier: 'categorypeek'; categoryName: string };
 
 interface GameState {
   puzzle: Puzzle | null;
@@ -24,6 +36,8 @@ interface GameState {
   gameMode: GameMode;
   firstSolve: boolean;
   score: number | null;
+  hintsUsed: number;
+  hintPenalty: number;
 
   loadPuzzle: (puzzle: Puzzle, mode?: 'daily' | 'freeplay' | 'nyt', puzzleId?: string, gameMode?: GameMode, collection?: 'puzzles' | 'nyt_puzzles', firstSolve?: boolean) => void;
   restoreProgress: (solvedCategories: PuzzleCategory[], mistakes: number, elapsedMs: number) => void;
@@ -34,6 +48,7 @@ interface GameState {
   clearSelection: () => void;
   dismissToast: () => void;
   setScore: (score: number | null) => void;
+  useHint: (tier: HintTier, isPremium?: boolean) => HintResult | null;
   reset: () => void;
 }
 
@@ -54,6 +69,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   gameMode: 'normal',
   firstSolve: true,
   score: null,
+  hintsUsed: 0,
+  hintPenalty: 0,
 
   loadPuzzle(puzzle, mode, puzzleId, gameMode = 'normal', collection, firstSolve = true) {
     const words = [...puzzle.words];
@@ -78,6 +95,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       gameMode,
       firstSolve,
       score: null,
+      hintsUsed: 0,
+      hintPenalty: 0,
     });
   },
 
@@ -197,6 +216,39 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ score });
   },
 
+  useHint(tier, isPremium = false) {
+    const { puzzle, solvedCategories, selectedWords, hintsUsed, status } = get();
+    if (!puzzle || status !== 'playing') return null;
+    if (!isPremium && hintsUsed >= MAX_HINTS) return null;
+
+    const cost = HINT_COSTS[tier];
+    const unsolved = puzzle.categories.filter(
+      c => !solvedCategories.some(s => s.name === c.name)
+    );
+    if (unsolved.length === 0) return null;
+
+    set({ hintsUsed: hintsUsed + 1, hintPenalty: get().hintPenalty + cost });
+
+    if (tier === 'warmcold') {
+      const matchCount = unsolved.reduce((best, cat) => {
+        const overlap = selectedWords.filter(w => cat.words.includes(w)).length;
+        return Math.max(best, overlap);
+      }, 0);
+      return { tier: 'warmcold', matchCount };
+    }
+
+    if (tier === 'wordreveal') {
+      const target = unsolved[Math.floor(Math.random() * unsolved.length)];
+      const unrevealedWords = target.words.filter(w => !selectedWords.includes(w));
+      const word = unrevealedWords[Math.floor(Math.random() * unrevealedWords.length)] ?? target.words[0];
+      return { tier: 'wordreveal', word, colour: target.colour };
+    }
+
+    // categorypeek
+    const target = unsolved[Math.floor(Math.random() * unsolved.length)];
+    return { tier: 'categorypeek', categoryName: target.name };
+  },
+
   reset() {
     set({
       puzzle: null,
@@ -215,6 +267,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       gameMode: 'normal',
       firstSolve: true,
       score: null,
+      hintsUsed: 0,
+      hintPenalty: 0,
     });
   },
 }));

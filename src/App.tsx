@@ -35,12 +35,14 @@ export type AuthStackParamList = {
 
 export type AppStackParamList = {
   Home: undefined;
-  PuzzleSelect: undefined;
+  PuzzleSelect: { recipientId?: string; recipientName?: string } | undefined;
   Game: {
     mode: 'daily' | 'freeplay' | 'nyt';
     puzzleId?: string;
     collection?: 'puzzles' | 'nyt_puzzles';
     challengeId?: string;
+    recipientId?: string;
+    recipientName?: string;
   };
   Result: undefined;
   Stats: undefined;
@@ -110,11 +112,15 @@ const linking = {
   },
 };
 
+// Notification data shapes sent from challenges.ts
+type NotificationData = { screen?: string; challengeId?: string };
+
 export default function App() {
   const { user, restoreSession } = useAuthStore();
   const loadSettings = useSettingsStore(s => s.load);
   const [ready, setReady] = useState(false);
   const [pendingChallengeId, setPendingChallengeId] = useState<string | null>(null);
+  const [pendingScreen, setPendingScreen] = useState<string | null>(null);
   const [navRef, setNavRef] = useState<any>(null);
 
   const [fontsLoaded] = useFonts({
@@ -139,10 +145,36 @@ export default function App() {
     }
   }
 
+  // Handle a push notification tap — navigate if ready, otherwise store as pending
+  function handleNotificationData(data: NotificationData) {
+    const target = data?.screen;
+    const challengeId = data?.challengeId;
+    if (navRef && user) {
+      if (target === 'ChallengesInbox') navRef.navigate('ChallengesInbox');
+      else if (target === 'Challenge' && challengeId) navRef.navigate('Challenge', { challengeId });
+    } else {
+      if (target) setPendingScreen(target);
+      if (challengeId) setPendingChallengeId(challengeId);
+    }
+  }
+
   // Listen for deep links while the app is already open
   useEffect(() => {
     const sub = Linking.addEventListener('url', ({ url }) => handleDeepLink(url));
     return () => sub.remove();
+  }, [navRef, user]);
+
+  // Register expo-notifications response listener (native only)
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    let sub: { remove: () => void } | null = null;
+    import('expo-notifications').then(N => {
+      sub = N.addNotificationResponseReceivedListener(response => {
+        const data = response.notification.request.content.data as NotificationData;
+        handleNotificationData(data);
+      });
+    }).catch(() => {});
+    return () => { sub?.remove(); };
   }, [navRef, user]);
 
   // Check for a deep link that launched the app
@@ -150,16 +182,31 @@ export default function App() {
     Linking.getInitialURL().then(url => {
       if (url) handleDeepLink(url);
     });
+    // Check if app was launched from a notification tap
+    if (Platform.OS !== 'web') {
+      import('expo-notifications').then(N => {
+        N.getLastNotificationResponseAsync().then(response => {
+          if (response) {
+            const data = response.notification.request.content.data as NotificationData;
+            handleNotificationData(data);
+          }
+        });
+      }).catch(() => {});
+    }
     Promise.all([restoreSession(), loadSettings()]).finally(() => setReady(true));
   }, []);
 
-  // Once the user is authenticated and a pending challenge exists, navigate to it
+  // Once the user is authenticated and pending navigation exists, resolve it
   useEffect(() => {
-    if (user && pendingChallengeId && navRef) {
+    if (!user || !navRef) return;
+    if (pendingChallengeId) {
       navRef.navigate('Challenge', { challengeId: pendingChallengeId });
       setPendingChallengeId(null);
+    } else if (pendingScreen === 'ChallengesInbox') {
+      navRef.navigate('ChallengesInbox');
+      setPendingScreen(null);
     }
-  }, [user, pendingChallengeId, navRef]);
+  }, [user, pendingChallengeId, pendingScreen, navRef]);
 
   const { width: windowWidth } = useWindowDimensions();
 

@@ -4,7 +4,7 @@ import {
   ActivityIndicator, ListRenderItem, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useColors } from '@/hooks/useColors';
 import { CATEGORY_COLOURS, type CategoryColour, CATEGORY_ORDER, type ColorTheme } from '@/constants/colors';
 import {
@@ -16,7 +16,7 @@ import { AdBanner } from '@/components/BannerAd';
 import { FONTS } from '@/constants/fonts';
 import type { AppStackParamList } from '../App';
 
-type Props = { navigation: NativeStackNavigationProp<AppStackParamList, 'PuzzleSelect'> };
+type Props = NativeStackScreenProps<AppStackParamList, 'PuzzleSelect'>;
 type Collection = 'generated' | 'nyt';
 
 const DIFFICULTY_LABELS: Record<CategoryColour, string> = {
@@ -33,7 +33,9 @@ const SORT_LABELS: Record<PuzzleSortMode, string> = {
   date_desc: '↓ Newest', date_asc: '↑ Oldest', diff_asc: '↑ Easiest', diff_desc: '↓ Hardest',
 };
 
-export function PuzzleSelectScreen({ navigation }: Props) {
+export function PuzzleSelectScreen({ navigation, route }: Props) {
+  const recipientId = route.params?.recipientId;
+  const recipientName = route.params?.recipientName;
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -114,14 +116,14 @@ export function PuzzleSelectScreen({ navigation }: Props) {
       setModalLabel(label);
       setModalCollection(coll);
     } else {
-      navigation.navigate('Game', { mode: 'freeplay', puzzleId: id, collection: coll });
+      navigation.navigate('Game', { mode: 'freeplay', puzzleId: id, collection: coll, recipientId, recipientName });
     }
   }
 
   function handlePlayAgain() {
     setModalPuzzleId(null);
     if (modalPuzzleId) {
-      navigation.navigate('Game', { mode: 'freeplay', puzzleId: modalPuzzleId, collection: modalCollection });
+      navigation.navigate('Game', { mode: 'freeplay', puzzleId: modalPuzzleId, collection: modalCollection, recipientId, recipientName });
     }
   }
 
@@ -164,6 +166,11 @@ export function PuzzleSelectScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
+        {recipientId && recipientName && (
+          <View style={styles.challengeBanner}>
+            <Text style={styles.challengeBannerText}>⚡ Pick a puzzle to challenge {recipientName}</Text>
+          </View>
+        )}
         <AdBanner />
 
         <View style={styles.tabs}>
@@ -261,6 +268,8 @@ function makeStyles(c: ColorTheme) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: c.bgScreen },
     container: { flex: 1 },
+    challengeBanner: { backgroundColor: c.green, marginHorizontal: 20, marginTop: 12, borderRadius: 12, padding: 12, alignItems: 'center' },
+    challengeBannerText: { fontSize: 14, fontFamily: FONTS.extraBold, color: '#162219' },
     tabs: { flexDirection: 'row', marginHorizontal: 20, marginVertical: 12, borderRadius: 12, backgroundColor: c.bgBase, padding: 4 },
     tab: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
     tabActive: { backgroundColor: c.text1 },

@@ -13,6 +13,7 @@ export type TileStripStyle = keyof typeof STRIP_CONFIG;
 interface SettingsState {
   hardMode: boolean;
   notificationsEnabled: boolean;
+  challengeNotificationsEnabled: boolean;
   darkMode: boolean;
   tileStripStyle: TileStripStyle;
   loaded: boolean;
@@ -20,6 +21,7 @@ interface SettingsState {
   load: () => Promise<void>;
   setHardMode: (val: boolean) => Promise<void>;
   setNotificationsEnabled: (val: boolean) => Promise<void>;
+  setChallengeNotificationsEnabled: (val: boolean) => Promise<void>;
   setDarkMode: (val: boolean) => Promise<void>;
   setTileStripStyle: (val: TileStripStyle) => Promise<void>;
 }
@@ -27,21 +29,25 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>((set) => ({
   hardMode: false,
   notificationsEnabled: false,
+  challengeNotificationsEnabled: true,
   darkMode: false,
   tileStripStyle: 'big',
   loaded: false,
 
   async load() {
     try {
-      const [hard, notif, dark, strip] = await Promise.all([
+      const [hard, notif, challengeNotif, dark, strip] = await Promise.all([
         AsyncStorage.getItem('setting_hard_mode'),
         AsyncStorage.getItem('setting_notifications'),
+        AsyncStorage.getItem('setting_challenge_notifications'),
         AsyncStorage.getItem('setting_dark_mode'),
         AsyncStorage.getItem('setting_tile_strip'),
       ]);
       set({
         hardMode: hard === 'true',
         notificationsEnabled: notif === 'true',
+        // default true — new installs get challenge notifications on
+        challengeNotificationsEnabled: challengeNotif === null ? true : challengeNotif === 'true',
         darkMode: dark === 'true',
         tileStripStyle: (strip as TileStripStyle) ?? 'big',
         loaded: true,
@@ -59,6 +65,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   async setNotificationsEnabled(val) {
     set({ notificationsEnabled: val });
     await AsyncStorage.setItem('setting_notifications', String(val));
+  },
+
+  async setChallengeNotificationsEnabled(val) {
+    set({ challengeNotificationsEnabled: val });
+    await AsyncStorage.setItem('setting_challenge_notifications', String(val));
   },
 
   async setDarkMode(val) {

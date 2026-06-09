@@ -12,6 +12,7 @@ interface UserProfile {
   streakBest: number;
   puzzlesPlayed: number;
   puzzlesWon: number;
+  isPremium: boolean;
   isGuest?: boolean;
 }
 
@@ -110,6 +111,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         streakBest: 0,
         puzzlesPlayed: 0,
         puzzlesWon: 0,
+        isPremium: false,
         isGuest: true,
       },
     });
@@ -175,6 +177,7 @@ function mapModel(record: Record<string, unknown>): UserProfile {
     streakBest: (record.streak_best as number) || 0,
     puzzlesPlayed: (record.puzzles_played as number) || 0,
     puzzlesWon: (record.puzzles_won as number) || 0,
+    isPremium: (record.is_premium as boolean) || false,
   };
 }
 

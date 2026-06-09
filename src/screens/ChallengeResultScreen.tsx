@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Share } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Share, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchChallenge, isMine, type Challenge } from '@/api/challenges';
@@ -42,6 +42,7 @@ export function ChallengeResultScreen({ route, navigation }: Props) {
   const { challengeId } = route.params;
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetchChallenge(challengeId).then(c => {
@@ -70,7 +71,24 @@ export function ChallengeResultScreen({ route, navigation }: Props) {
       '',
       'Play at konnectd.xyz',
     ].join('\n');
-    await Share.share({ message: text });
+
+    if (Platform.OS === 'web') {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        try { await navigator.share({ text }); return; } catch { /* fall through to clipboard */ }
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        const { copyShareText } = await import('@/utils/shareGrid');
+        await copyShareText(text);
+      }
+    } else {
+      try { await Share.share({ message: text }); return; } catch { /* fall through */ }
+      const { copyShareText } = await import('@/utils/shareGrid');
+      await copyShareText(text);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
   }
 
   if (loading) {
@@ -171,11 +189,23 @@ export function ChallengeResultScreen({ route, navigation }: Props) {
         </View>
 
         <View style={styles.footer}>
-          <Pressable style={styles.btnShare} onPress={handleShare}>
-            <Text style={styles.btnShareText}>Share Result</Text>
+          <Pressable style={styles.btnChallengeAgain} onPress={() => {
+            const opponentId = mine ? challenge.opponent : challenge.challenger;
+            const opponentName = mine ? (challenge.opponentName ?? 'them') : challenge.challengerName;
+            navigation.navigate('PuzzleSelect', { recipientId: opponentId ?? undefined, recipientName: opponentName ?? undefined });
+          }}>
+            <Text style={styles.btnChallengeAgainText}>⚡ Challenge Again</Text>
           </Pressable>
-          <Pressable style={styles.btnHome} onPress={() => navigation.navigate('Home')}>
-            <Text style={styles.btnHomeText}>← Home</Text>
+          <View style={styles.footerRow}>
+            <Pressable style={styles.btnNextPuzzle} onPress={() => navigation.navigate('PuzzleSelect')}>
+              <Text style={styles.btnNextPuzzleText}>Next Puzzle →</Text>
+            </Pressable>
+            <Pressable style={styles.btnShare} onPress={handleShare}>
+              <Text style={styles.btnShareText}>{copied ? '✓ Copied!' : 'Share'}</Text>
+            </Pressable>
+          </View>
+          <Pressable style={styles.btnDone} onPress={() => navigation.navigate('Home')}>
+            <Text style={styles.btnDoneText}>Done</Text>
           </Pressable>
         </View>
       </View>
@@ -206,10 +236,15 @@ function makeStyles(c: ColorTheme) {
     vsLabel: { width: 30, alignItems: 'center' },
     vsText: { fontSize: 13, fontFamily: FONTS.extraBold, color: c.text3 },
     footer: { gap: 10 },
-    btnShare: { backgroundColor: c.text1, borderRadius: 14, padding: 16, alignItems: 'center' },
-    btnShareText: { fontSize: 16, fontFamily: FONTS.extraBold, color: c.bgScreen },
-    btnHome: { alignItems: 'center', paddingVertical: 8 },
-    btnHomeText: { fontSize: 15, fontFamily: FONTS.bold, color: c.text2 },
+    btnChallengeAgain: { backgroundColor: c.green, borderRadius: 14, padding: 16, alignItems: 'center' },
+    btnChallengeAgainText: { fontSize: 16, fontFamily: FONTS.extraBold, color: '#162219' },
+    footerRow: { flexDirection: 'row', gap: 10 },
+    btnNextPuzzle: { flex: 1, borderWidth: 1.5, borderColor: c.border, borderRadius: 14, padding: 14, alignItems: 'center' },
+    btnNextPuzzleText: { fontSize: 15, fontFamily: FONTS.bold, color: c.text1 },
+    btnShare: { flex: 1, borderWidth: 1.5, borderColor: c.border, borderRadius: 14, padding: 14, alignItems: 'center' },
+    btnShareText: { fontSize: 15, fontFamily: FONTS.bold, color: c.text2 },
+    btnDone: { alignItems: 'center', paddingVertical: 6 },
+    btnDoneText: { fontSize: 14, fontFamily: FONTS.bold, color: c.text3 },
     emoji: { fontSize: 52 },
     title: { fontSize: 22, fontFamily: FONTS.extraBold, color: c.text1 },
     subtitle: { fontSize: 15, fontFamily: FONTS.bold, color: c.text2, textAlign: 'center' },
