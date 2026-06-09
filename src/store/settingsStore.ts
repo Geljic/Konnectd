@@ -9,6 +9,7 @@ export const STRIP_CONFIG = {
 } as const;
 
 export type TileStripStyle = keyof typeof STRIP_CONFIG;
+export type CosmeticTheme = 'classic' | 'gardenPop';
 
 interface SettingsState {
   hardMode: boolean;
@@ -16,6 +17,7 @@ interface SettingsState {
   challengeNotificationsEnabled: boolean;
   darkMode: boolean;
   tileStripStyle: TileStripStyle;
+  cosmeticTheme: CosmeticTheme;
   loaded: boolean;
 
   load: () => Promise<void>;
@@ -24,6 +26,7 @@ interface SettingsState {
   setChallengeNotificationsEnabled: (val: boolean) => Promise<void>;
   setDarkMode: (val: boolean) => Promise<void>;
   setTileStripStyle: (val: TileStripStyle) => Promise<void>;
+  setCosmeticTheme: (val: CosmeticTheme) => Promise<void>;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -32,16 +35,18 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   challengeNotificationsEnabled: true,
   darkMode: false,
   tileStripStyle: 'big',
+  cosmeticTheme: 'classic',
   loaded: false,
 
   async load() {
     try {
-      const [hard, notif, challengeNotif, dark, strip] = await Promise.all([
+      const [hard, notif, challengeNotif, dark, strip, cosmeticTheme] = await Promise.all([
         AsyncStorage.getItem('setting_hard_mode'),
         AsyncStorage.getItem('setting_notifications'),
         AsyncStorage.getItem('setting_challenge_notifications'),
         AsyncStorage.getItem('setting_dark_mode'),
         AsyncStorage.getItem('setting_tile_strip'),
+        AsyncStorage.getItem('setting_cosmetic_theme'),
       ]);
       set({
         hardMode: hard === 'true',
@@ -50,6 +55,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         challengeNotificationsEnabled: challengeNotif === null ? true : challengeNotif === 'true',
         darkMode: dark === 'true',
         tileStripStyle: (strip as TileStripStyle) ?? 'big',
+        cosmeticTheme: cosmeticTheme === 'gardenPop' ? 'gardenPop' : 'classic',
         loaded: true,
       });
     } catch {
@@ -80,5 +86,10 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   async setTileStripStyle(val) {
     set({ tileStripStyle: val });
     await AsyncStorage.setItem('setting_tile_strip', val);
+  },
+
+  async setCosmeticTheme(val) {
+    set({ cosmeticTheme: val });
+    await AsyncStorage.setItem('setting_cosmetic_theme', val);
   },
 }));

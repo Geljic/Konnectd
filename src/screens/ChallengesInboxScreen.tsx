@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, Pressable, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { fetchMyChallenges, isMine, isExpired, type Challenge } from '@/api/challenges';
+import { fetchMyChallenges, subscribeToChallengeChanges, isMine, isExpired, type Challenge } from '@/api/challenges';
 import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
@@ -26,8 +26,8 @@ export function ChallengesInboxScreen({ navigation }: Props) {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(() => {
-    setLoading(true);
+  const load = useCallback((showSpinner = true) => {
+    if (showSpinner) setLoading(true);
     fetchMyChallenges().then(c => {
       setChallenges(c);
       setLoading(false);
@@ -35,6 +35,21 @@ export function ChallengesInboxScreen({ navigation }: Props) {
   }, []);
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
+    subscribeToChallengeChanges(() => load(false)).then(fn => {
+      if (cancelled) fn();
+      else unsubscribe = fn;
+    });
+    const interval = setInterval(() => load(false), 10000);
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+      clearInterval(interval);
+    };
+  }, [load]);
 
   function handlePress(item: Challenge) {
     if (item.status === 'complete') {

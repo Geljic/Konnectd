@@ -31,17 +31,29 @@ interface Props {
   visible: boolean;
   hintsUsed: number;
   hintPenalty: number;
+  rewardedHintTokens: number;
   isPremium: boolean;
   onSelectTier: (tier: HintTier) => void;
   onClose: () => void;
-  onUpgrade?: () => void;
+  onWatchRewardedAd?: () => void;
+  rewardedAdLoading?: boolean;
 }
 
-export function HintModal({ visible, hintsUsed, hintPenalty, isPremium, onSelectTier, onClose, onUpgrade }: Props) {
+export function HintModal({
+  visible,
+  hintsUsed,
+  hintPenalty,
+  rewardedHintTokens,
+  isPremium,
+  onSelectTier,
+  onClose,
+  onWatchRewardedAd,
+  rewardedAdLoading = false,
+}: Props) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const hintsLeft = isPremium ? Infinity : MAX_HINTS - hintsUsed;
-  const exhausted = !isPremium && hintsLeft <= 0;
+  const exhausted = !isPremium && hintsLeft <= 0 && rewardedHintTokens <= 0;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -56,6 +68,7 @@ export function HintModal({ visible, hintsUsed, hintPenalty, isPremium, onSelect
             ) : (
               <Text style={styles.subtitle}>
                 {hintsLeft === Infinity ? '' : `${hintsLeft} hint${hintsLeft !== 1 ? 's' : ''} remaining`}
+                {rewardedHintTokens > 0 ? ` · ${rewardedHintTokens} ad hint${rewardedHintTokens !== 1 ? 's' : ''}` : ''}
                 {hintPenalty > 0 ? ` · −${hintPenalty} pts so far` : ''}
               </Text>
             )}
@@ -65,11 +78,17 @@ export function HintModal({ visible, hintsUsed, hintPenalty, isPremium, onSelect
             <View style={styles.upgradeBox}>
               <Text style={styles.upgradeTitle}>No hints left</Text>
               <Text style={styles.upgradeDesc}>
-                Upgrade to Premium for unlimited hints every game, plus streak freeze, cosmetics and more.
+                Watch a rewarded video to unlock one extra hint for this puzzle.
               </Text>
-              {onUpgrade && (
-                <Pressable style={styles.upgradeBtn} onPress={() => { onClose(); onUpgrade(); }}>
-                  <Text style={styles.upgradeBtnText}>Upgrade to Premium</Text>
+              {onWatchRewardedAd && (
+                <Pressable
+                  style={[styles.rewardBtn, rewardedAdLoading && styles.rewardBtnDisabled]}
+                  onPress={onWatchRewardedAd}
+                  disabled={rewardedAdLoading}
+                >
+                  <Text style={styles.rewardBtnText}>
+                    {rewardedAdLoading ? 'Loading ad...' : 'Watch ad for 1 hint'}
+                  </Text>
                 </Pressable>
               )}
             </View>
@@ -181,11 +200,12 @@ function makeStyles(c: ColorTheme) {
     },
     upgradeTitle: { fontSize: 17, fontFamily: FONTS.extraBold, color: c.text1 },
     upgradeDesc: { fontSize: 13, fontFamily: FONTS.bold, color: c.text2, textAlign: 'center' },
-    upgradeBtn: {
-      backgroundColor: c.green, borderRadius: 12,
-      paddingHorizontal: 24, paddingVertical: 12, marginTop: 4,
+    rewardBtn: {
+      borderRadius: 12, borderWidth: 1.5, borderColor: c.border,
+      paddingHorizontal: 20, paddingVertical: 11,
     },
-    upgradeBtnText: { fontSize: 15, fontFamily: FONTS.extraBold, color: '#FFF' },
+    rewardBtnDisabled: { opacity: 0.5 },
+    rewardBtnText: { fontSize: 14, fontFamily: FONTS.extraBold, color: c.text1 },
     cancelBtn: {
       alignItems: 'center', padding: 14,
       borderRadius: 12, borderWidth: 1.5, borderColor: c.border,

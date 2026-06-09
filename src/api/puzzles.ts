@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import pb from './pb';
 import type { CategoryColour } from '@/constants/colors';
+import { DAILY_PUZZLE_LAUNCH_DATE } from '@/constants/config';
 
 export interface PuzzleCategory {
   name: string;
@@ -22,6 +23,10 @@ export interface PuzzleListItem {
   id: string;
   difficulty_min: CategoryColour;
   play_count: number;
+}
+
+export interface DailyPuzzleListItem extends PuzzleListItem {
+  daily_date: string;
 }
 
 export interface NytPuzzleListItem {
@@ -96,6 +101,38 @@ export async function fetchPuzzlesPage(
       totalItems: result.totalItems,
     };
   } catch {
+    return { items: [], totalPages: 0, totalItems: 0 };
+  }
+}
+
+export async function fetchDailyPuzzlesPage(
+  page: number,
+  sortAsc = false,
+  search = '',
+): Promise<PageResult<DailyPuzzleListItem>> {
+  const today = new Date().toISOString().slice(0, 10);
+  const filters = [
+    `status = 'published'`,
+    `daily_date != ''`,
+    `daily_date >= '${DAILY_PUZZLE_LAUNCH_DATE}'`,
+    `daily_date <= '${today}'`,
+  ];
+  if (search.trim()) filters.push(`daily_date ~ '${search.trim()}'`);
+
+  try {
+    const result = await pb.collection('puzzles').getList(page, 10, {
+      filter: filters.join(' && '),
+      sort: sortAsc ? 'daily_date' : '-daily_date',
+      fields: 'id,difficulty_min,play_count,daily_date',
+      requestKey: null,
+    });
+    return {
+      items: result.items as unknown as DailyPuzzleListItem[],
+      totalPages: result.totalPages,
+      totalItems: result.totalItems,
+    };
+  } catch (e) {
+    console.error('[fetchDailyPuzzlesPage] error:', e);
     return { items: [], totalPages: 0, totalItems: 0 };
   }
 }

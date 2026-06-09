@@ -8,16 +8,36 @@ export const ADMOB_IDS = {
     banner: __DEV__
       ? 'ca-app-pub-3940256099942544/6300978111'  // test ID
       : 'ca-app-pub-REPLACE/REPLACE',
+    rewarded: __DEV__
+      ? 'ca-app-pub-3940256099942544/5224354917'  // test ID
+      : 'ca-app-pub-REPLACE/REPLACE',
   },
   ios: {
     banner: __DEV__
       ? 'ca-app-pub-3940256099942544/2934735716'  // test ID
       : 'ca-app-pub-REPLACE/REPLACE',
+    rewarded: __DEV__
+      ? 'ca-app-pub-3940256099942544/1712485313'  // test ID
+      : 'ca-app-pub-REPLACE/REPLACE',
   },
 };
 
+export const MONETISATION_PRODUCTS = {
+  cosmeticsPack: {
+    id: 'konnectd_cosmetics_garden_pop',
+    label: 'Garden Pop Cosmetic Pack',
+    priceLabel: '$1.99',
+  },
+  supportPass: {
+    id: 'konnectd_support_pass',
+    label: 'Supporter Pass',
+    priceLabel: '$4.99',
+  },
+} as const;
+
 // Web base URL for shareable links — update when domain changes
 export const WEB_BASE_URL = process.env.EXPO_PUBLIC_WEB_BASE_URL ?? 'https://konnectd.xyz';
+export const DAILY_PUZZLE_LAUNCH_DATE = process.env.EXPO_PUBLIC_DAILY_PUZZLE_LAUNCH_DATE ?? '2026-06-09';
 
 export const MAX_MISTAKES = 4;
 export const MAX_HINTS = 3;

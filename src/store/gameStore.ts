@@ -38,6 +38,7 @@ interface GameState {
   score: number | null;
   hintsUsed: number;
   hintPenalty: number;
+  rewardedHintTokens: number;
 
   loadPuzzle: (puzzle: Puzzle, mode?: 'daily' | 'freeplay' | 'nyt', puzzleId?: string, gameMode?: GameMode, collection?: 'puzzles' | 'nyt_puzzles', firstSolve?: boolean) => void;
   restoreProgress: (solvedCategories: PuzzleCategory[], mistakes: number, elapsedMs: number) => void;
@@ -48,6 +49,7 @@ interface GameState {
   clearSelection: () => void;
   dismissToast: () => void;
   setScore: (score: number | null) => void;
+  grantRewardedHintToken: () => void;
   useHint: (tier: HintTier, isPremium?: boolean) => HintResult | null;
   reset: () => void;
 }
@@ -71,6 +73,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   score: null,
   hintsUsed: 0,
   hintPenalty: 0,
+  rewardedHintTokens: 0,
 
   loadPuzzle(puzzle, mode, puzzleId, gameMode = 'normal', collection, firstSolve = true) {
     const words = [...puzzle.words];
@@ -97,6 +100,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       score: null,
       hintsUsed: 0,
       hintPenalty: 0,
+      rewardedHintTokens: 0,
     });
   },
 
@@ -216,10 +220,15 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ score });
   },
 
+  grantRewardedHintToken() {
+    set({ rewardedHintTokens: get().rewardedHintTokens + 1 });
+  },
+
   useHint(tier, isPremium = false) {
-    const { puzzle, solvedCategories, selectedWords, hintsUsed, status } = get();
+    const { puzzle, solvedCategories, selectedWords, hintsUsed, status, rewardedHintTokens } = get();
     if (!puzzle || status !== 'playing') return null;
-    if (!isPremium && hintsUsed >= MAX_HINTS) return null;
+    const usingRewardedToken = !isPremium && hintsUsed >= MAX_HINTS && rewardedHintTokens > 0;
+    if (!isPremium && hintsUsed >= MAX_HINTS && !usingRewardedToken) return null;
 
     const cost = HINT_COSTS[tier];
     const unsolved = puzzle.categories.filter(
@@ -227,7 +236,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     );
     if (unsolved.length === 0) return null;
 
-    set({ hintsUsed: hintsUsed + 1, hintPenalty: get().hintPenalty + cost });
+    set({
+      hintsUsed: hintsUsed + 1,
+      rewardedHintTokens: usingRewardedToken ? rewardedHintTokens - 1 : rewardedHintTokens,
+      hintPenalty: get().hintPenalty + cost,
+    });
 
     if (tier === 'warmcold') {
       const matchCount = unsolved.reduce((best, cat) => {
@@ -269,6 +282,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       score: null,
       hintsUsed: 0,
       hintPenalty: 0,
+      rewardedHintTokens: 0,
     });
   },
 }));

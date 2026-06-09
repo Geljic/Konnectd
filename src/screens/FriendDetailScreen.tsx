@@ -10,7 +10,7 @@ import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
 import { fetchMatchHistory, type ChallengeMatch } from '@/api/social';
-import { fetchActiveChallengesWithFriend, type Challenge } from '@/api/challenges';
+import { fetchActiveChallengesWithFriend, subscribeToChallengeChanges, type Challenge } from '@/api/challenges';
 import { removeFriendship } from '@/api/friends';
 import pb from '@/api/pb';
 import type { AppStackParamList } from '../App';
@@ -127,8 +127,9 @@ export function FriendDetailScreen({ navigation, route }: Props) {
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      async function loadData() {
-        setLoading(true);
+      let unsubscribe: (() => void) | undefined;
+      async function loadData(showSpinner = true) {
+        if (showSpinner) setLoading(true);
         const [history, challenges] = await Promise.all([
           fetchMatchHistory(friendId),
           fetchActiveChallengesWithFriend(friendId),
@@ -140,7 +141,16 @@ export function FriendDetailScreen({ navigation, route }: Props) {
         }
       }
       loadData();
-      return () => { cancelled = true; };
+      subscribeToChallengeChanges(() => loadData(false)).then(fn => {
+        if (cancelled) fn();
+        else unsubscribe = fn;
+      });
+      const interval = setInterval(() => loadData(false), 10000);
+      return () => {
+        cancelled = true;
+        unsubscribe?.();
+        clearInterval(interval);
+      };
     }, [friendId]),
   );
 
@@ -252,22 +262,10 @@ export function FriendDetailScreen({ navigation, route }: Props) {
         ) : (
           <Pressable
             style={styles.newChallengeBtn}
-            onPress={() =>
-              Alert.alert(
-                'Challenge ' + friendDisplayName,
-                'Win any puzzle, then tap "Challenge a Friend" on the result screen — you can pick ' + friendDisplayName + ' there to send the challenge.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Pick Puzzle',
-                    onPress: () => navigation.navigate('PuzzleSelect', {
-                      recipientId: friendId,
-                      recipientName: friendDisplayName,
-                    }),
-                  },
-                ],
-              )
-            }
+            onPress={() => navigation.navigate('PuzzleSelect', {
+              recipientId: friendId,
+              recipientName: friendDisplayName,
+            })}
           >
             <Text style={styles.newChallengeBtnText}>+ New Challenge</Text>
           </Pressable>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Line, Circle } from 'react-native-svg';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -21,6 +21,8 @@ import { HintModal, HintResultBanner } from '@/components/HintModal';
 import { useSound } from '@/hooks/useSound';
 import { FONTS } from '@/constants/fonts';
 import { MAX_HINTS } from '@/constants/config';
+import { showRewardedHintAd } from '@/api/rewardedAds';
+import { useMonetisationStore } from '@/store/monetisationStore';
 import type { AppStackParamList } from '../App';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Game'>;
@@ -66,15 +68,18 @@ export function GameScreen({ route, navigation }: Props) {
   const [helpVisible, setHelpVisible] = useState(false);
   const [hintModalVisible, setHintModalVisible] = useState(false);
   const [hintResult, setHintResult] = useState<HintResult | null>(null);
+  const [rewardedAdLoading, setRewardedAdLoading] = useState(false);
 
   const hardMode = useSettingsStore(s => s.hardMode);
-  const isPremium = useAuthStore(s => s.user?.isPremium ?? false);
+  const accountPremium = useAuthStore(s => s.user?.isPremium ?? false);
+  const supporter = useMonetisationStore(s => s.isSupporter());
+  const isPremium = accountPremium || supporter;
 
   const {
     loadPuzzle, restoreProgress, submitGuess, commitSolve, shuffleBoard, clearSelection, dismissToast, setScore,
-    useHint,
+    useHint, grantRewardedHintToken,
     status, mistakes, toastMessage, puzzle, selectedWords, startTime, currentMode, currentPuzzleId,
-    solvedCategories, currentCollection, hintsUsed, hintPenalty,
+    solvedCategories, currentCollection, hintsUsed, hintPenalty, rewardedHintTokens,
   } = useGameStore();
   const { play, playCorrect } = useSound();
 
@@ -194,6 +199,8 @@ export function GameScreen({ route, navigation }: Props) {
           : null;
         const puzzleLabel = currentCollection === 'nyt_puzzles'
           ? `NYT Puzzle${nytDate ? ` · ${nytDate}` : ''}`
+          : nytDate
+          ? `Daily Puzzle · ${nytDate}`
           : 'Curated Puzzle';
         createChallenge({
           puzzleId: puzzle.id,
@@ -227,6 +234,24 @@ export function GameScreen({ route, navigation }: Props) {
     setHintModalVisible(false);
     const result = useHint(tier, isPremium);
     if (result) setHintResult(result);
+  }
+
+  async function handleRewardedHintAd() {
+    if (rewardedAdLoading) return;
+    setRewardedAdLoading(true);
+    try {
+      const earnedReward = await showRewardedHintAd();
+      if (earnedReward) {
+        grantRewardedHintToken();
+        Alert.alert('Hint unlocked', 'You earned one extra hint for this puzzle.');
+      } else {
+        Alert.alert('Ad unavailable', 'No rewarded ad was available. Please try again soon.');
+      }
+    } catch {
+      Alert.alert('Ad unavailable', 'No rewarded ad was available. Please try again soon.');
+    } finally {
+      setRewardedAdLoading(false);
+    }
   }
 
   function handleShuffle() {
@@ -317,14 +342,16 @@ export function GameScreen({ route, navigation }: Props) {
             </Pressable>
           </View>
           <Pressable
-            style={[styles.btnHint, (!isPremium && hintsUsed >= MAX_HINTS) && styles.btnHintDisabled]}
+            style={styles.btnHint}
             onPress={() => setHintModalVisible(true)}
             disabled={status !== 'playing'}
           >
             <Text style={styles.btnHintText}>
               {isPremium
                 ? `⭐ Hint${hintPenalty > 0 ? ` (−${hintPenalty} pts)` : ''}`
-                : `💡 Hint ${hintsUsed > 0 ? `(${MAX_HINTS - hintsUsed} left · −${hintPenalty} pts)` : `(${MAX_HINTS} free)`}`
+                : hintsUsed >= MAX_HINTS && rewardedHintTokens <= 0
+                ? '▶ Watch ad for a hint'
+                : `💡 Hint ${hintsUsed > 0 ? `(${Math.max(0, MAX_HINTS - hintsUsed)} left${rewardedHintTokens > 0 ? ` + ${rewardedHintTokens} ad` : ''} · −${hintPenalty} pts)` : `(${MAX_HINTS} free)`}`
               }
             </Text>
           </Pressable>
@@ -342,9 +369,12 @@ export function GameScreen({ route, navigation }: Props) {
         visible={hintModalVisible}
         hintsUsed={hintsUsed}
         hintPenalty={hintPenalty}
+        rewardedHintTokens={rewardedHintTokens}
         isPremium={isPremium}
         onSelectTier={handleHintSelect}
         onClose={() => setHintModalVisible(false)}
+        onWatchRewardedAd={supporter ? undefined : handleRewardedHintAd}
+        rewardedAdLoading={rewardedAdLoading}
       />
     </SafeAreaView>
   );
@@ -382,7 +412,6 @@ function makeStyles(c: ColorTheme) {
       alignSelf: 'center', borderWidth: 1.5, borderColor: c.border,
       borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,
     },
-    btnHintDisabled: { opacity: 0.4 },
     btnHintText: { fontSize: 13, fontFamily: FONTS.bold, color: c.text2 },
   });
 }

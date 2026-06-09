@@ -8,8 +8,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useColors } from '@/hooks/useColors';
 import { CATEGORY_COLOURS, type CategoryColour, CATEGORY_ORDER, type ColorTheme } from '@/constants/colors';
 import {
-  fetchPuzzlesPage, fetchNytPuzzlesPage, getCompletedPuzzleIds,
-  type PuzzleListItem, type NytPuzzleListItem, type PuzzleSortMode,
+  fetchPuzzlesPage, fetchDailyPuzzlesPage, fetchNytPuzzlesPage, getCompletedPuzzleIds,
+  type PuzzleListItem, type DailyPuzzleListItem, type NytPuzzleListItem, type PuzzleSortMode,
 } from '@/api/puzzles';
 import { GameResultModal } from '@/components/GameResultModal';
 import { AdBanner } from '@/components/BannerAd';
@@ -17,7 +17,7 @@ import { FONTS } from '@/constants/fonts';
 import type { AppStackParamList } from '../App';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'PuzzleSelect'>;
-type Collection = 'generated' | 'nyt';
+type Collection = 'generated' | 'daily' | 'nyt';
 
 const DIFFICULTY_LABELS: Record<CategoryColour, string> = {
   yellow: 'Easy', green: 'Medium', blue: 'Hard', purple: 'Expert',
@@ -43,6 +43,7 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
   const [difficulty, setDifficulty] = useState<CategoryColour | null>(null);
   const [search, setSearch] = useState('');
   const [sortMode, setSortMode] = useState<PuzzleSortMode>('date_desc');
+  const [dailySortAsc, setDailySortAsc] = useState(false);
   const [nytSortAsc, setNytSortAsc] = useState(true);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
 
@@ -54,6 +55,11 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
   const [genPage, setGenPage] = useState(1);
   const [genTotalPages, setGenTotalPages] = useState(1);
   const [genLoading, setGenLoading] = useState(false);
+
+  const [dailyItems, setDailyItems] = useState<DailyPuzzleListItem[]>([]);
+  const [dailyPage, setDailyPage] = useState(1);
+  const [dailyTotalPages, setDailyTotalPages] = useState(1);
+  const [dailyLoading, setDailyLoading] = useState(false);
 
   const [nytItems, setNytItems] = useState<NytPuzzleListItem[]>([]);
   const [nytPage, setNytPage] = useState(1);
@@ -69,6 +75,15 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
     setGenLoading(false);
   }, []);
 
+  const loadDaily = useCallback(async (page: number, asc: boolean, q: string, reset = false) => {
+    setDailyLoading(true);
+    const result = await fetchDailyPuzzlesPage(page, asc, q);
+    setDailyItems(prev => reset ? result.items : [...prev, ...result.items]);
+    setDailyPage(page);
+    setDailyTotalPages(result.totalPages);
+    setDailyLoading(false);
+  }, []);
+
   const loadNyt = useCallback(async (page: number, asc: boolean, q: string, reset = false) => {
     setNytLoading(true);
     const result = await fetchNytPuzzlesPage(page, asc, q);
@@ -80,6 +95,7 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     loadNyt(1, nytSortAsc, '', true);
+    loadDaily(1, dailySortAsc, '', true);
     loadGenerated(1, null, sortMode, true);
     getCompletedPuzzleIds().then(setCompletedIds);
   }, []);
@@ -89,12 +105,17 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
   }, [difficulty, sortMode]);
 
   useEffect(() => {
+    if (collection === 'daily') loadDaily(1, dailySortAsc, search, true);
+  }, [dailySortAsc]);
+
+  useEffect(() => {
     if (collection === 'nyt') loadNyt(1, nytSortAsc, search, true);
   }, [nytSortAsc]);
 
   function handleCollectionSwitch(c: Collection) {
     setCollection(c);
     setSearch('');
+    if (c === 'daily' && dailyItems.length === 0) loadDaily(1, dailySortAsc, '', true);
     if (c === 'nyt' && nytItems.length === 0) loadNyt(1, nytSortAsc, '', true);
     if (c === 'generated' && genItems.length === 0) loadGenerated(1, difficulty, sortMode, true);
   }
@@ -102,6 +123,7 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
   function handleSearch(text: string) {
     setSearch(text);
     if (collection === 'nyt') loadNyt(1, nytSortAsc, text, true);
+    else if (collection === 'daily') loadDaily(1, dailySortAsc, text, true);
     else loadGenerated(1, difficulty, sortMode, true);
   }
 
@@ -128,10 +150,16 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
   }
 
   const isNyt = collection === 'nyt';
-  const hasMore = isNyt ? nytPage < nytTotalPages : genPage < genTotalPages;
+  const isDaily = collection === 'daily';
+  const hasMore = isNyt
+    ? nytPage < nytTotalPages
+    : isDaily
+    ? dailyPage < dailyTotalPages
+    : genPage < genTotalPages;
 
   function loadMore() {
     if (isNyt) loadNyt(nytPage + 1, nytSortAsc, search);
+    else if (isDaily) loadDaily(dailyPage + 1, dailySortAsc, search);
     else loadGenerated(genPage + 1, difficulty, sortMode);
   }
 
@@ -144,6 +172,22 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
         </View>
         <Text style={styles.rowTitle}>Puzzle #{(genPage - 1) * 10 + index + 1}</Text>
         <Text style={styles.rowMeta}>{item.play_count} plays</Text>
+        {done && <View style={styles.donePill}><Text style={styles.donePillText}>✓ Done</Text></View>}
+      </Pressable>
+    );
+  };
+
+  const renderDailyItem: ListRenderItem<DailyPuzzleListItem> = ({ item }) => {
+    const done = completedIds.has(item.id);
+    return (
+      <Pressable style={styles.row} onPress={() => openPuzzle(item.id, `Daily Puzzle · ${formatNytDate(item.daily_date)}`, 'puzzles')}>
+        <View style={[styles.diffBadge, { backgroundColor: CATEGORY_COLOURS[item.difficulty_min] }]}>
+          <Text style={styles.diffBadgeText}>{DIFFICULTY_LABELS[item.difficulty_min]}</Text>
+        </View>
+        <View style={styles.rowContent}>
+          <Text style={styles.rowTitle}>Daily Puzzle</Text>
+          <Text style={styles.rowMeta}>{formatNytDate(item.daily_date)}</Text>
+        </View>
         {done && <View style={styles.donePill}><Text style={styles.donePillText}>✓ Done</Text></View>}
       </Pressable>
     );
@@ -174,8 +218,11 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
         <AdBanner />
 
         <View style={styles.tabs}>
-          <Pressable style={[styles.tab, !isNyt && styles.tabActive]} onPress={() => handleCollectionSwitch('generated')}>
-            <Text style={[styles.tabText, !isNyt && styles.tabTextActive]}>Curated</Text>
+          <Pressable style={[styles.tab, collection === 'generated' && styles.tabActive]} onPress={() => handleCollectionSwitch('generated')}>
+            <Text style={[styles.tabText, collection === 'generated' && styles.tabTextActive]}>Curated</Text>
+          </Pressable>
+          <Pressable style={[styles.tab, isDaily && styles.tabActive]} onPress={() => handleCollectionSwitch('daily')}>
+            <Text style={[styles.tabText, isDaily && styles.tabTextActive]}>Daily</Text>
           </Pressable>
           <Pressable style={[styles.tab, isNyt && styles.tabActive]} onPress={() => handleCollectionSwitch('nyt')}>
             <Text style={[styles.tabText, isNyt && styles.tabTextActive]}>NYT Puzzles</Text>
@@ -185,7 +232,7 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
         <View style={styles.searchRow}>
           <TextInput
             style={styles.searchInput}
-            placeholder={isNyt ? 'Search by date or #' : 'Search...'}
+            placeholder={isNyt ? 'Search by date or #' : isDaily ? 'Search by date' : 'Search...'}
             placeholderTextColor={colors.text3}
             value={search}
             onChangeText={handleSearch}
@@ -196,6 +243,10 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
             <Pressable style={styles.sortBtn} onPress={() => setNytSortAsc(v => !v)}>
               <Text style={styles.sortBtnText}>{nytSortAsc ? '↑ Oldest' : '↓ Newest'}</Text>
             </Pressable>
+          ) : isDaily ? (
+            <Pressable style={styles.sortBtn} onPress={() => setDailySortAsc(v => !v)}>
+              <Text style={styles.sortBtnText}>{dailySortAsc ? '↑ Oldest' : '↓ Newest'}</Text>
+            </Pressable>
           ) : (
             <Pressable style={styles.sortBtn} onPress={cycleSortMode}>
               <Text style={styles.sortBtnText}>{SORT_LABELS[sortMode]}</Text>
@@ -203,7 +254,7 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
           )}
         </View>
 
-        {!isNyt && (
+        {collection === 'generated' && (
           <View style={styles.chips}>
             <Pressable style={[styles.chip, !difficulty && styles.chipActive]} onPress={() => setDifficulty(null)}>
               <Text style={[styles.chipText, !difficulty && styles.chipTextActive]}>All</Text>
@@ -222,7 +273,7 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        {(isNyt ? nytLoading : genLoading) && (isNyt ? nytItems : genItems).length === 0 ? (
+        {(isNyt ? nytLoading : isDaily ? dailyLoading : genLoading) && (isNyt ? nytItems : isDaily ? dailyItems : genItems).length === 0 ? (
           <ActivityIndicator style={styles.loader} color={colors.text2} />
         ) : isNyt ? (
           <FlatList
@@ -234,6 +285,19 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
             ListFooterComponent={hasMore ? (
               <Pressable style={styles.loadMore} onPress={loadMore} disabled={nytLoading}>
                 {nytLoading ? <ActivityIndicator color={colors.text2} /> : <Text style={styles.loadMoreText}>Load more</Text>}
+              </Pressable>
+            ) : null}
+          />
+        ) : isDaily ? (
+          <FlatList
+            data={dailyItems}
+            keyExtractor={p => p.id}
+            renderItem={renderDailyItem}
+            contentContainerStyle={styles.list}
+            ListEmptyComponent={<Text style={styles.empty}>No daily puzzles found.</Text>}
+            ListFooterComponent={hasMore ? (
+              <Pressable style={styles.loadMore} onPress={loadMore} disabled={dailyLoading}>
+                {dailyLoading ? <ActivityIndicator color={colors.text2} /> : <Text style={styles.loadMoreText}>Load more</Text>}
               </Pressable>
             ) : null}
           />

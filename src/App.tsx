@@ -8,6 +8,7 @@ import { useFonts } from 'expo-font';
 
 import { useAuthStore } from '@/store/authStore';
 import { useSettingsStore } from '@/store/settingsStore';
+import { useMonetisationStore } from '@/store/monetisationStore';
 import { WelcomeScreen } from '@/screens/WelcomeScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
 import { SignUpScreen } from '@/screens/SignUpScreen';
@@ -118,6 +119,7 @@ type NotificationData = { screen?: string; challengeId?: string };
 export default function App() {
   const { user, restoreSession } = useAuthStore();
   const loadSettings = useSettingsStore(s => s.load);
+  const loadMonetisation = useMonetisationStore(s => s.load);
   const [ready, setReady] = useState(false);
   const [pendingChallengeId, setPendingChallengeId] = useState<string | null>(null);
   const [pendingScreen, setPendingScreen] = useState<string | null>(null);
@@ -193,7 +195,7 @@ export default function App() {
         });
       }).catch(() => {});
     }
-    Promise.all([restoreSession(), loadSettings()]).finally(() => setReady(true));
+    Promise.all([restoreSession(), loadSettings(), loadMonetisation()]).finally(() => setReady(true));
   }, []);
 
   // Once the user is authenticated and pending navigation exists, resolve it

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { fetchChallenge, isExpired, isMine, type Challenge } from '@/api/challenges';
+import { fetchChallenge, subscribeToChallenge, isExpired, isMine, type Challenge } from '@/api/challenges';
 import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
@@ -31,6 +31,28 @@ export function ChallengeScreen({ route, navigation }: Props) {
       setLoading(false);
     });
   }, [challengeId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
+    subscribeToChallenge(challengeId, c => {
+      if (!c) {
+        setError('Challenge not found or you need to be logged in.');
+        return;
+      }
+      setChallenge(c);
+      if (c.status === 'complete' && isMine(c)) {
+        navigation.replace('ChallengeResult', { challengeId });
+      }
+    }).then(fn => {
+      if (cancelled) fn();
+      else unsubscribe = fn;
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [challengeId, navigation]);
 
   // Poll every 5s while challenger is waiting for opponent to play
   useEffect(() => {

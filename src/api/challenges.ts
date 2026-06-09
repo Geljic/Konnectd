@@ -52,6 +52,41 @@ function mapChallenge(r: Record<string, unknown>): Challenge {
   };
 }
 
+type ChallengeUnsubscribe = () => void;
+
+export async function subscribeToChallengeChanges(onChange: () => void): Promise<ChallengeUnsubscribe> {
+  if (!pb.authStore.isValid) return () => {};
+  try {
+    const unsubscribe = await pb.collection('challenges').subscribe('*', () => {
+      onChange();
+    });
+    return unsubscribe;
+  } catch (e) {
+    console.error('[subscribeToChallengeChanges] error:', e);
+    return () => {};
+  }
+}
+
+export async function subscribeToChallenge(
+  challengeId: string,
+  onChange: (challenge: Challenge | null) => void,
+): Promise<ChallengeUnsubscribe> {
+  if (!pb.authStore.isValid) return () => {};
+  try {
+    const unsubscribe = await pb.collection('challenges').subscribe(challengeId, e => {
+      if (e.action === 'delete') {
+        onChange(null);
+      } else {
+        onChange(mapChallenge(e.record as unknown as Record<string, unknown>));
+      }
+    });
+    return unsubscribe;
+  } catch (e) {
+    console.error('[subscribeToChallenge] error:', e);
+    return () => {};
+  }
+}
+
 export async function createChallenge(params: {
   puzzleId: string;
   puzzleCollection: 'puzzles' | 'nyt_puzzles';

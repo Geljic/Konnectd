@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Share, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { fetchChallenge, isMine, type Challenge } from '@/api/challenges';
+import { fetchChallenge, subscribeToChallenge, isMine, type Challenge } from '@/api/challenges';
 import { CATEGORY_COLOURS, type CategoryColour, type ColorTheme } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
 import { FONTS } from '@/constants/fonts';
@@ -49,6 +49,28 @@ export function ChallengeResultScreen({ route, navigation }: Props) {
       setChallenge(c);
       setLoading(false);
     });
+  }, [challengeId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
+    subscribeToChallenge(challengeId, c => {
+      setChallenge(c);
+      setLoading(false);
+    }).then(fn => {
+      if (cancelled) fn();
+      else unsubscribe = fn;
+    });
+    const interval = setInterval(async () => {
+      const c = await fetchChallenge(challengeId);
+      setChallenge(c);
+      setLoading(false);
+    }, 10000);
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+      clearInterval(interval);
+    };
   }, [challengeId]);
 
   async function handleShare() {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
@@ -10,7 +10,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useGuestGuard } from '@/hooks/useGuestGuard';
 import { KonnectLogo } from '@/components/KonnectLogo';
 import { AdBanner } from '@/components/BannerAd';
-import { fetchMyChallenges, isMine } from '@/api/challenges';
+import { fetchMyChallenges, subscribeToChallengeChanges, isMine } from '@/api/challenges';
 import type { AppStackParamList } from '../App';
 
 type Props = { navigation: NativeStackNavigationProp<AppStackParamList, 'Home'> };
@@ -69,11 +69,31 @@ export function HomeScreen({ navigation }: Props) {
   const { isGuest, guardAction } = useGuestGuard();
   const [openChallengeCount, setOpenChallengeCount] = useState(0);
 
-  useEffect(() => {
+  const refreshOpenChallengeCount = useCallback(() => {
     fetchMyChallenges().then(cs =>
       setOpenChallengeCount(cs.filter(c => c.status !== 'complete' && !isMine(c)).length),
     );
   }, []);
+
+  useEffect(() => {
+    refreshOpenChallengeCount();
+  }, [refreshOpenChallengeCount]);
+
+  useEffect(() => {
+    if (isGuest) return;
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
+    subscribeToChallengeChanges(refreshOpenChallengeCount).then(fn => {
+      if (cancelled) fn();
+      else unsubscribe = fn;
+    });
+    const interval = setInterval(refreshOpenChallengeCount, 10000);
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+      clearInterval(interval);
+    };
+  }, [isGuest, refreshOpenChallengeCount]);
 
   return (
     <SafeAreaView style={styles.safe}>
