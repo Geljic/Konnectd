@@ -298,6 +298,8 @@ export async function recordPlaySession(params: {
     score: params.score ?? null,
   });
 
+  if (gameType !== 'connections') return;
+
   // Increment play count on the puzzle (best-effort, not critical)
   try {
     const collection = params.collection ?? 'puzzles';

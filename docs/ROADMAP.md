@@ -227,6 +227,13 @@ Connections asks "what belongs together?" Wordlines asks "what order do these id
 - Difficulty rises through ambiguity, cross-associations, and less literal path logic
 - Share result differentiates Wordlines from Connections
 
+### First playable slice
+- Home screen game switcher swaps Connections / Wordlines actions in-place with animation
+- Daily / Random Wordlines route into `WordlinesGameScreen`
+- Free Play routes into `WordlinesSelectScreen`
+- Local completion state stored with AsyncStorage
+- Wordlines play sessions record as `game_type = 'word_trails'`, `game_mode = 'classic'`
+
 ### Mode-aware stats and matches
 From this phase onward, every play session and challenge must include:
 - `game_type`: `connections`, `word_trails`, etc.

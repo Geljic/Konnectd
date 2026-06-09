@@ -1,8 +1,19 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { WordTrail, WordTrailsPuzzle } from '@/data/wordTrailsPuzzles';
+
+const WORD_TRAILS_RESULTS_KEY = 'word_trails_results';
 
 export interface WordTrailsValidationResult {
   valid: boolean;
   errors: string[];
+}
+
+export interface WordTrailsResult {
+  completed: boolean;
+  mistakes: number;
+  durationSeconds: number;
+  solvedTrailLabels: string[];
+  completedAt: string;
 }
 
 export function createWordTrailsPuzzle(params: {
@@ -63,4 +74,37 @@ export function validateWordTrailsPuzzles(puzzles: WordTrailsPuzzle[]): WordTrai
   });
 
   return { valid: errors.length === 0, errors };
+}
+
+export function getDailyWordTrailsPuzzle(puzzles: WordTrailsPuzzle[], now = new Date()): WordTrailsPuzzle {
+  const start = new Date('2026-06-09T00:00:00Z').getTime();
+  const dayIndex = Math.max(0, Math.floor((now.getTime() - start) / 86400000));
+  return puzzles[dayIndex % puzzles.length];
+}
+
+export function getRandomWordTrailsPuzzle(puzzles: WordTrailsPuzzle[]): WordTrailsPuzzle {
+  return puzzles[Math.floor(Math.random() * puzzles.length)];
+}
+
+export async function markWordTrailsCompleted(
+  puzzleId: string,
+  result: Omit<WordTrailsResult, 'completedAt'>,
+): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(WORD_TRAILS_RESULTS_KEY);
+    const map: Record<string, WordTrailsResult> = raw ? JSON.parse(raw) : {};
+    map[puzzleId] = { ...result, completedAt: new Date().toISOString() };
+    await AsyncStorage.setItem(WORD_TRAILS_RESULTS_KEY, JSON.stringify(map));
+  } catch {}
+}
+
+export async function getCompletedWordTrailsIds(): Promise<Set<string>> {
+  try {
+    const raw = await AsyncStorage.getItem(WORD_TRAILS_RESULTS_KEY);
+    if (!raw) return new Set();
+    const map: Record<string, WordTrailsResult> = JSON.parse(raw);
+    return new Set(Object.entries(map).filter(([, result]) => result.completed).map(([id]) => id));
+  } catch {
+    return new Set();
+  }
 }

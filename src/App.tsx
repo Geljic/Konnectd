@@ -25,6 +25,8 @@ import { ChallengesInboxScreen } from '@/screens/ChallengesInboxScreen';
 import { SocialScreen } from '@/screens/SocialScreen';
 import { FriendDetailScreen } from '@/screens/FriendDetailScreen';
 import { LeaderboardScreen } from '@/screens/LeaderboardScreen';
+import { WordlinesGameScreen } from '@/screens/WordlinesGameScreen';
+import { WordlinesSelectScreen } from '@/screens/WordlinesSelectScreen';
 import { useColors } from '@/hooks/useColors';
 import { WEB_BASE_URL } from '@/constants/config';
 
@@ -55,6 +57,11 @@ export type AppStackParamList = {
   Friends: undefined;
   FriendDetail: { friendshipId: string; friendId: string; friendHandle: string; friendDisplayName: string };
   Leaderboard: undefined;
+  WordlinesGame: {
+    mode: 'daily' | 'random' | 'freeplay';
+    puzzleId?: string;
+  };
+  WordlinesSelect: undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -100,6 +107,8 @@ function AppNavigator() {
       <AppStack.Screen name="Friends" component={SocialScreen} options={{ headerShown: false }} />
       <AppStack.Screen name="FriendDetail" component={FriendDetailScreen} options={({ route }) => ({ title: route.params.friendDisplayName })} />
       <AppStack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ title: '🏆 Leaderboard' }} />
+      <AppStack.Screen name="WordlinesGame" component={WordlinesGameScreen} options={{ headerShown: false }} />
+      <AppStack.Screen name="WordlinesSelect" component={WordlinesSelectScreen} options={{ title: 'Wordlines' }} />
     </AppStack.Navigator>
   );
 }

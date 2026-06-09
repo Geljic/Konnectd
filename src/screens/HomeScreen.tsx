@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { Animated, View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -121,13 +121,6 @@ export function HomeScreen({ navigation }: Props) {
   const gamePrimaryBg = selectedGame === 'connections' ? colors.text1 : colors.blue;
   const gameSecondaryBg = selectedGame === 'connections' ? colors.bgBase : colors.bgSurface;
 
-  function showWordlinesComingSoon() {
-    Alert.alert(
-      'Wordlines is next',
-      'The first 50 curated Wordlines puzzles are in. The playable board is the next piece to wire up.',
-    );
-  }
-
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
@@ -146,33 +139,80 @@ export function HomeScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.buttons}>
-          <View style={styles.gameSwitch}>
+          <View style={styles.modeSection}>
+            <Text style={styles.modeTitle}>Choose game mode</Text>
+            <Text style={styles.modeSubtitle}>
+              {selectedGame === 'connections' ? 'Find four hidden groups.' : 'Build four ordered word trails.'}
+            </Text>
+          </View>
+
+          <View style={styles.gameCards}>
             <Pressable
               style={[
-                styles.gameSwitchBtn,
-                selectedGame === 'connections' && styles.gameSwitchBtnActive,
+                styles.gameCard,
+                selectedGame === 'connections' && styles.gameCardActive,
               ]}
               onPress={() => setSelectedGame('connections')}
             >
+              <View style={styles.connectionsIcon}>
+                <View style={[styles.iconTile, { backgroundColor: colors.yellow }]} />
+                <View style={[styles.iconTile, { backgroundColor: colors.green }]} />
+                <View style={[styles.iconTile, { backgroundColor: colors.blue }]} />
+                <View style={[styles.iconTile, { backgroundColor: colors.purple }]} />
+              </View>
               <Text style={[
-                styles.gameSwitchText,
-                selectedGame === 'connections' && styles.gameSwitchTextActive,
+                styles.gameCardTitle,
+                selectedGame === 'connections' && styles.gameCardTitleActive,
               ]}>
                 Connections
+              </Text>
+              <Text style={[
+                styles.gameCardSub,
+                selectedGame === 'connections' && styles.gameCardSubActive,
+              ]}>
+                Hidden groups
               </Text>
             </Pressable>
             <Pressable
               style={[
-                styles.gameSwitchBtn,
-                selectedGame === 'word_trails' && styles.gameSwitchBtnWordlinesActive,
+                styles.gameCard,
+                selectedGame === 'word_trails' && styles.gameCardWordlinesActive,
               ]}
               onPress={() => setSelectedGame('word_trails')}
             >
+              <View style={styles.wordlineIcon}>
+                <View style={[
+                  styles.wordlineDot,
+                  selectedGame !== 'word_trails' && { backgroundColor: colors.blue },
+                ]} />
+                <View style={[
+                  styles.wordlineDash,
+                  selectedGame !== 'word_trails' && { backgroundColor: colors.blue },
+                ]} />
+                <View style={[
+                  styles.wordlineDot,
+                  selectedGame !== 'word_trails' && { backgroundColor: colors.blue },
+                ]} />
+                <View style={[
+                  styles.wordlineDash,
+                  selectedGame !== 'word_trails' && { backgroundColor: colors.blue },
+                ]} />
+                <View style={[
+                  styles.wordlineDot,
+                  selectedGame !== 'word_trails' && { backgroundColor: colors.blue },
+                ]} />
+              </View>
               <Text style={[
-                styles.gameSwitchText,
-                selectedGame === 'word_trails' && styles.gameSwitchTextActive,
+                styles.gameCardTitle,
+                selectedGame === 'word_trails' && styles.gameCardTitleActive,
               ]}>
                 Wordlines
+              </Text>
+              <Text style={[
+                styles.gameCardSub,
+                selectedGame === 'word_trails' && styles.gameCardSubActive,
+              ]}>
+                Ordered trails
               </Text>
             </Pressable>
           </View>
@@ -182,7 +222,7 @@ export function HomeScreen({ navigation }: Props) {
               style={[styles.btnPrimary, { backgroundColor: gamePrimaryBg }]}
               onPress={() => selectedGame === 'connections'
                 ? navigation.navigate('Game', { mode: 'daily' })
-                : showWordlinesComingSoon()}
+                : navigation.navigate('WordlinesGame', { mode: 'daily' })}
             >
               <Text style={[styles.btnLabel, { color: selectedGame === 'connections' ? colors.tileStrip : colors.bgScreen }]}>
                 {selectedGame === 'connections' ? 'DAILY PUZZLE' : 'DAILY WORDLINE'}
@@ -197,7 +237,7 @@ export function HomeScreen({ navigation }: Props) {
                 style={[styles.btnSecondary, { flex: 1, backgroundColor: gameSecondaryBg }]}
                 onPress={() => selectedGame === 'connections'
                   ? navigation.navigate('Game', { mode: 'nyt' })
-                  : showWordlinesComingSoon()}
+                  : navigation.navigate('WordlinesGame', { mode: 'random' })}
               >
                 <Text style={[styles.btnLabel, { color: selectedGame === 'connections' ? colors.text2 : gameAccent }]}>
                   {selectedGame === 'connections' ? 'NYT' : 'RANDOM'}
@@ -208,7 +248,7 @@ export function HomeScreen({ navigation }: Props) {
                 style={[styles.btnTertiary, { flex: 1, backgroundColor: gameSecondaryBg, borderColor: gameAccent }]}
                 onPress={() => selectedGame === 'connections'
                   ? navigation.navigate('PuzzleSelect')
-                  : showWordlinesComingSoon()}
+                  : navigation.navigate('WordlinesSelect')}
               >
                 <Text style={[styles.btnLabel, { color: selectedGame === 'connections' ? colors.text2 : gameAccent }]}>
                   FREE PLAY
@@ -221,10 +261,10 @@ export function HomeScreen({ navigation }: Props) {
               style={[styles.btnLeaderboard, selectedGame === 'word_trails' && { borderColor: gameAccent }]}
               onPress={() => selectedGame === 'connections'
                 ? guardAction(() => navigation.navigate('Leaderboard'))
-                : showWordlinesComingSoon()}
+                : navigation.navigate('Stats')}
             >
               <Text style={styles.btnLeaderboardText}>
-                {selectedGame === 'connections' ? '🏆  Leaderboard' : 'Stats coming soon'}
+                {selectedGame === 'connections' ? '🏆  Leaderboard' : 'Wordlines stats'}
               </Text>
             </Pressable>
           </Animated.View>
@@ -273,25 +313,36 @@ function makeStyles(c: ColorTheme) {
       borderWidth: 1, borderColor: c.border,
     },
     guestBannerText: { fontSize: 12, fontFamily: FONTS.bold, color: c.text2, textAlign: 'center' },
-    buttons: { gap: 12 },
-    gameSwitch: {
+    buttons: { gap: 14 },
+    modeSection: { gap: 3 },
+    modeTitle: { fontSize: 18, fontFamily: FONTS.extraBold, color: c.text1 },
+    modeSubtitle: { fontSize: 13, fontFamily: FONTS.bold, color: c.text3 },
+    gameCards: {
       flexDirection: 'row',
-      backgroundColor: c.bgBase,
-      borderRadius: 16,
-      padding: 4,
-      gap: 4,
+      gap: 12,
     },
-    gameSwitchBtn: {
+    gameCard: {
       flex: 1,
-      minHeight: 42,
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
+      minHeight: 118,
+      borderRadius: 16,
+      backgroundColor: c.bgBase,
+      borderWidth: 2,
+      borderColor: 'transparent',
+      padding: 14,
+      justifyContent: 'space-between',
+      gap: 8,
     },
-    gameSwitchBtnActive: { backgroundColor: c.text1 },
-    gameSwitchBtnWordlinesActive: { backgroundColor: c.blue },
-    gameSwitchText: { fontSize: 14, fontFamily: FONTS.extraBold, color: c.text2 },
-    gameSwitchTextActive: { color: c.bgScreen },
+    gameCardActive: { backgroundColor: c.text1, borderColor: c.tileStrip },
+    gameCardWordlinesActive: { backgroundColor: c.blue, borderColor: c.bgScreen },
+    connectionsIcon: { width: 42, flexDirection: 'row', flexWrap: 'wrap', gap: 3 },
+    iconTile: { width: 19, height: 19, borderRadius: 6 },
+    wordlineIcon: { flexDirection: 'row', alignItems: 'center', height: 22 },
+    wordlineDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: c.bgScreen },
+    wordlineDash: { width: 18, height: 3, borderRadius: 2, backgroundColor: c.bgScreen, opacity: 0.9 },
+    gameCardTitle: { fontSize: 17, fontFamily: FONTS.extraBold, color: c.text1 },
+    gameCardTitleActive: { color: c.bgScreen },
+    gameCardSub: { fontSize: 12, fontFamily: FONTS.bold, color: c.text3 },
+    gameCardSubActive: { color: c.bgScreen, opacity: 0.85 },
     actionPanel: { gap: 12 },
     btnPrimary: { backgroundColor: c.text1, borderRadius: 16, padding: 20, gap: 4 },
     btnLabel: { fontSize: 11, fontFamily: FONTS.extraBold, letterSpacing: 2 },
