@@ -4,7 +4,7 @@ import { WEB_BASE_URL } from '@/constants/config';
 import { sendPushToUser } from '@/utils/notifications';
 import { useSettingsStore } from '@/store/settingsStore';
 import {
-  DEFAULT_CONNECTIONS_RULESET,
+  DEFAULT_GROUPS_RULESET,
   DEFAULT_GAME_TYPE,
   normaliseGameType,
   normaliseRuleset,
@@ -126,7 +126,7 @@ export async function createChallenge(params: {
       challenger_solved_order: params.solvedOrder,
       challenger_score: params.score ?? null,
       game_type: params.gameType ?? DEFAULT_GAME_TYPE,
-      game_mode: normaliseRuleset(params.gameMode ?? DEFAULT_CONNECTIONS_RULESET, params.gameType ?? DEFAULT_GAME_TYPE),
+      game_mode: normaliseRuleset(params.gameMode ?? DEFAULT_GROUPS_RULESET, params.gameType ?? DEFAULT_GAME_TYPE),
       puzzle_id: params.puzzleId,
       puzzle_collection: params.puzzleCollection,
       puzzle_label: params.puzzleLabel,

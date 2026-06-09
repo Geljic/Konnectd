@@ -69,7 +69,7 @@ export async function scheduleDailyStreakReminder(): Promise<void> {
   await N.scheduleNotificationAsync({
     content: {
       title: '🔥 Keep your streak alive!',
-      body: "Today's Connections puzzle is waiting for you.",
+      body: "Today's Konnectd puzzle is waiting for you.",
       sound: true,
     },
     trigger: {

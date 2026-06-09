@@ -108,7 +108,7 @@ function AppNavigator() {
       <AppStack.Screen name="FriendDetail" component={FriendDetailScreen} options={({ route }) => ({ title: route.params.friendDisplayName })} />
       <AppStack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ title: '🏆 Leaderboard' }} />
       <AppStack.Screen name="WordlinesGame" component={WordlinesGameScreen} options={{ headerShown: false }} />
-      <AppStack.Screen name="WordlinesSelect" component={WordlinesSelectScreen} options={{ title: 'Wordlines' }} />
+      <AppStack.Screen name="WordlinesSelect" component={WordlinesSelectScreen} options={{ title: 'Next Steps' }} />
     </AppStack.Navigator>
   );
 }

@@ -80,7 +80,7 @@ export function ChallengeResultScreen({ route, navigation }: Props) {
     const iWon = (mine && winner === 'challenger') || (!mine && winner === 'opponent');
     const fmtScore = (s: number | null) => s !== null ? ` · ${s} pts` : '';
     const text = [
-      `⚡ KonnectD Challenge — ${challenge.puzzleLabel}`,
+      `⚡ Konnectd Challenge — ${challenge.puzzleLabel}`,
       '',
       mine
         ? `Me: ${formatTime(challenge.challengerDuration)}, ${challenge.challengerMistakes} mistakes${fmtScore(challenge.challengerScore)}`

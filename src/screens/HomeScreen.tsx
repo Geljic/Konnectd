@@ -142,7 +142,7 @@ export function HomeScreen({ navigation }: Props) {
           <View style={styles.modeSection}>
             <Text style={styles.modeTitle}>Choose game mode</Text>
             <Text style={styles.modeSubtitle}>
-              {selectedGame === 'connections' ? 'Find four hidden groups.' : 'Build four ordered word trails.'}
+              {selectedGame === 'connections' ? 'Find four hidden groups.' : 'Build four ordered paths.'}
             </Text>
           </View>
 
@@ -164,7 +164,7 @@ export function HomeScreen({ navigation }: Props) {
                 styles.gameCardTitle,
                 selectedGame === 'connections' && styles.gameCardTitleActive,
               ]}>
-                Connections
+                Groups
               </Text>
               <Text style={[
                 styles.gameCardSub,
@@ -206,13 +206,13 @@ export function HomeScreen({ navigation }: Props) {
                 styles.gameCardTitle,
                 selectedGame === 'word_trails' && styles.gameCardTitleActive,
               ]}>
-                Wordlines
+                Next Steps
               </Text>
               <Text style={[
                 styles.gameCardSub,
                 selectedGame === 'word_trails' && styles.gameCardSubActive,
               ]}>
-                Ordered trails
+                Ordered steps
               </Text>
             </Pressable>
           </View>
@@ -225,10 +225,10 @@ export function HomeScreen({ navigation }: Props) {
                 : navigation.navigate('WordlinesGame', { mode: 'daily' })}
             >
               <Text style={[styles.btnLabel, { color: selectedGame === 'connections' ? colors.tileStrip : colors.bgScreen }]}>
-                {selectedGame === 'connections' ? 'DAILY PUZZLE' : 'DAILY WORDLINE'}
+                {selectedGame === 'connections' ? 'DAILY GROUPS' : 'DAILY STEPS'}
               </Text>
               <Text style={styles.btnPrimaryText}>
-                {selectedGame === 'connections' ? "Play today's puzzle" : "Untangle today's trail"}
+                {selectedGame === 'connections' ? "Play today's puzzle" : "Find today's path"}
               </Text>
             </Pressable>
 
@@ -264,7 +264,7 @@ export function HomeScreen({ navigation }: Props) {
                 : navigation.navigate('Stats')}
             >
               <Text style={styles.btnLeaderboardText}>
-                {selectedGame === 'connections' ? '🏆  Leaderboard' : 'Wordlines stats'}
+                {selectedGame === 'connections' ? '🏆  Leaderboard' : 'Next Steps stats'}
               </Text>
             </Pressable>
           </Animated.View>

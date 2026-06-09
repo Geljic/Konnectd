@@ -26,9 +26,9 @@ export function buildShareText(
 
   const cta = challengeLink
     ? `⚡ Think you can beat me?\n${challengeLink}`
-    : `Play KonnectD 👇\n${WEB_BASE_URL}`;
+    : `Play Konnectd 👇\n${WEB_BASE_URL}`;
 
-  return `KonnectD\n${result}\n\n${rows}\n\n${cta}`;
+  return `Konnectd\n${result}\n\n${rows}\n\n${cta}`;
 }
 
 export async function copyShareText(text: string): Promise<void> {

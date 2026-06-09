@@ -186,7 +186,7 @@ export function StatsScreen() {
               ) : (
                 <Text style={styles.emptyHint}>
                   {modeFilter.gameType === 'word_trails'
-                    ? 'No Wordlines games yet.'
+                    ? 'No Next Steps games yet.'
                     : modeFilter.gameMode === 'hard'
                       ? 'No hard mode games yet. Enable hard mode in Settings.'
                       : 'Play your first puzzle to see stats here.'}
@@ -198,7 +198,7 @@ export function StatsScreen() {
             {filtered.length === 0 && (
               <Text style={styles.emptyHint}>
                 {modeFilter.gameType === 'word_trails'
-                  ? 'No Wordlines games recorded yet.'
+                  ? 'No Next Steps games recorded yet.'
                   : modeFilter.gameMode === 'hard'
                     ? 'No hard mode games recorded yet.'
                     : 'No games recorded yet.'}

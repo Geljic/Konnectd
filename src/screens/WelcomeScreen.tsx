@@ -21,7 +21,7 @@ export function WelcomeScreen({ navigation }: Props) {
       <View style={styles.container}>
         <View style={styles.hero}>
           <KonnectLogo iconSize={160} />
-          <Text style={styles.tagline}>Word connections. Daily puzzles.{'\n'}Challenge your friends.</Text>
+          <Text style={styles.tagline}>Daily word puzzles.{'\n'}Challenge your friends.</Text>
         </View>
         <View style={styles.buttons}>
           <Pressable style={styles.btnPrimary} onPress={() => navigation.navigate('SignUp')}>

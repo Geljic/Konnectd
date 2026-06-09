@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { Animated, View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Line } from 'react-native-svg';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -19,6 +19,7 @@ import { MAX_MISTAKES } from '@/constants/config';
 import { useSound } from '@/hooks/useSound';
 import { MistakeDots } from '@/components/MistakeDots';
 import { WordlinesHelpModal } from '@/components/WordlinesHelpModal';
+import { STRIP_CONFIG, useSettingsStore, type TileStripStyle } from '@/store/settingsStore';
 import type { AppStackParamList } from '../App';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'WordlinesGame'>;
@@ -85,7 +86,7 @@ function WordlineFace({
             : 'M32 35 Q40 35 48 35';
 
   return (
-    <Svg width="54" height="34" viewBox="0 0 80 50">
+    <Svg width="52" height="28" viewBox="0 0 80 50">
       {blink ? (
         <>
           <Line x1="22" y1={eyeY} x2="32" y2={eyeY} stroke={color} strokeWidth="4" strokeLinecap="round" />
@@ -136,8 +137,9 @@ function WordlineTile({
   const faceIndex = faceIndexFor(word);
   const [blink, setBlink] = useState(false);
   const bob = useRef(new Animated.Value(0)).current;
-  const pressScale = useRef(new Animated.Value(1)).current;
+  const faceScale = useRef(new Animated.Value(1)).current;
   const shuffleKick = useRef(new Animated.Value(0)).current;
+  const stripCfg = useSettingsStore((s: { tileStripStyle: TileStripStyle }) => STRIP_CONFIG[s.tileStripStyle]);
   const selected = selectedIndex >= 0;
 
   useEffect(() => {
@@ -170,13 +172,13 @@ function WordlineTile({
   }, [faceIndex]);
 
   useEffect(() => {
-    Animated.spring(pressScale, {
-      toValue: selected ? 1.04 : 1,
+    Animated.spring(faceScale, {
+      toValue: selected ? 1.12 : 1,
       useNativeDriver: true,
       friction: 6,
       tension: 180,
     }).start();
-  }, [pressScale, selected]);
+  }, [faceScale, selected]);
 
   useEffect(() => {
     if (shuffleSignal === 0) return;
@@ -188,7 +190,7 @@ function WordlineTile({
   }, [shuffleKick, shuffleSignal]);
 
   const expression = status === 'lost' ? 'sad' : selected ? 'selected' : 'idle';
-  const faceColor = selected ? colors.bgScreen : colors.text1;
+  const faceColor = colors.categoryText;
 
   return (
     <Pressable disabled={disabled} onPress={onPress} style={styles.tilePressable}>
@@ -197,32 +199,37 @@ function WordlineTile({
           styles.tile,
           selected && styles.tileSelected,
           status === 'lost' && styles.tileLost,
-          {
-            transform: [
-              { translateY: bob },
-              {
-                rotate: shuffleKick.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0deg', faceIndex % 2 === 0 ? '3deg' : '-3deg'],
-                }),
-              },
-              { scale: pressScale },
-            ],
-          },
         ]}
       >
-        {selected && <Text style={styles.orderBadge}>{selectedIndex + 1}</Text>}
-        <View style={styles.faceWrap}>
-          <WordlineFace expression={expression} faceIndex={faceIndex} blink={blink} color={faceColor} />
+        <View style={[styles.faceStrip, { backgroundColor: colors.tileStrip, height: stripCfg.height }]}>
+          <Animated.View
+            style={{
+              transform: [
+                { translateY: bob },
+                {
+                  rotate: shuffleKick.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', faceIndex % 2 === 0 ? '7deg' : '-7deg'],
+                  }),
+                },
+                { scale: faceScale },
+              ],
+            }}
+          >
+            <WordlineFace expression={expression} faceIndex={faceIndex} blink={blink} color={faceColor} />
+          </Animated.View>
         </View>
-        <Text
-          style={[styles.tileText, selected && styles.tileTextSelected]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.72}
-        >
-          {word}
-        </Text>
+        <View style={[styles.wordArea, selected && styles.wordAreaSelected]}>
+          {selected && <Text style={styles.orderBadge}>{selectedIndex + 1}</Text>}
+          <Text
+            style={styles.tileText}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.72}
+          >
+            {word}
+          </Text>
+        </View>
       </Animated.View>
     </Pressable>
   );
@@ -230,7 +237,9 @@ function WordlineTile({
 
 export function WordlinesGameScreen({ route, navigation }: Props) {
   const colors = useColors();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { height } = useWindowDimensions();
+  const compact = height < 760;
+  const styles = useMemo(() => makeStyles(colors, compact), [colors, compact]);
   const sound = useSound();
 
   const puzzle = useMemo(
@@ -242,7 +251,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
   const [solvedTrails, setSolvedTrails] = useState<WordTrail[]>([]);
   const [mistakes, setMistakes] = useState(0);
   const [status, setStatus] = useState<GameStatus>('playing');
-  const [message, setMessage] = useState('Tap four words in trail order.');
+  const [message, setMessage] = useState('Tap four words in step order.');
   const [elapsed, setElapsed] = useState(0);
   const [helpVisible, setHelpVisible] = useState(false);
   const [shuffleSignal, setShuffleSignal] = useState(0);
@@ -316,7 +325,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
     sound.play('wrong');
     setMistakes(nextMistakes);
     setSelectedWords([]);
-    setMessage(sameSetTrail ? 'Right words, wrong order.' : 'That trail does not connect.');
+    setMessage(sameSetTrail ? 'Right words, wrong order.' : 'Those steps do not connect.');
     if (nextMistakes >= MAX_MISTAKES) {
       sound.play('lose');
       setStatus('lost');
@@ -325,7 +334,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
 
   function resetSelection() {
     setSelectedWords([]);
-    setMessage('Tap four words in trail order.');
+    setMessage('Tap four words in step order.');
   }
 
   function handleShuffle() {
@@ -340,17 +349,21 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
   }
 
   const remainingMistakes = Math.max(0, MAX_MISTAKES - mistakes);
+  const rows: string[][] = [];
+  for (let i = 0; i < boardWords.length; i += 4) {
+    rows.push(boardWords.slice(i, i + 4));
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.container}>
         <View style={styles.header}>
           <Pressable style={styles.iconBtn} onPress={handleBack} hitSlop={12}>
             <BackIcon color={colors.text1} />
           </Pressable>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.eyebrow}>Wordlines</Text>
+            <Text style={styles.eyebrow}>Next Steps</Text>
             <Text style={styles.title}>{puzzle.title}</Text>
             <View style={styles.metaRow}>
               <Text style={styles.meta}>Difficulty {puzzle.difficulty}</Text>
@@ -364,17 +377,21 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
           </Pressable>
         </View>
 
-        <View style={styles.solvedStack}>
-          {solvedTrails.map((trail, index) => (
-            <View key={trail.label} style={[styles.solvedTrail, { borderLeftColor: trailColors[index] }]}>
-              <Text style={styles.solvedLabel}>{trail.label}</Text>
-              <Text style={styles.solvedWords}>{trail.words.join(' -> ')}</Text>
-            </View>
-          ))}
-        </View>
+        {solvedTrails.length > 0 && (
+          <View style={styles.solvedStack}>
+            {solvedTrails.map((trail, index) => (
+              <View key={trail.label} style={[styles.solvedTrail, { borderLeftColor: trailColors[index] }]}>
+                <Text style={styles.solvedLabel}>{trail.label}</Text>
+                <Text style={styles.solvedWords} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>
+                  {trail.words.join(' -> ')}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <View style={styles.messageBox}>
-          <Text style={styles.messageText}>{status === 'won' ? 'All trails solved.' : status === 'lost' ? 'Trail closed.' : message}</Text>
+          <Text style={styles.messageText}>{status === 'won' ? 'All paths solved.' : status === 'lost' ? 'Path closed.' : message}</Text>
         </View>
 
         {status === 'lost' && (
@@ -385,26 +402,35 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
           </View>
         )}
 
-        <View style={styles.grid}>
-          {boardWords.map(word => {
-            const selectedIndex = selectedWords.indexOf(word);
-            return (
-              <WordlineTile
-                key={word}
-                word={word}
-                selectedIndex={selectedIndex}
-                disabled={status !== 'playing'}
-                status={status}
-                shuffleSignal={shuffleSignal}
-                onPress={() => toggleWord(word)}
-                colors={colors}
-                styles={styles}
-              />
-            );
-          })}
+        <View style={styles.board}>
+          {rows.map((row, rowIndex) => (
+            <View key={rowIndex} style={styles.gridRow}>
+              {row.map(word => {
+                const selectedIndex = selectedWords.indexOf(word);
+                return (
+                  <WordlineTile
+                    key={word}
+                    word={word}
+                    selectedIndex={selectedIndex}
+                    disabled={status !== 'playing'}
+                    status={status}
+                    shuffleSignal={shuffleSignal}
+                    onPress={() => toggleWord(word)}
+                    colors={colors}
+                    styles={styles}
+                  />
+                );
+              })}
+              {row.length < 4 && Array.from({ length: 4 - row.length }).map((_, fillerIndex) => (
+                <View key={`empty-${rowIndex}-${fillerIndex}`} style={styles.tilePressable} />
+              ))}
+            </View>
+          ))}
         </View>
 
-        <MistakeDots mistakes={mistakes} />
+        <View style={styles.mistakesWrap}>
+          <MistakeDots mistakes={mistakes} />
+        </View>
 
         {status === 'playing' && (
           <View style={styles.actions}>
@@ -417,8 +443,9 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
             <Pressable
               style={[styles.primaryBtn, selectedWords.length !== 4 && styles.primaryBtnDisabled]}
               onPress={submitTrail}
+              disabled={selectedWords.length !== 4}
             >
-              <Text style={styles.primaryBtnText}>Submit Trail</Text>
+              <Text style={styles.primaryBtnText}>Submit Steps</Text>
             </Pressable>
           </View>
         )}
@@ -433,7 +460,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
             </Pressable>
           </View>
         )}
-      </ScrollView>
+      </View>
       <WordlinesHelpModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
     </SafeAreaView>
   );
@@ -441,69 +468,106 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
 
 const trailColors = ['#F5C842', '#3DBE8A', '#4AAEC8', '#9D6EC8'];
 
-function makeStyles(c: ColorTheme) {
+function makeStyles(c: ColorTheme, compact: boolean) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: c.bgScreen },
-    container: { padding: 18, paddingBottom: 28, gap: 16 },
-    header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 4 },
-    headerCenter: { flex: 1, alignItems: 'center', gap: 6 },
-    iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-    eyebrow: { fontSize: 12, fontFamily: FONTS.extraBold, color: c.blue, letterSpacing: 1.5, textTransform: 'uppercase' },
-    title: { fontSize: 26, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
-    metaRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center' },
-    meta: { fontSize: 12, fontFamily: FONTS.bold, color: c.text2, backgroundColor: c.bgBase, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5 },
-    solvedStack: { gap: 8, minHeight: 0 },
-    solvedTrail: { backgroundColor: c.bgSurface, borderRadius: 8, padding: 10, borderLeftWidth: 5 },
-    solvedLabel: { fontSize: 13, fontFamily: FONTS.extraBold, color: c.text1 },
-    solvedWords: { fontSize: 12, fontFamily: FONTS.bold, color: c.text2, marginTop: 2 },
-    messageBox: { backgroundColor: c.bgBase, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 12, alignItems: 'center' },
-    messageText: { fontSize: 14, fontFamily: FONTS.bold, color: c.text2, textAlign: 'center' },
-    answers: { backgroundColor: c.bgSurface, borderRadius: 8, padding: 12, gap: 6 },
-    answerLine: { fontSize: 12, fontFamily: FONTS.bold, color: c.text2 },
-    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    tilePressable: { width: '23.5%', aspectRatio: 1.02 },
+    container: {
+      flex: 1,
+      paddingHorizontal: compact ? 12 : 18,
+      paddingTop: compact ? 4 : 8,
+      paddingBottom: compact ? 8 : 12,
+      gap: compact ? 7 : 10,
+      minHeight: 0,
+    },
+    header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    headerCenter: { flex: 1, alignItems: 'center', gap: compact ? 3 : 5 },
+    iconBtn: { width: compact ? 32 : 36, height: compact ? 32 : 36, alignItems: 'center', justifyContent: 'center' },
+    eyebrow: { fontSize: compact ? 10 : 11, fontFamily: FONTS.extraBold, color: c.blue, letterSpacing: 1.5, textTransform: 'uppercase' },
+    title: { fontSize: compact ? 21 : 25, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
+    metaRow: { flexDirection: 'row', gap: compact ? 5 : 8, flexWrap: 'wrap', justifyContent: 'center' },
+    meta: {
+      fontSize: compact ? 10 : 12,
+      fontFamily: FONTS.bold,
+      color: c.text2,
+      backgroundColor: c.bgBase,
+      borderRadius: 10,
+      paddingHorizontal: compact ? 7 : 10,
+      paddingVertical: compact ? 3 : 5,
+    },
+    solvedStack: { gap: compact ? 5 : 7, maxHeight: compact ? 104 : 134 },
+    solvedTrail: { backgroundColor: c.bgSurface, borderRadius: 8, paddingHorizontal: 10, paddingVertical: compact ? 6 : 8, borderLeftWidth: 5 },
+    solvedLabel: { fontSize: compact ? 11 : 13, fontFamily: FONTS.extraBold, color: c.text1 },
+    solvedWords: { fontSize: compact ? 10 : 12, fontFamily: FONTS.bold, color: c.text2, marginTop: 1 },
+    messageBox: { backgroundColor: c.bgBase, borderRadius: 8, paddingVertical: compact ? 7 : 9, paddingHorizontal: 12, alignItems: 'center' },
+    messageText: { fontSize: compact ? 12 : 14, fontFamily: FONTS.bold, color: c.text2, textAlign: 'center' },
+    answers: { backgroundColor: c.bgSurface, borderRadius: 8, padding: compact ? 8 : 10, gap: compact ? 3 : 5, maxHeight: compact ? 88 : 116 },
+    answerLine: { fontSize: compact ? 10 : 12, fontFamily: FONTS.bold, color: c.text2 },
+    board: {
+      flex: 1,
+      minHeight: 0,
+      backgroundColor: c.bgBase,
+      borderRadius: 16,
+      paddingHorizontal: compact ? 5 : 8,
+      paddingVertical: compact ? 5 : 6,
+      overflow: 'visible',
+    },
+    gridRow: { flex: 1, flexDirection: 'row', overflow: 'visible' },
+    tilePressable: { flex: 1, margin: compact ? 3 : 4, overflow: 'visible' },
     tile: {
       flex: 1,
-      backgroundColor: c.tileDefault,
-      borderRadius: 8,
-      borderWidth: 1.5,
-      borderColor: c.border,
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingTop: 13,
-      paddingBottom: 10,
-      paddingHorizontal: 6,
+      backgroundColor: c.tileStrip,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: 'transparent',
+      overflow: 'hidden',
       position: 'relative',
       shadowColor: c.shadow,
-      shadowOpacity: 0.14,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 5,
+      shadowOffset: { width: 0, height: 3 },
     },
-    tileSelected: { backgroundColor: c.blue, borderColor: c.blue },
+    tileSelected: { borderColor: c.blue },
     tileLost: { opacity: 0.88 },
-    faceWrap: { height: 36, justifyContent: 'center', alignItems: 'center' },
+    faceStrip: {
+      width: '100%',
+      height: compact ? 24 : 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderBottomLeftRadius: 8,
+      borderBottomRightRadius: 8,
+    },
+    wordArea: {
+      flex: 1,
+      backgroundColor: c.tileDefault,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 6,
+      paddingVertical: 6,
+      position: 'relative',
+    },
+    wordAreaSelected: { backgroundColor: c.tileSelected },
     tileText: { fontSize: 12, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
-    tileTextSelected: { color: c.bgScreen },
     orderBadge: {
       position: 'absolute',
-      top: 4,
-      left: 4,
+      top: compact ? 5 : 7,
+      left: compact ? 5 : 7,
       width: 18,
       height: 18,
       borderRadius: 9,
-      backgroundColor: c.bgScreen,
-      color: c.blue,
+      backgroundColor: c.blue,
       textAlign: 'center',
       fontSize: 11,
       fontFamily: FONTS.extraBold,
       lineHeight: 18,
+      color: c.categoryText,
     },
-    actions: { flexDirection: 'row', gap: 10 },
-    endActions: { flexDirection: 'row', gap: 10 },
-    secondaryBtn: { flex: 1, backgroundColor: c.bgBase, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
-    secondaryBtnText: { fontSize: 14, fontFamily: FONTS.extraBold, color: c.text1 },
-    primaryBtn: { flex: 2, backgroundColor: c.blue, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
+    mistakesWrap: { marginTop: compact ? -1 : 0 },
+    actions: { flexDirection: 'row', gap: compact ? 7 : 10 },
+    endActions: { flexDirection: 'row', gap: compact ? 7 : 10 },
+    secondaryBtn: { flex: 1, backgroundColor: c.bgBase, borderRadius: 12, paddingVertical: compact ? 10 : 13, alignItems: 'center' },
+    secondaryBtnText: { fontSize: compact ? 12 : 14, fontFamily: FONTS.extraBold, color: c.text1 },
+    primaryBtn: { flex: 2, backgroundColor: c.blue, borderRadius: 12, paddingVertical: compact ? 10 : 13, alignItems: 'center' },
     primaryBtnDisabled: { opacity: 0.45 },
-    primaryBtnText: { fontSize: 14, fontFamily: FONTS.extraBold, color: c.bgScreen },
+    primaryBtnText: { fontSize: compact ? 12 : 14, fontFamily: FONTS.extraBold, color: c.categoryText },
   });
 }

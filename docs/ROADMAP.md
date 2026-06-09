@@ -1,12 +1,12 @@
-# KonnectD — Product Roadmap
+# Konnectd — Product Roadmap
 
 _Last updated: June 2026_
 
 ## Vision
 
-> "The Connections game designed for how you actually play with other people."
+> "A daily word puzzle app designed for how you actually play with other people."
 
-NYT Connections is a solo daily ritual with bolted-on sharing. KonnectD is social-first — challenging, collaborating, and competing are built into the core loop. The competitor to beat is not NYT (unreachable brand moat) but **Connections Unlimited**, which has the right instincts but executes with web-first, Android-first, no-social mediocrity.
+Konnectd is social-first: challenging, collaborating, and competing are built into the core loop. The goal is a word puzzle app with its own identity, not a single-mode clone.
 
 ---
 
@@ -21,7 +21,7 @@ NYT Connections is a solo daily ritual with bolted-on sharing. KonnectD is socia
 | 4 | Hints system + push notifications | 🚧 In progress |
 | 5 | Monetisation — cosmetics, first puzzle pack, subscription | 🔲 Next |
 | 6 | Blitz Mode — 90-second speed round, daily leaderboard | 🔲 Planned |
-| 7 | Wordlines — ordered word-trail mode + mode-aware stats/matches | 🔲 Planned |
+| 7 | Next Steps — ordered-path mode + mode-aware stats/matches | 🔲 Planned |
 
 ---
 
@@ -30,7 +30,7 @@ NYT Connections is a solo daily ritual with bolted-on sharing. KonnectD is socia
 These choices were made in June 2026 and should guide all feature prioritisation:
 
 ### Retention
-KonnectD already has strong retention hooks (daily habit, streaks, co-streaks, social graph, nemesis/frenemy labels). The gap is **content variety** and **a second reason to open the app after the daily puzzle**. New modes solve this — not more social features.
+Konnectd already has strong retention hooks (daily habit, streaks, co-streaks, social graph, nemesis/frenemy labels). The gap is **content variety** and **a second reason to open the app after the daily puzzle**. New modes solve this — not more social features.
 
 ### Monetisation philosophy
 - Core game is always free — never gate the daily puzzle, friend challenges, or leaderboard
@@ -39,14 +39,14 @@ KonnectD already has strong retention hooks (daily habit, streaks, co-streaks, s
 - Rewarded video for hints (opt-in, not intrusive)
 
 ### New mode order
-1. **Wordlines first** — original single-player word-trail mode, instant to play at launch, gives the app a second daily loop without requiring friends to be online
-2. **Async co-op Wordlines second** — use the friends graph after the solo mode has proven the mechanic and built shared vocabulary
+1. **Next Steps first** — original single-player ordered-path mode, instant to play at launch, gives the app a second daily loop without requiring friends to be online
+2. **Async co-op Next Steps second** — use the friends graph after the solo mode has proven the mechanic and built shared vocabulary
 3. **Blitz Mode later** — paused for now because clock-based leaderboards invite cheating
 
-### Why Wordlines over Codenames Duet for launch
+### Why Next Steps over Codenames Duet for launch
 - Single-player is easier to launch: users can install, play, understand, and share without needing a friend already in the app
-- The mechanic is familiar but ownable: Connections asks "what belongs together?", Wordlines asks "what order do these ideas flow in?"
-- Ordered paths differentiate it from word ladders, phrase chains, and Connections clones
+- The mechanic is familiar but ownable: Groups asks "what belongs together?", Next Steps asks "what order do these ideas flow in?"
+- Ordered paths differentiate it from word ladders, phrase chains, and category-grouping games
 - Curated content can ship immediately; AI generation can follow once the structure is proven
 - Async co-op becomes a future extension of the same mechanic rather than a separate Codenames-shaped feature
 
@@ -118,8 +118,8 @@ KonnectD already has strong retention hooks (daily habit, streaks, co-streaks, s
 - All buttons fixed for contrast
 
 ### Branding & UI
-- Animated KonnectD logo: 4 tiles that bob independently, blink, and wink
-- KonnectD wordmark on Home, Game screen, and all share text
+- Animated Konnectd logo: 4 tiles that bob independently, blink, and wink
+- Konnectd wordmark on Home, Game screen, and all share text
 - Web layout: max 430px centred with dark `#0A120D` gutter
 - Home screen footer nav anchored below scroll
 
@@ -196,10 +196,10 @@ Ship **one cosmetic pack** + **Reward Video for Hints** + **One time purhase to 
 
 ---
 
-## Phase 7 — Wordlines Mode 🔲
+## Phase 7 — Next Steps Mode 🔲
 
 ### Concept
-Single-player ordered word-path puzzle. The player sees 16 mixed words and must untangle 4 hidden trails of 4 words. Each trail is ordered: every word connects to the next by meaning, cause/effect, phrase, hierarchy, process, place, or story logic.
+Single-player ordered word-path puzzle. The player sees 16 mixed words and must untangle 4 hidden paths of 4 words. Each path is ordered: every word connects to the next by meaning, cause/effect, phrase, hierarchy, process, place, or story logic.
 
 Example:
 - `SEED -> ROOT -> TREE -> FOREST`
@@ -207,7 +207,7 @@ Example:
 - `SCRIPT -> ACTOR -> STAGE -> APPLAUSE`
 - `COURT -> JUDGE -> VERDICT -> SENTENCE`
 
-Connections asks "what belongs together?" Wordlines asks "what order do these ideas flow in?"
+Groups asks "what belongs together?" Next Steps asks "what order do these ideas flow in?"
 
 ### Launch content
 - 50 curated puzzles added in `src/data/wordTrailsPuzzles.ts`
@@ -216,23 +216,23 @@ Connections asks "what belongs together?" Wordlines asks "what order do these id
   - `id`
   - `title`
   - `difficulty` from 1-5
-  - four ordered `trails`
-  - per-trail `label` and `relation`
+  - four ordered paths
+  - per-path `label` and `relation`
 - Every puzzle should contain 16 unique visible words
 
 ### Rules
-- Select 4 words, then arrange them into the intended trail order
-- Correct trail locks in and reveals its relation label
+- Select 4 words, then arrange them into the intended step order
+- Correct path locks in and reveals its relation label
 - Wrong set or wrong order costs a mistake
 - Difficulty rises through ambiguity, cross-associations, and less literal path logic
-- Share result differentiates Wordlines from Connections
+- Share result differentiates Next Steps from Groups
 
 ### First playable slice
-- Home screen game switcher swaps Connections / Wordlines actions in-place with animation
-- Daily / Random Wordlines route into `WordlinesGameScreen`
-- Free Play routes into `WordlinesSelectScreen`
+- Home screen game switcher swaps Groups / Next Steps actions in-place with animation
+- Daily / Random Next Steps route into the ordered-path game screen
+- Free Play routes into the Next Steps archive screen
 - Local completion state stored with AsyncStorage
-- Wordlines play sessions record as `game_type = 'word_trails'`, `game_mode = 'classic'`
+- Next Steps play sessions record as `game_type = 'word_trails'`, `game_mode = 'classic'`
 
 ### Mode-aware stats and matches
 From this phase onward, every play session and challenge must include:
@@ -249,9 +249,9 @@ This keeps future stats, leaderboards, match history, and challenge inboxes from
 - Existing records backfill as `connections` / `normal`
 
 ### Future async co-op extension
-Once the solo mode is proven, add co-op Wordlines using the existing friends graph:
-- One friend gives a clue for a hidden trail
-- The other friend tries to complete the trail
+Once the solo mode is proven, add co-op Next Steps using the existing friends graph:
+- One friend gives a clue for a hidden path
+- The other friend tries to complete the path
 - PocketBase subscriptions notify when it is your turn
 - Notification hub / bell badge should collect turns, challenges, and friend requests
 
@@ -259,7 +259,7 @@ Once the solo mode is proven, add co-op Wordlines using the existing friends gra
 
 ## Competitive Positioning
 
-| Feature | NYT | Connections Unlimited | **KonnectD** |
+| Feature | Daily word apps | Social puzzle sites | **Konnectd** |
 |---|---|---|---|
 | Challenge a friend (in-app) | ❌ | ❌ | ✅ |
 | Friends + social hub | ❌ | ❌ | ✅ |
@@ -271,7 +271,7 @@ Once the solo mode is proven, add co-op Wordlines using the existing friends gra
 | Hints system | ❌ | Partial | 🚧 |
 | Push notifications | ❌ | ❌ | 🚧 |
 | Blitz mode | ❌ | ❌ | Paused |
-| Wordlines ordered-path mode | ❌ | ❌ | 🔲 |
+| Next Steps ordered-path mode | ❌ | ❌ | 🔲 |
 | Async co-op mode | ❌ | ❌ | 🔲 |
 | Cosmetics / themes | ❌ | ❌ | 🔲 |
 | Australian content pack | ❌ | ❌ | 🔲 |

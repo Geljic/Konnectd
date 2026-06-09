@@ -1,14 +1,14 @@
 export type GameType = 'connections' | 'word_trails';
-export type ConnectionsRuleset = 'normal' | 'hard';
+export type GroupsRuleset = 'normal' | 'hard';
 export type WordTrailsRuleset = 'classic';
-export type Ruleset = ConnectionsRuleset | WordTrailsRuleset;
+export type Ruleset = GroupsRuleset | WordTrailsRuleset;
 
 export const DEFAULT_GAME_TYPE: GameType = 'connections';
-export const DEFAULT_CONNECTIONS_RULESET: ConnectionsRuleset = 'normal';
+export const DEFAULT_GROUPS_RULESET: GroupsRuleset = 'normal';
 
 export const GAME_TYPE_LABELS: Record<GameType, string> = {
-  connections: 'Connections',
-  word_trails: 'Wordlines',
+  connections: 'Groups',
+  word_trails: 'Next Steps',
 };
 
 export const RULESET_LABELS: Record<Ruleset, string> = {
@@ -23,5 +23,5 @@ export function normaliseGameType(value: unknown): GameType {
 
 export function normaliseRuleset(value: unknown, gameType: GameType = DEFAULT_GAME_TYPE): Ruleset {
   if (gameType === 'word_trails') return 'classic';
-  return value === 'hard' ? 'hard' : DEFAULT_CONNECTIONS_RULESET;
+  return value === 'hard' ? 'hard' : DEFAULT_GROUPS_RULESET;
 }

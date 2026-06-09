@@ -3,10 +3,10 @@ import type { Puzzle, PuzzleCategory } from '@/api/puzzles';
 import type { CategoryColour } from '@/constants/colors';
 import { CATEGORY_ORDER } from '@/constants/colors';
 import { MAX_MISTAKES, MAX_HINTS } from '@/constants/config';
-import type { ConnectionsRuleset } from '@/constants/gameModes';
+import type { GroupsRuleset } from '@/constants/gameModes';
 
 type GameStatus = 'idle' | 'playing' | 'won' | 'lost';
-export type GameMode = ConnectionsRuleset;
+export type GameMode = GroupsRuleset;
 
 export type HintTier = 'warmcold' | 'wordreveal' | 'categorypeek';
 export const HINT_COSTS: Record<HintTier, number> = {

@@ -11,7 +11,7 @@ import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
 
-const EXAMPLE_TRAILS = [
+const EXAMPLE_PATHS = [
   { colour: '#F5C842', label: 'grows into', words: ['SEED', 'ROOT', 'TREE', 'FOREST'] },
   { colour: '#3DBE8A', label: 'causes', words: ['MATCH', 'SPARK', 'FIRE', 'SMOKE'] },
   { colour: '#4AAEC8', label: 'performance path', words: ['SCRIPT', 'ACTOR', 'STAGE', 'APPLAUSE'] },
@@ -58,19 +58,19 @@ export function WordlinesHelpModal({ visible, onClose }: { visible: boolean; onC
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.body}>
             <View style={styles.section}>
-              <Text style={styles.rule}>Find four hidden word trails.</Text>
-              <Text style={styles.rule}>Tap four words <Text style={styles.bold}>in order</Text>, then hit <Text style={styles.bold}>Submit Trail</Text>.</Text>
-              <Text style={styles.rule}>You get <Text style={styles.bold}>4 mistakes</Text> before the trail closes.</Text>
+              <Text style={styles.rule}>Find four hidden ordered paths.</Text>
+              <Text style={styles.rule}>Tap four words <Text style={styles.bold}>in order</Text>, then hit <Text style={styles.bold}>Submit Steps</Text>.</Text>
+              <Text style={styles.rule}>You get <Text style={styles.bold}>4 mistakes</Text> before the path closes.</Text>
               <Text style={styles.rule}>Right words but wrong order? You'll be told to reorder them.</Text>
             </View>
 
             <View style={styles.divider} />
 
-            <Text style={styles.sectionTitle}>Example Trails</Text>
+            <Text style={styles.sectionTitle}>Example Paths</Text>
             <Text style={styles.sectionSub}>Every word connects to the next by meaning, cause, phrase, process, or story logic.</Text>
 
             <View style={styles.trailList}>
-              {EXAMPLE_TRAILS.map(trail => (
+              {EXAMPLE_PATHS.map(trail => (
                 <View key={trail.label} style={styles.trailRow}>
                   <View style={[styles.swatch, { backgroundColor: trail.colour }]}>
                     <PathIcon color={colors.categoryText} />
@@ -89,7 +89,7 @@ export function WordlinesHelpModal({ visible, onClose }: { visible: boolean; onC
             <View style={styles.divider} />
 
             <View style={styles.tipCard}>
-              <Text style={styles.tipTitle}>Trail logic</Text>
+              <Text style={styles.tipTitle}>Path logic</Text>
               <Text style={styles.tipText}>
                 A set can be correct but still fail if the order is wrong. For example, <Text style={styles.bold}>MATCH -> SPARK -> FIRE -> SMOKE</Text> works because the ideas flow forward.
               </Text>

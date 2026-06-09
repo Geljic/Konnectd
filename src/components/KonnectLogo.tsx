@@ -108,8 +108,8 @@ export function KonnectLogo({ iconSize = 160 }: { iconSize?: number }) {
   return (
     <View style={textStyles.root}>
       <KonnectIcon size={iconSize} />
-      <Text style={textStyles.wordmark}>KonnectD</Text>
-      <Text style={textStyles.tagline}>Find four hidden groups</Text>
+      <Text style={textStyles.wordmark}>Konnectd</Text>
+      <Text style={textStyles.tagline}>Daily word puzzles</Text>
     </View>
   );
 }

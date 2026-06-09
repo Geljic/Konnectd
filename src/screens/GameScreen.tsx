@@ -292,7 +292,7 @@ export function GameScreen({ route, navigation }: Props) {
 
           <View style={styles.headerCenter}>
             <View style={styles.titleRow}>
-              <Text style={styles.title}>KonnectD</Text>
+              <Text style={styles.title}>Konnectd</Text>
               {hardMode && (
                 <View style={styles.hardBadge}>
                   <FireIcon color={colors.purple} />

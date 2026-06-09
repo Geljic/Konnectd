@@ -66,7 +66,7 @@ Admin dashboard: `http://localhost:8090/_/` (local) or via tunnel URL.
 
 | App | PocketBase Port |
 |---|---|
-| Connections Game | 8091 |
+| Konnectd app | 8091 |
 | _(next app)_ | 8092 |
 
 ---

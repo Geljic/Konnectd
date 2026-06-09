@@ -1,12 +1,13 @@
-# KonnectD
+# Konnectd
 
-A daily word puzzle game inspired by NYT Connections. Group 16 words into 4 categories — but watch out, some words could fit more than one.
+A daily word puzzle app with two modes: Groups, where you sort 16 words into hidden sets, and Next Steps, where you build ordered paths of connected words.
 
 Built with Expo + React Native (web & mobile), PocketBase backend, and Docker for deployment.
 
 ## Features
 
 - Daily puzzles with unlimited archive access
+- Groups and Next Steps modes
 - Hard mode
 - Challenge a friend to beat your score
 - Friends list, leaderboard, and match history
