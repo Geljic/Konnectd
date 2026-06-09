@@ -35,7 +35,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   challengeNotificationsEnabled: true,
   darkMode: false,
   tileStripStyle: 'big',
-  cosmeticTheme: 'classic',
+  cosmeticTheme: 'gardenPop',
   loaded: false,
 
   async load() {
@@ -55,7 +55,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         challengeNotificationsEnabled: challengeNotif === null ? true : challengeNotif === 'true',
         darkMode: dark === 'true',
         tileStripStyle: (strip as TileStripStyle) ?? 'big',
-        cosmeticTheme: cosmeticTheme === 'gardenPop' ? 'gardenPop' : 'classic',
+        cosmeticTheme: cosmeticTheme === 'classic' ? 'classic' : 'gardenPop',
         loaded: true,
       });
     } catch {

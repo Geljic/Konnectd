@@ -297,9 +297,10 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
   const recorded = useRef(false);
 
   useEffect(() => {
+    if (status !== 'playing') return;
     const id = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt.current) / 1000)), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [status]);
 
   useEffect(() => {
     if (recorded.current || status === 'playing') return;
@@ -424,7 +425,6 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
     setHintVisible(false);
   }
 
-  const remainingMistakes = Math.max(0, MAX_MISTAKES - mistakes);
   const displayTrails = status === 'lost' ? puzzle.trails : solvedTrails;
   const rows: string[][] = [];
   for (let i = 0; i < boardWords.length; i += 4) {
@@ -443,16 +443,17 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
           <View style={styles.headerCenter}>
             <Text style={styles.eyebrow}>Next Steps</Text>
             <Text style={styles.title}>{puzzle.title}</Text>
-            <View style={styles.metaRow}>
-              <Text style={styles.meta}>Difficulty {puzzle.difficulty}</Text>
-              <Text style={styles.meta}>{formatTime(elapsed)}</Text>
-              <Text style={styles.meta}>{remainingMistakes} misses left</Text>
-            </View>
+            <Text style={styles.subtitle}>Difficulty {puzzle.difficulty}</Text>
           </View>
 
-          <Pressable style={styles.iconBtn} onPress={() => setHelpVisible(true)} hitSlop={12}>
-            <InfoIcon color={colors.text2} />
-          </Pressable>
+          <View style={styles.rightCluster}>
+            <View style={styles.timerBadge}>
+              <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
+            </View>
+            <Pressable style={styles.iconBtn} onPress={() => setHelpVisible(true)} hitSlop={12}>
+              <InfoIcon color={colors.text2} />
+            </Pressable>
+          </View>
         </View>
 
         {displayTrails.length > 0 && (
@@ -468,15 +469,10 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
           </View>
         )}
 
-        <View style={styles.messageBox}>
-          <Text style={styles.messageText}>{status === 'won' ? 'All paths solved.' : status === 'lost' ? 'Path closed.' : message}</Text>
-        </View>
-
-        {hintText && status === 'playing' && (
-          <Pressable style={styles.hintBanner} onPress={() => setHintText(null)}>
-            <Text style={styles.hintBannerText}>{hintText}</Text>
-            <Text style={styles.hintBannerSub}>Tap to dismiss</Text>
-          </Pressable>
+        {status !== 'won' && (
+          <View style={styles.messageBox}>
+            <Text style={styles.messageText}>{status === 'lost' ? 'Path closed.' : message}</Text>
+          </View>
         )}
 
         {status === 'playing' && (
@@ -508,8 +504,17 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
           </View>
         )}
 
+        {status !== 'playing' && <View style={{ flex: 1 }} />}
+
         <View style={styles.mistakesWrap}>
           <MistakeDots mistakes={mistakes} />
+
+          {hintText && status === 'playing' && (
+            <Pressable style={styles.hintBanner} onPress={() => setHintText(null)}>
+              <Text style={styles.hintBannerText}>{hintText}</Text>
+              <Text style={styles.hintBannerSub}>Tap to dismiss</Text>
+            </Pressable>
+          )}
 
           {status === 'playing' ? (
             <>
@@ -533,7 +538,11 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
                 onPress={() => setHintVisible(true)}
                 disabled={hintsUsed >= MAX_STEP_HINTS}
               >
-                <Text style={styles.btnHintText}>Hint {MAX_STEP_HINTS - hintsUsed} left · -{HINT_PENALTY} pts</Text>
+                <Text style={styles.btnHintText}>
+                  {hintsUsed === 0
+                    ? `💡 Hint (${MAX_STEP_HINTS} free)`
+                    : `💡 Hint (${MAX_STEP_HINTS - hintsUsed} left · −${HINT_PENALTY} pts)`}
+                </Text>
               </Pressable>
             </>
           ) : (
@@ -553,19 +562,42 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
       <Modal visible={hintVisible} transparent animationType="fade" onRequestClose={() => setHintVisible(false)}>
         <Pressable style={styles.hintOverlay} onPress={() => setHintVisible(false)}>
           <Pressable style={styles.hintSheet} onPress={e => e.stopPropagation()}>
-            <Text style={styles.hintTitle}>Use a Hint</Text>
-            <Text style={styles.hintSub}>{MAX_STEP_HINTS - hintsUsed} hint{MAX_STEP_HINTS - hintsUsed === 1 ? '' : 's'} remaining · -{HINT_PENALTY} pts each</Text>
+            <View style={styles.hintHeader}>
+              <Text style={styles.hintTitle}>Use a Hint</Text>
+              <Text style={styles.hintSub}>
+                {MAX_STEP_HINTS - hintsUsed} hint{MAX_STEP_HINTS - hintsUsed === 1 ? '' : 's'} remaining
+                {hintsUsed > 0 ? ` · −${hintsUsed * HINT_PENALTY} pts so far` : ''}
+              </Text>
+            </View>
             <Pressable style={styles.hintOption} onPress={() => useStepHint('same_path')}>
-              <Text style={styles.hintOptionTitle}>Warm / Cold</Text>
-              <Text style={styles.hintOptionDesc}>Count how many selected words share a path.</Text>
+              <Text style={styles.hintOptionEmoji}>🌡️</Text>
+              <View style={styles.hintOptionText}>
+                <Text style={styles.hintOptionTitle}>Warm / Cold</Text>
+                <Text style={styles.hintOptionDesc}>Count how many selected words share a path.</Text>
+              </View>
+              <View style={styles.hintCostPill}>
+                <Text style={styles.hintCostText}>−{HINT_PENALTY}</Text>
+              </View>
             </Pressable>
             <Pressable style={styles.hintOption} onPress={() => useStepHint('next_step')}>
-              <Text style={styles.hintOptionTitle}>Next Step</Text>
-              <Text style={styles.hintOptionDesc}>Reveal one word that follows a selected word.</Text>
+              <Text style={styles.hintOptionEmoji}>🔍</Text>
+              <View style={styles.hintOptionText}>
+                <Text style={styles.hintOptionTitle}>Next Step</Text>
+                <Text style={styles.hintOptionDesc}>Reveal one word that follows a selected word.</Text>
+              </View>
+              <View style={styles.hintCostPill}>
+                <Text style={styles.hintCostText}>−{HINT_PENALTY}</Text>
+              </View>
             </Pressable>
             <Pressable style={styles.hintOption} onPress={() => useStepHint('path_label')}>
-              <Text style={styles.hintOptionTitle}>Path Peek</Text>
-              <Text style={styles.hintOptionDesc}>Reveal one hidden path label.</Text>
+              <Text style={styles.hintOptionEmoji}>👁️</Text>
+              <View style={styles.hintOptionText}>
+                <Text style={styles.hintOptionTitle}>Path Peek</Text>
+                <Text style={styles.hintOptionDesc}>Reveal one hidden path label.</Text>
+              </View>
+              <View style={styles.hintCostPill}>
+                <Text style={styles.hintCostText}>−{HINT_PENALTY}</Text>
+              </View>
             </Pressable>
             <Pressable style={styles.hintCancel} onPress={() => setHintVisible(false)}>
               <Text style={styles.hintCancelText}>Cancel</Text>
@@ -613,16 +645,10 @@ function makeStyles(c: ColorTheme, compact: boolean) {
     iconBtn: { width: compact ? 32 : 36, height: compact ? 32 : 36, alignItems: 'center', justifyContent: 'center' },
     eyebrow: { fontSize: compact ? 10 : 11, fontFamily: FONTS.extraBold, color: c.blue, letterSpacing: 1.5, textTransform: 'uppercase' },
     title: { fontSize: compact ? 21 : 25, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
-    metaRow: { flexDirection: 'row', gap: compact ? 5 : 8, flexWrap: 'wrap', justifyContent: 'center' },
-    meta: {
-      fontSize: compact ? 10 : 12,
-      fontFamily: FONTS.bold,
-      color: c.text2,
-      backgroundColor: c.bgBase,
-      borderRadius: 10,
-      paddingHorizontal: compact ? 7 : 10,
-      paddingVertical: compact ? 3 : 5,
-    },
+    subtitle: { fontSize: compact ? 12 : 13, fontFamily: FONTS.bold, color: c.text2 },
+    rightCluster: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+    timerBadge: { alignItems: 'flex-end', minWidth: 36 },
+    timerText: { fontSize: compact ? 11 : 13, fontFamily: FONTS.bold, color: c.text2 },
     solvedStack: { gap: compact ? 4 : 6, maxHeight: compact ? 132 : 154 },
     solvedTrail: { backgroundColor: c.bgSurface, borderRadius: 8, paddingHorizontal: 10, paddingVertical: compact ? 6 : 8, borderLeftWidth: 5 },
     solvedTrailRevealed: { backgroundColor: c.bgBase },
@@ -741,11 +767,22 @@ function makeStyles(c: ColorTheme, compact: boolean) {
       padding: 20,
       gap: 10,
     },
-    hintTitle: { fontSize: 20, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
-    hintSub: { fontSize: 13, fontFamily: FONTS.bold, color: c.text3, textAlign: 'center', marginBottom: 4 },
-    hintOption: { backgroundColor: c.bgBase, borderRadius: 12, padding: 14, gap: 3 },
+    hintHeader: { alignItems: 'center', paddingBottom: 6 },
+    hintTitle: { fontSize: 20, fontFamily: FONTS.extraBold, color: c.text1 },
+    hintSub: { fontSize: 13, fontFamily: FONTS.bold, color: c.text3, marginTop: 2 },
+    hintOption: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      backgroundColor: c.bgBase, borderRadius: 12, padding: 14,
+    },
+    hintOptionEmoji: { fontSize: 24, width: 32, textAlign: 'center' },
+    hintOptionText: { flex: 1, gap: 2 },
     hintOptionTitle: { fontSize: 15, fontFamily: FONTS.extraBold, color: c.text1 },
     hintOptionDesc: { fontSize: 12, fontFamily: FONTS.bold, color: c.text3 },
+    hintCostPill: {
+      backgroundColor: c.errorFlash + '22',
+      borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+    },
+    hintCostText: { fontSize: 13, fontFamily: FONTS.extraBold, color: c.errorFlash },
     hintCancel: { alignItems: 'center', padding: 14, borderRadius: 12, borderWidth: 1.5, borderColor: c.border, marginTop: 4 },
     hintCancelText: { fontSize: 15, fontFamily: FONTS.bold, color: c.text2 },
   });

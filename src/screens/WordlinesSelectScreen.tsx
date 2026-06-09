@@ -30,9 +30,18 @@ const SORT_LABELS: Record<SortMode, string> = {
   diff_desc: '↓ Hardest',
 };
 
+const DIFFICULTY_COLOURS = (c: ColorTheme) => ({
+  1: c.yellow,
+  2: c.green,
+  3: c.blue,
+  4: c.purple,
+  5: c.purple,
+} as Record<number, string>);
+
 export function WordlinesSelectScreen({ navigation }: Props) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const difficultyColours = useMemo(() => DIFFICULTY_COLOURS(colors), [colors]);
   const [difficulty, setDifficulty] = useState<WordTrailsPuzzle['difficulty'] | null>(null);
   const [search, setSearch] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('title_asc');
@@ -89,7 +98,7 @@ export function WordlinesSelectScreen({ navigation }: Props) {
         style={styles.row}
         onPress={() => openPuzzle(item)}
       >
-        <View style={styles.badge}>
+        <View style={[styles.badge, { backgroundColor: difficultyColours[item.difficulty] }]}>
           <Text style={styles.badgeText}>{DIFFICULTY_LABELS[item.difficulty]}</Text>
         </View>
         <View style={styles.rowContent}>
@@ -125,7 +134,7 @@ export function WordlinesSelectScreen({ navigation }: Props) {
           {DIFFICULTIES.map(level => (
             <Pressable
               key={level}
-              style={[styles.chip, difficulty === level && styles.chipActive]}
+              style={[styles.chip, difficulty === level && { backgroundColor: difficultyColours[level] }]}
               onPress={() => setDifficulty(level)}
             >
               <Text style={[styles.chipText, difficulty === level && styles.chipTextActive]}>{DIFFICULTY_LABELS[level]}</Text>

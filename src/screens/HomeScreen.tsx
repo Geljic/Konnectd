@@ -146,7 +146,8 @@ export function HomeScreen({ navigation }: Props) {
   };
 
   const gameAccent = selectedGame === 'connections' ? colors.tileStrip : colors.blue;
-  const gamePrimaryBg = selectedGame === 'connections' ? colors.text1 : colors.blue;
+  const gamePrimaryBg = colors.text1;
+  const gamePrimaryLabel = selectedGame === 'connections' ? colors.tileStrip : colors.blue;
   const gameSecondaryBg = selectedGame === 'connections' ? colors.bgBase : colors.bgSurface;
   const selectedDailyDone = dailyDone[selectedGame];
 
@@ -238,26 +239,13 @@ export function HomeScreen({ navigation }: Props) {
               onPress={() => setSelectedGame('word_trails')}
             >
               <View style={styles.wordlineIcon}>
-                <View style={[
-                  styles.wordlineDot,
-                  selectedGame !== 'word_trails' && { backgroundColor: colors.blue },
-                ]} />
-                <View style={[
-                  styles.wordlineDash,
-                  selectedGame !== 'word_trails' && { backgroundColor: colors.blue },
-                ]} />
-                <View style={[
-                  styles.wordlineDot,
-                  selectedGame !== 'word_trails' && { backgroundColor: colors.blue },
-                ]} />
-                <View style={[
-                  styles.wordlineDash,
-                  selectedGame !== 'word_trails' && { backgroundColor: colors.blue },
-                ]} />
-                <View style={[
-                  styles.wordlineDot,
-                  selectedGame !== 'word_trails' && { backgroundColor: colors.blue },
-                ]} />
+                <View style={[styles.wordlineDot, { backgroundColor: colors.yellow }]} />
+                <View style={[styles.wordlineDash, selectedGame !== 'word_trails' && { backgroundColor: colors.blue }]} />
+                <View style={[styles.wordlineDot, { backgroundColor: colors.green }]} />
+                <View style={[styles.wordlineDash, selectedGame !== 'word_trails' && { backgroundColor: colors.blue }]} />
+                <View style={[styles.wordlineDot, { backgroundColor: colors.blue }]} />
+                <View style={[styles.wordlineDash, selectedGame !== 'word_trails' && { backgroundColor: colors.blue }]} />
+                <View style={[styles.wordlineDot, { backgroundColor: colors.purple }]} />
               </View>
               <Text style={[
                 styles.gameCardTitle,
@@ -279,8 +267,10 @@ export function HomeScreen({ navigation }: Props) {
               style={[styles.btnPrimary, { backgroundColor: gamePrimaryBg }]}
               onPress={handleDailyPress}
             >
-              <Text style={[styles.btnLabel, { color: selectedGame === 'connections' ? colors.tileStrip : colors.bgScreen }]}>
-                {selectedDailyDone ? 'COMPLETED' : selectedGame === 'connections' ? 'DAILY GROUPS' : 'DAILY STEPS'}
+              <Text style={[styles.btnLabel, { color: gamePrimaryLabel }]}>
+                {selectedDailyDone
+                  ? selectedGame === 'connections' ? 'DAILY GROUPS · COMPLETED' : 'DAILY STEPS · COMPLETED'
+                  : selectedGame === 'connections' ? 'DAILY GROUPS' : 'DAILY STEPS'}
               </Text>
               <Text style={styles.btnPrimaryText}>
                 {selectedDailyDone ? "View today's result" : selectedGame === 'connections' ? "Play today's puzzle" : "Find today's path"}
@@ -396,7 +386,7 @@ function makeStyles(c: ColorTheme) {
       gap: 8,
     },
     gameCardActive: { backgroundColor: c.text1, borderColor: c.tileStrip },
-    gameCardWordlinesActive: { backgroundColor: c.blue, borderColor: c.bgScreen },
+    gameCardWordlinesActive: { backgroundColor: c.text1, borderColor: c.blue },
     connectionsIcon: { width: 42, flexDirection: 'row', flexWrap: 'wrap', gap: 3 },
     iconTile: { width: 19, height: 19, borderRadius: 6 },
     wordlineIcon: { flexDirection: 'row', alignItems: 'center', height: 22 },
