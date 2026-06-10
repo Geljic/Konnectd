@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 40" width="80" height="40" role="img" aria-label="Sleepy tile face">
+  <rect data-part="strip" width="80" height="40" rx="8" fill="#8EC4AA"/>
+  <g data-part="cheeks" fill="#F49A8B" opacity="0.62">
+    <rect x="13" y="22" width="9" height="4" rx="2"/>
+    <rect x="58" y="22" width="9" height="4" rx="2"/>
+  </g>
+  <g data-part="eyes">
+    <path d="M22 17.5 Q27 21 32 17.5" stroke="#12221A" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+    <path d="M48 17.5 Q53 21 58 17.5" stroke="#12221A" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+  </g>
+  <g data-part="mouth">
+    <ellipse cx="40" cy="28.5" rx="3.8" ry="5.1" fill="#12221A"/>
+    <ellipse cx="40" cy="31" rx="2" ry="1.2" fill="#F49A8B"/>
+  </g>
+</svg>

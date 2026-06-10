@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 40" width="80" height="40" role="img" aria-label="Big smile tile face">
+  <rect data-part="strip" width="80" height="40" rx="8" fill="#8EC4AA"/>
+  <g data-part="cheeks" fill="#F49A8B" opacity="0.72">
+    <rect x="13" y="20.5" width="9" height="4" rx="2"/>
+    <rect x="58" y="20.5" width="9" height="4" rx="2"/>
+  </g>
+  <g data-part="eyes">
+    <path d="M22 18 Q27 12 32 18" stroke="#12221A" stroke-width="3.1" fill="none" stroke-linecap="round"/>
+    <path d="M48 18 Q53 12 58 18" stroke="#12221A" stroke-width="3.1" fill="none" stroke-linecap="round"/>
+  </g>
+  <g data-part="mouth">
+    <path d="M27 24.5 Q40 35 53 24.5 Z" fill="#12221A"/>
+    <path d="M30 24.5 Q40 29 50 24.5" fill="#FFF7D8"/>
+    <path d="M35 31 Q40 28.5 45 31 Q42 34 40 34 Q38 34 35 31 Z" fill="#F49A8B"/>
+  </g>
+</svg>

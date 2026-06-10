@@ -13,7 +13,7 @@ import { AdBanner } from '@/components/BannerAd';
 import { GameResultModal } from '@/components/GameResultModal';
 import { fetchMyChallenges, subscribeToChallengeChanges, isMine } from '@/api/challenges';
 import { fetchDailyPuzzle, getCompletedPuzzleIds } from '@/api/puzzles';
-import { WORD_TRAILS_PUZZLES } from '@/data/wordTrailsPuzzles';
+import { getWordTrails } from '@/api/wordTrails';
 import { getDailyWordTrailsPuzzle, getWordTrailsResult } from '@/utils/wordTrails';
 import type { AppStackParamList } from '../App';
 
@@ -96,7 +96,7 @@ export function HomeScreen({ navigation }: Props) {
   const refreshDailyDone = useCallback(async () => {
     const groupsDaily = await fetchDailyPuzzle();
     const groupsCompleted = groupsDaily ? (await getCompletedPuzzleIds()).has(groupsDaily.id) : false;
-    const stepsDaily = getDailyWordTrailsPuzzle(WORD_TRAILS_PUZZLES);
+    const stepsDaily = getDailyWordTrailsPuzzle(getWordTrails());
     const stepsResult = await getWordTrailsResult(stepsDaily.id);
     setDailyDone({
       connections: groupsCompleted,
@@ -167,7 +167,7 @@ export function HomeScreen({ navigation }: Props) {
       return;
     }
 
-    const daily = getDailyWordTrailsPuzzle(WORD_TRAILS_PUZZLES);
+    const daily = getDailyWordTrailsPuzzle(getWordTrails());
     const result = await getWordTrailsResult(daily.id);
     if (result?.completed) {
       setCompletedDaily({
@@ -278,17 +278,19 @@ export function HomeScreen({ navigation }: Props) {
             </Pressable>
 
             <View style={styles.btnRow}>
-              <Pressable
-                style={[styles.btnSecondary, { flex: 1, backgroundColor: gameSecondaryBg }]}
-                onPress={() => selectedGame === 'connections'
-                  ? navigation.navigate('Game', { mode: 'nyt' })
-                  : navigation.navigate('WordlinesGame', { mode: 'random' })}
-              >
-                <Text style={[styles.btnLabel, { color: selectedGame === 'connections' ? colors.text2 : gameAccent }]}>
-                  {selectedGame === 'connections' ? 'NYT' : 'RANDOM'}
-                </Text>
-                <Text style={styles.btnSecondaryText}>Random puzzle</Text>
-              </Pressable>
+              {(selectedGame !== 'connections' || user?.nytAccess) && (
+                <Pressable
+                  style={[styles.btnSecondary, { flex: 1, backgroundColor: gameSecondaryBg }]}
+                  onPress={() => selectedGame === 'connections'
+                    ? navigation.navigate('Game', { mode: 'nyt' })
+                    : navigation.navigate('WordlinesGame', { mode: 'random' })}
+                >
+                  <Text style={[styles.btnLabel, { color: selectedGame === 'connections' ? colors.text2 : gameAccent }]}>
+                    {selectedGame === 'connections' ? 'NYT' : 'RANDOM'}
+                  </Text>
+                  <Text style={styles.btnSecondaryText}>Random puzzle</Text>
+                </Pressable>
+              )}
               <Pressable
                 style={[styles.btnTertiary, { flex: 1, backgroundColor: gameSecondaryBg, borderColor: gameAccent }]}
                 onPress={() => selectedGame === 'connections'

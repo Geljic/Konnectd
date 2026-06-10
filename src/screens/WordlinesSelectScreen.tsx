@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, FlatList, StyleSheet, ListRenderItem, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { WORD_TRAILS_PUZZLES, type WordTrailsPuzzle } from '@/data/wordTrailsPuzzles';
+import { type WordTrailsPuzzle } from '@/data/wordTrailsPuzzles';
+import { getWordTrails, loadWordTrails } from '@/api/wordTrails';
 import { getCompletedWordTrailsIds, getWordTrailsResult } from '@/utils/wordTrails';
 import { GameResultModal } from '@/components/GameResultModal';
 import { AdBanner } from '@/components/BannerAd';
@@ -47,13 +48,15 @@ export function WordlinesSelectScreen({ navigation }: Props) {
   const [search, setSearch] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('title_asc');
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [allPuzzles, setAllPuzzles] = useState<WordTrailsPuzzle[]>(getWordTrails());
   const [modalPuzzle, setModalPuzzle] = useState<{ id: string; title: string; result: { durationSeconds: number; mistakes: number } } | null>(null);
 
   useEffect(() => {
     getCompletedWordTrailsIds().then(setCompletedIds);
+    loadWordTrails().then(setAllPuzzles);
   }, []);
 
-  const puzzles = WORD_TRAILS_PUZZLES
+  const puzzles = allPuzzles
     .filter(puzzle => !difficulty || puzzle.difficulty === difficulty)
     .filter(puzzle => {
       const q = search.trim().toLowerCase();

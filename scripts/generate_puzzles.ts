@@ -132,7 +132,7 @@ async function main() {
   console.log(`Generating ${COUNT} puzzles...`);
 
   // Auth to PocketBase as admin
-  await pb.admins.authWithPassword(
+  await pb.collection('_superusers').authWithPassword(
     process.env.POCKETBASE_ADMIN_EMAIL ?? '',
     process.env.POCKETBASE_ADMIN_PASSWORD ?? ''
   );

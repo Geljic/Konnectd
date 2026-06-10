@@ -3,6 +3,7 @@ import type { CategoryColour } from '@/constants/colors';
 import { WEB_BASE_URL } from '@/constants/config';
 import { sendPushToUser } from '@/utils/notifications';
 import { useSettingsStore } from '@/store/settingsStore';
+import { hasBlockBetween } from './safety';
 import {
   DEFAULT_GROUPS_RULESET,
   DEFAULT_GAME_TYPE,
@@ -114,6 +115,7 @@ export async function createChallenge(params: {
 }): Promise<Challenge | null> {
   if (!pb.authStore.isValid) return null;
   try {
+    if (params.recipientId && await hasBlockBetween(params.recipientId)) return null;
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
     const challengerName = pb.authStore.model?.display_name
       ? `${pb.authStore.model.display_name}#${pb.authStore.model.username_tag ?? '????'}`

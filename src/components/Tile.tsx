@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, Text, View, StyleSheet } from 'react-native';
-import Svg, { Path, Line, Circle, Ellipse, Rect, G } from 'react-native-svg';
+import { Pressable, Text, View, StyleSheet, useWindowDimensions } from 'react-native';
+import Svg, { Path, Line, Ellipse, Rect, G } from 'react-native-svg';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -29,183 +29,293 @@ interface TileProps {
   solvingDelay?: number;
 }
 
-const D = '#162219';
 const W = '#FFFFFF';
+const CHEEK = '#F49A8B';
+const TOOTH = '#FFF7D8';
 
 const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
+const FACE_COUNT = 16;
+const SELECTED_FACE_SEQUENCE = [1, 13, 14, 13, 2, 15];
+const WRONG_FACE_SEQUENCE = [12, 8, 10, 8];
+const SUCCESS_FACE_SEQUENCE = [2, 11, 15];
+
+function tileFontSize(word: string, compact = false) {
+  const length = word.length;
+  const size =
+    length >= 11 ? 11 :
+    length >= 10 ? 12.5 :
+    length >= 9 ? 13.5 :
+    length >= 8 ? 15 :
+    17;
+  return compact ? Math.max(10.5, size - 2) : size;
+}
 
 // Eye config per face — null means no blinkable eye on that side
-type EyeInfo = { cx: number; cy: number; baseRy: number; innerRy?: number };
+type EyeInfo = { cx: number; cy: number; baseRx: number; baseRy: number; innerR?: number; innerDx?: number; innerDy?: number };
 type FaceEyeConfig = { left: EyeInfo | null; right: EyeInfo | null };
 
 const FACE_EYES: FaceEyeConfig[] = [
-  { left: { cx: 26, cy: 18, baseRy: 4.5 }, right: { cx: 54, cy: 18, baseRy: 4.5 } },                           // 0
-  { left: { cx: 26, cy: 15, baseRy: 4.5 }, right: { cx: 54, cy: 15, baseRy: 4.5 } },                           // 1
-  { left: null, right: null },                                                                                    // 2 closed arcs
-  { left: { cx: 26, cy: 17, baseRy: 7, innerRy: 3.5 }, right: { cx: 54, cy: 17, baseRy: 7, innerRy: 3.5 } },  // 3 big eyes
-  { left: { cx: 26, cy: 17, baseRy: 4.5 }, right: null },                                                       // 4 one eye + squint
-  { left: null, right: { cx: 54, cy: 18, baseRy: 4.5 } },                                                       // 5 robot + one eye
-  { left: { cx: 26, cy: 20, baseRy: 4.5 }, right: { cx: 54, cy: 20, baseRy: 4.5 } },                           // 6
-  { left: null, right: null },                                                                                    // 7 x-eyes
-  { left: null, right: null },                                                                                    // 8 arc eyes
-  { left: null, right: null },                                                                                    // 9 flat eyes
-  { left: { cx: 26, cy: 17, baseRy: 2.5 }, right: { cx: 54, cy: 17, baseRy: 2.5 } },                           // 10 small eyes
-  { left: { cx: 26, cy: 15, baseRy: 4.5 }, right: { cx: 54, cy: 15, baseRy: 4.5 } },                           // 11
+  { left: { cx: 27, cy: 17, baseRx: 4.1, baseRy: 5.9, innerR: 1.35, innerDx: -1.2, innerDy: -2.2 }, right: { cx: 53, cy: 17, baseRx: 4.1, baseRy: 5.9, innerR: 1.35, innerDx: -1.2, innerDy: -2.2 } }, // 0 neutral
+  { left: { cx: 27, cy: 17, baseRx: 4.1, baseRy: 5.9, innerR: 1.35, innerDx: -1.2, innerDy: -2.2 }, right: { cx: 53, cy: 17, baseRx: 4.1, baseRy: 5.9, innerR: 1.35, innerDx: -1.2, innerDy: -2.2 } }, // 1 happy
+  { left: null, right: null }, // 2 big smile
+  { left: { cx: 27, cy: 16, baseRx: 4.2, baseRy: 6.2, innerR: 1.4, innerDx: -1.3, innerDy: -2.3 }, right: { cx: 53, cy: 16, baseRx: 4.2, baseRy: 6.2, innerR: 1.4, innerDx: -1.3, innerDy: -2.3 } }, // 3 surprised
+  { left: null, right: null }, // 4 sleepy
+  { left: null, right: null }, // 5 blink
+  { left: { cx: 27, cy: 17, baseRx: 4, baseRy: 5.8, innerR: 1.35, innerDx: -1.2, innerDy: -2.2 }, right: null }, // 6 wink
+  { left: { cx: 27, cy: 18, baseRx: 4, baseRy: 5.8, innerR: 1.35, innerDx: -1.2, innerDy: -2.2 }, right: { cx: 53, cy: 18, baseRx: 4, baseRy: 5.8, innerR: 1.35, innerDx: -1.2, innerDy: -2.2 } }, // 7 shy
+  { left: { cx: 27, cy: 19, baseRx: 3.7, baseRy: 5.3, innerR: 1.15, innerDx: -1.1, innerDy: -2 }, right: { cx: 53, cy: 19, baseRx: 3.7, baseRy: 5.3, innerR: 1.15, innerDx: -1.1, innerDy: -2 } }, // 8 grumpy
+  { left: null, right: null }, // 9 squint
+  { left: null, right: null }, // 10 dizzy
+  { left: null, right: null }, // 11 laugh
+  { left: { cx: 27, cy: 18, baseRx: 4.1, baseRy: 5.9, innerR: 1.35, innerDx: -1.2, innerDy: -2.2 }, right: { cx: 53, cy: 18, baseRx: 4.1, baseRy: 5.9, innerR: 1.35, innerDx: -1.2, innerDy: -2.2 } }, // 12 worried
+  { left: { cx: 27, cy: 17, baseRx: 4.1, baseRy: 5.9, innerR: 1.35, innerDx: -1.2, innerDy: -2.2 }, right: { cx: 53, cy: 17, baseRx: 4.1, baseRy: 5.9, innerR: 1.35, innerDx: -1.2, innerDy: -2.2 } }, // 13 talk A
+  { left: { cx: 27, cy: 17, baseRx: 4.1, baseRy: 5.9, innerR: 1.35, innerDx: -1.2, innerDy: -2.2 }, right: { cx: 53, cy: 17, baseRx: 4.1, baseRy: 5.9, innerR: 1.35, innerDx: -1.2, innerDy: -2.2 } }, // 14 talk O
+  { left: null, right: null }, // 15 eyes closed smile
 ];
 
 // Dark eye ellipse — cy shifts down as ry shrinks to keep bottom edge fixed (eyelid closes from top)
-function AnimatedEye({ cx, cy, baseRy, eyeRy, eyeShiftX }: {
-  cx: number; cy: number; baseRy: number;
+function AnimatedEye({ cx, cy, baseRx, baseRy, eyeRy, eyeShiftX, color }: {
+  cx: number; cy: number; baseRx: number; baseRy: number;
   eyeRy: SharedValue<number>;
   eyeShiftX: SharedValue<number>;
+  color: string;
 }) {
   const animProps = useAnimatedProps(() => ({
     cx: cx + eyeShiftX.value,
     cy: cy + (baseRy - eyeRy.value),
     ry: eyeRy.value,
   }));
-  return <AnimatedEllipse rx={baseRy} fill={D} animatedProps={animProps} />;
+  return <AnimatedEllipse rx={baseRx} fill={color} animatedProps={animProps} />;
 }
 
 // White inner pupil that scales proportionally with outer eye (for big-eye faces)
-function AnimatedInnerEye({ cx, cy, outerBaseRy, innerBaseRy, eyeRy, eyeShiftX }: {
-  cx: number; cy: number; outerBaseRy: number; innerBaseRy: number;
+function AnimatedInnerEye({ cx, cy, outerBaseRy, innerR, innerDx = 0, innerDy = 0, eyeRy, eyeShiftX }: {
+  cx: number; cy: number; outerBaseRy: number; innerR: number; innerDx?: number; innerDy?: number;
   eyeRy: SharedValue<number>;
   eyeShiftX: SharedValue<number>;
 }) {
   const animProps = useAnimatedProps(() => ({
-    cx: cx + eyeShiftX.value,
-    cy: cy + (outerBaseRy - eyeRy.value),
-    ry: (eyeRy.value / outerBaseRy) * innerBaseRy,
+    cx: cx + innerDx + eyeShiftX.value,
+    cy: cy + innerDy + (outerBaseRy - eyeRy.value),
+    ry: (eyeRy.value / outerBaseRy) * innerR,
   }));
-  return <AnimatedEllipse rx={innerBaseRy} fill={W} animatedProps={animProps} />;
+  return <AnimatedEllipse rx={innerR} fill={W} opacity={0.9} animatedProps={animProps} />;
 }
 
-// Static parts for each face — everything except the blinkable eyes
-function FaceStaticParts({ index }: { index: number }) {
-  switch (index % 12) {
+function FaceCheeks({ strong = false }: { strong?: boolean }) {
+  return (
+    <G opacity={strong ? 0.82 : 0.72}>
+      <Rect x="13" y="22" width={strong ? 10 : 9} height={strong ? 4.3 : 4} rx={2} fill={CHEEK} />
+      <Rect x="58" y="22" width={strong ? 10 : 9} height={strong ? 4.3 : 4} rx={2} fill={CHEEK} />
+    </G>
+  );
+}
+
+function FaceSmile({ color }: { color: string }) {
+  return <Path d="M33 26 Q40 31 47 26" stroke={color} strokeWidth="2.7" fill="none" strokeLinecap="round" />;
+}
+
+function FaceBigMouth({ color, wide = false }: { color: string; wide?: boolean }) {
+  return (
+    <G>
+      <Path d={wide ? 'M27 25 Q40 36 53 25 Z' : 'M29 25 Q40 35 51 25 Z'} fill={color} />
+      <Path d={wide ? 'M30 25 Q40 29 50 25' : 'M32 25 Q40 28 48 25'} fill={TOOTH} />
+      <Path d="M35 31 Q40 28.5 45 31 Q42 34 40 34 Q38 34 35 31 Z" fill={CHEEK} />
+    </G>
+  );
+}
+
+function FaceTalkO({ color }: { color: string }) {
+  return (
+    <G>
+      <Ellipse cx="40" cy="28" rx="4.4" ry="5.6" fill={color} />
+      <Ellipse cx="40" cy="31" rx="2.2" ry="1.2" fill={CHEEK} />
+    </G>
+  );
+}
+
+// Static parts for each face — everything except the blinkable open eyes
+function FaceStaticParts({ index, color }: { index: number; color: string }) {
+  switch (index % 16) {
     case 0:
-      return <Path d="M32 29 Q40 34 48 29" stroke={D} strokeWidth="2" fill="none" strokeLinecap="round" />;
+      return <>
+        <FaceCheeks />
+        <Path d="M35 27 Q40 29 45 27" stroke={color} strokeWidth="2.4" fill="none" strokeLinecap="round" />
+      </>;
     case 1:
       return <>
-        <Path d="M24 24 Q40 36 56 24 Z" fill={D} />
-        <Path d="M27 24 Q40 32 53 24" fill={W} />
-        <Line x1="33" y1="24" x2="32" y2="29" stroke={D} strokeWidth="1.5" strokeLinecap="round" />
-        <Line x1="40" y1="24" x2="40" y2="30" stroke={D} strokeWidth="1.5" strokeLinecap="round" />
-        <Line x1="47" y1="24" x2="48" y2="29" stroke={D} strokeWidth="1.5" strokeLinecap="round" />
+        <FaceCheeks />
+        <FaceSmile color={color} />
       </>;
     case 2:
       return <>
-        <Path d="M21 18 A5 5 0 0 0 31 18 Z" fill={D} />
-        <Line x1="21" y1="18" x2="31" y2="18" stroke={D} strokeWidth="2" strokeLinecap="round" />
-        <Path d="M49 18 A5 5 0 0 0 59 18 Z" fill={D} />
-        <Line x1="49" y1="18" x2="59" y2="18" stroke={D} strokeWidth="2" strokeLinecap="round" />
-        <Line x1="33" y1="29" x2="47" y2="29" stroke={D} strokeWidth="2" strokeLinecap="round" />
+        <FaceCheeks />
+        <Path d="M22 18 Q27 12 32 18" stroke={color} strokeWidth="3.1" fill="none" strokeLinecap="round" />
+        <Path d="M48 18 Q53 12 58 18" stroke={color} strokeWidth="3.1" fill="none" strokeLinecap="round" />
+        <FaceBigMouth color={color} wide />
       </>;
     case 3:
-      // Mouth only — animated eyes handle the eye circles including white pupils
       return <>
-        <Ellipse cx="40" cy="31" rx="4.5" ry="4" fill={D} />
-        <Ellipse cx="40" cy="31" rx="2.5" ry="2.5" fill={W} />
+        <FaceCheeks />
+        <FaceTalkO color={color} />
       </>;
     case 4:
       return <>
-        <Path d="M49 16 Q54 21 59 16" stroke={D} strokeWidth="2.5" fill="none" strokeLinecap="round" />
-        <Path d="M32 28 Q40 33 48 28" stroke={D} strokeWidth="2" fill="none" strokeLinecap="round" />
+        <FaceCheeks />
+        <Path d="M22 18 Q27 21 32 18" stroke={color} strokeWidth="2.8" fill="none" strokeLinecap="round" />
+        <Path d="M48 18 Q53 21 58 18" stroke={color} strokeWidth="2.8" fill="none" strokeLinecap="round" />
+        <FaceTalkO color={color} />
       </>;
     case 5:
       return <>
-        <Line x1="26" y1="13" x2="26" y2="8" stroke={D} strokeWidth="2" strokeLinecap="round" />
-        <Line x1="19" y1="17" x2="13" y2="14" stroke={D} strokeWidth="1.5" strokeLinecap="round" />
-        <Rect x="18" y="13" width="16" height="10" rx="3" fill={D} />
-        <Path d="M44 28 Q51 33 55 28" stroke={D} strokeWidth="2" fill="none" strokeLinecap="round" />
+        <FaceCheeks />
+        <Path d="M22 18 Q27 14 32 18" stroke={color} strokeWidth="3" fill="none" strokeLinecap="round" />
+        <Path d="M48 18 Q53 14 58 18" stroke={color} strokeWidth="3" fill="none" strokeLinecap="round" />
+        <Line x1="36" y1="27" x2="44" y2="27" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
       </>;
     case 6:
       return <>
-        <Line x1="19" y1="10" x2="31" y2="14" stroke={D} strokeWidth="2.5" strokeLinecap="round" />
-        <Line x1="49" y1="14" x2="61" y2="10" stroke={D} strokeWidth="2.5" strokeLinecap="round" />
-        <Path d="M31 31 Q40 26 49 31" stroke={D} strokeWidth="2" fill="none" strokeLinecap="round" />
+        <FaceCheeks />
+        <Path d="M48 17 Q53 21 58 17" stroke={color} strokeWidth="2.9" fill="none" strokeLinecap="round" />
+        <FaceSmile color={color} />
       </>;
     case 7:
       return <>
-        <Line x1="21" y1="13" x2="31" y2="23" stroke={D} strokeWidth="2.5" strokeLinecap="round" />
-        <Line x1="31" y1="13" x2="21" y2="23" stroke={D} strokeWidth="2.5" strokeLinecap="round" />
-        <Line x1="49" y1="13" x2="59" y2="23" stroke={D} strokeWidth="2.5" strokeLinecap="round" />
-        <Line x1="59" y1="13" x2="49" y2="23" stroke={D} strokeWidth="2.5" strokeLinecap="round" />
-        <Path d="M27 30 Q32 27 37 30 Q42 33 47 30" stroke={D} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+        <FaceCheeks strong />
+        <Path d="M22 11 Q27 8 32 11" stroke={color} strokeWidth="2.3" fill="none" strokeLinecap="round" />
+        <Path d="M48 11 Q53 8 58 11" stroke={color} strokeWidth="2.3" fill="none" strokeLinecap="round" />
+        <FaceSmile color={color} />
       </>;
     case 8:
       return <>
-        <Path d="M21 21 A5 5 0 0 1 31 21" stroke={D} strokeWidth="3" fill="none" strokeLinecap="round" />
-        <Path d="M49 21 A5 5 0 0 1 59 21" stroke={D} strokeWidth="3" fill="none" strokeLinecap="round" />
-        <Path d="M20 27 Q40 38 60 27 Z" fill={D} />
-        <Path d="M23 27 Q40 35 57 27" fill={W} />
-        <Line x1="30" y1="27" x2="29" y2="31" stroke={D} strokeWidth="1.5" strokeLinecap="round" />
-        <Line x1="37" y1="27" x2="37" y2="32" stroke={D} strokeWidth="1.5" strokeLinecap="round" />
-        <Line x1="43" y1="27" x2="43" y2="32" stroke={D} strokeWidth="1.5" strokeLinecap="round" />
-        <Line x1="50" y1="27" x2="51" y2="31" stroke={D} strokeWidth="1.5" strokeLinecap="round" />
+        <FaceCheeks />
+        <Path d="M20 12 L32 16" stroke={color} strokeWidth="3" strokeLinecap="round" />
+        <Path d="M48 16 L60 12" stroke={color} strokeWidth="3" strokeLinecap="round" />
+        <Path d="M31 31 Q40 25 49 31" stroke={color} strokeWidth="2.7" fill="none" strokeLinecap="round" />
       </>;
     case 9:
       return <>
-        <Ellipse cx="26" cy="18" rx="6" ry="2.5" fill={D} />
-        <Ellipse cx="54" cy="18" rx="6" ry="2.5" fill={D} />
-        <Path d="M35 28 Q43 32 50 27" stroke={D} strokeWidth="2" fill="none" strokeLinecap="round" />
+        <FaceCheeks />
+        <Path d="M22 15 L32 20" stroke={color} strokeWidth="3.2" strokeLinecap="round" />
+        <Path d="M32 15 L22 20" stroke={color} strokeWidth="3.2" strokeLinecap="round" />
+        <Line x1="48" y1="18" x2="58" y2="18" stroke={color} strokeWidth="3.2" strokeLinecap="round" />
+        <FaceSmile color={color} />
       </>;
     case 10:
       return <>
-        <Ellipse cx="15" cy="23" rx="6" ry="3.5" fill="#F4A0A0" opacity="0.55" />
-        <Ellipse cx="65" cy="23" rx="6" ry="3.5" fill="#F4A0A0" opacity="0.55" />
-        <Path d="M34 27 Q40 31 46 27" stroke={D} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+        <FaceCheeks />
+        <Path d="M28 12 C20 12 20 24 28 24 C35 24 35 14 28 14 C23 14 23 21 28 21" stroke={color} strokeWidth="2.4" fill="none" strokeLinecap="round" />
+        <Path d="M54 12 C46 12 46 24 54 24 C61 24 61 14 54 14 C49 14 49 21 54 21" stroke={color} strokeWidth="2.4" fill="none" strokeLinecap="round" />
+        <FaceTalkO color={color} />
       </>;
     case 11:
       return <>
-        <Path d="M25 24 Q40 35 55 24 Z" fill={D} />
-        <Path d="M28 24 Q40 31 52 24" fill={W} />
-        <Path d="M33 24 L31 30 L36 24 Z" fill={D} />
-        <Path d="M44 24 L47 30 L49 24 Z" fill={D} />
+        <FaceCheeks />
+        <Path d="M23 15 L31 19 L23 23" stroke={color} strokeWidth="3.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M57 15 L49 19 L57 23" stroke={color} strokeWidth="3.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <FaceBigMouth color={color} />
+      </>;
+    case 12:
+      return <>
+        <FaceCheeks />
+        <Path d="M22 12 Q27 8 32 12" stroke={color} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+        <Path d="M48 12 Q53 8 58 12" stroke={color} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+        <Path d="M34 30 Q37 26 40 30 Q43 34 46 30" stroke={color} strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      </>;
+    case 13:
+      return <>
+        <FaceCheeks />
+        <Path d="M34 25 Q40 33 46 25 Z" fill={color} />
+        <Path d="M36 25 Q40 27 44 25" fill={TOOTH} />
+        <Ellipse cx="40" cy="31" rx="3" ry="1.5" fill={CHEEK} />
+      </>;
+    case 14:
+      return <>
+        <FaceCheeks />
+        <FaceTalkO color={color} />
+      </>;
+    case 15:
+      return <>
+        <FaceCheeks />
+        <Path d="M22 17 Q27 21.5 32 17" stroke={color} strokeWidth="3" fill="none" strokeLinecap="round" />
+        <Path d="M48 17 Q53 21.5 58 17" stroke={color} strokeWidth="3" fill="none" strokeLinecap="round" />
+        <FaceSmile color={color} />
       </>;
     default:
       return null;
   }
 }
 
-function FaceIllustration({ index, leftEyeRy, rightEyeRy, eyeShiftX }: {
+function FaceIllustration({ index, leftEyeRy, rightEyeRy, eyeShiftX, color }: {
   index: number;
   leftEyeRy: SharedValue<number>;
   rightEyeRy: SharedValue<number>;
   eyeShiftX: SharedValue<number>;
+  color: string;
 }) {
-  const faceIdx = index % 12;
+  const faceIdx = index % 16;
   const eyeConfig = FACE_EYES[faceIdx];
 
   return (
     <G>
-      <FaceStaticParts index={faceIdx} />
-      {eyeConfig.left && (eyeConfig.left.innerRy != null ? (
+      <FaceStaticParts index={faceIdx} color={color} />
+      {eyeConfig.left && (eyeConfig.left.innerR != null ? (
         <>
-          <AnimatedEye cx={eyeConfig.left.cx} cy={eyeConfig.left.cy} baseRy={eyeConfig.left.baseRy} eyeRy={leftEyeRy} eyeShiftX={eyeShiftX} />
-          <AnimatedInnerEye cx={eyeConfig.left.cx} cy={eyeConfig.left.cy} outerBaseRy={eyeConfig.left.baseRy} innerBaseRy={eyeConfig.left.innerRy} eyeRy={leftEyeRy} eyeShiftX={eyeShiftX} />
+          <AnimatedEye cx={eyeConfig.left.cx} cy={eyeConfig.left.cy} baseRx={eyeConfig.left.baseRx} baseRy={eyeConfig.left.baseRy} eyeRy={leftEyeRy} eyeShiftX={eyeShiftX} color={color} />
+          <AnimatedInnerEye
+            cx={eyeConfig.left.cx}
+            cy={eyeConfig.left.cy}
+            outerBaseRy={eyeConfig.left.baseRy}
+            innerR={eyeConfig.left.innerR}
+            innerDx={eyeConfig.left.innerDx}
+            innerDy={eyeConfig.left.innerDy}
+            eyeRy={leftEyeRy}
+            eyeShiftX={eyeShiftX}
+          />
         </>
       ) : (
-        <AnimatedEye cx={eyeConfig.left.cx} cy={eyeConfig.left.cy} baseRy={eyeConfig.left.baseRy} eyeRy={leftEyeRy} eyeShiftX={eyeShiftX} />
+        <AnimatedEye cx={eyeConfig.left.cx} cy={eyeConfig.left.cy} baseRx={eyeConfig.left.baseRx} baseRy={eyeConfig.left.baseRy} eyeRy={leftEyeRy} eyeShiftX={eyeShiftX} color={color} />
       ))}
-      {eyeConfig.right && (eyeConfig.right.innerRy != null ? (
+      {eyeConfig.right && (eyeConfig.right.innerR != null ? (
         <>
-          <AnimatedEye cx={eyeConfig.right.cx} cy={eyeConfig.right.cy} baseRy={eyeConfig.right.baseRy} eyeRy={rightEyeRy} eyeShiftX={eyeShiftX} />
-          <AnimatedInnerEye cx={eyeConfig.right.cx} cy={eyeConfig.right.cy} outerBaseRy={eyeConfig.right.baseRy} innerBaseRy={eyeConfig.right.innerRy} eyeRy={rightEyeRy} eyeShiftX={eyeShiftX} />
+          <AnimatedEye cx={eyeConfig.right.cx} cy={eyeConfig.right.cy} baseRx={eyeConfig.right.baseRx} baseRy={eyeConfig.right.baseRy} eyeRy={rightEyeRy} eyeShiftX={eyeShiftX} color={color} />
+          <AnimatedInnerEye
+            cx={eyeConfig.right.cx}
+            cy={eyeConfig.right.cy}
+            outerBaseRy={eyeConfig.right.baseRy}
+            innerR={eyeConfig.right.innerR}
+            innerDx={eyeConfig.right.innerDx}
+            innerDy={eyeConfig.right.innerDy}
+            eyeRy={rightEyeRy}
+            eyeShiftX={eyeShiftX}
+          />
         </>
       ) : (
-        <AnimatedEye cx={eyeConfig.right.cx} cy={eyeConfig.right.cy} baseRy={eyeConfig.right.baseRy} eyeRy={rightEyeRy} eyeShiftX={eyeShiftX} />
+        <AnimatedEye cx={eyeConfig.right.cx} cy={eyeConfig.right.cy} baseRx={eyeConfig.right.baseRx} baseRy={eyeConfig.right.baseRy} eyeRy={rightEyeRy} eyeShiftX={eyeShiftX} color={color} />
       ))}
     </G>
   );
 }
 
-const CALM_EXPRESSIONS = [0, 2, 4, 6, 9, 10];
+const CALM_EXPRESSIONS = [0, 1, 5, 6, 7, 9, 13, 14, 15];
 
-function FaceStrip({ faceIndex, selected, tileStripColor }: { faceIndex: number; selected: boolean; tileStripColor: string }) {
+function FaceStrip({
+  faceIndex,
+  selected,
+  shake,
+  solving,
+  tileStripColor,
+  tileEyeColor,
+}: {
+  faceIndex: number;
+  selected: boolean;
+  shake: boolean;
+  solving: boolean;
+  tileStripColor: string;
+  tileEyeColor: string;
+}) {
   const stripCfg = useSettingsStore((s: { tileStripStyle: TileStripStyle }) => STRIP_CONFIG[s.tileStripStyle]);
-  const initialFace = faceIndex % 12;
+  const initialFace = faceIndex % FACE_COUNT;
   const [face, setFace] = useState(initialFace);
 
   const opacity = useSharedValue(1);
@@ -215,6 +325,14 @@ function FaceStrip({ faceIndex, selected, tileStripColor }: { faceIndex: number;
   const leftEyeRy = useSharedValue(FACE_EYES[initialFace].left?.baseRy ?? 0);
   const rightEyeRy = useSharedValue(FACE_EYES[initialFace].right?.baseRy ?? 0);
   const eyeShiftX = useSharedValue(0);
+
+  function setFaceFrame(next: number) {
+    const nextFace = next % FACE_COUNT;
+    setFace(nextFace);
+    leftEyeRy.value = FACE_EYES[nextFace].left?.baseRy ?? 0;
+    rightEyeRy.value = FACE_EYES[nextFace].right?.baseRy ?? 0;
+    eyeShiftX.value = 0;
+  }
 
   // Continuous gentle bob — each tile starts at a random phase
   useEffect(() => {
@@ -231,7 +349,7 @@ function FaceStrip({ faceIndex, selected, tileStripColor }: { faceIndex: number;
 
   // Blink, wink, eye-shift — reschedule when face changes
   useEffect(() => {
-    const eyeConfig = FACE_EYES[face % 12];
+    const eyeConfig = FACE_EYES[face % FACE_COUNT];
     const hasLeft = !!eyeConfig.left;
     const hasRight = !!eyeConfig.right;
     const canBlink = hasLeft || hasRight;
@@ -298,6 +416,7 @@ function FaceStrip({ faceIndex, selected, tileStripColor }: { faceIndex: number;
 
   // Expression crossfade
   useEffect(() => {
+    if (selected || shake || solving) return;
     const interval = 12000 + Math.random() * 18000;
     let timer: ReturnType<typeof setTimeout>;
     function cycle() {
@@ -316,7 +435,40 @@ function FaceStrip({ faceIndex, selected, tileStripColor }: { faceIndex: number;
     }
     timer = setTimeout(cycle, Math.random() * interval);
     return () => clearTimeout(timer);
-  }, []);
+  }, [selected, shake, solving]);
+
+  // Intentional expressions: talk while selected, react to wrong guesses, celebrate solved tiles.
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    if (solving) {
+      SUCCESS_FACE_SEQUENCE.forEach((next, i) => {
+        timers.push(setTimeout(() => setFaceFrame(next), i * 120));
+      });
+      return () => timers.forEach(clearTimeout);
+    }
+
+    if (shake) {
+      WRONG_FACE_SEQUENCE.forEach((next, i) => {
+        timers.push(setTimeout(() => setFaceFrame(next), i * 95));
+      });
+      timers.push(setTimeout(() => setFaceFrame(initialFace), WRONG_FACE_SEQUENCE.length * 95 + 180));
+      return () => timers.forEach(clearTimeout);
+    }
+
+    if (selected) {
+      let i = 0;
+      setFaceFrame(SELECTED_FACE_SEQUENCE[0]);
+      const interval = setInterval(() => {
+        i = (i + 1) % SELECTED_FACE_SEQUENCE.length;
+        setFaceFrame(SELECTED_FACE_SEQUENCE[i]);
+      }, 170);
+      return () => clearInterval(interval);
+    }
+
+    setFaceFrame(initialFace);
+    return undefined;
+  }, [initialFace, selected, shake, solving]);
 
   // Selection bounce + squish
   useEffect(() => {
@@ -347,7 +499,7 @@ function FaceStrip({ faceIndex, selected, tileStripColor }: { faceIndex: number;
     <View style={[styles.faceStrip, { backgroundColor: tileStripColor, height: stripCfg.height }]}>
       <Animated.View style={[styles.faceInner, faceStyle]}>
         <Svg width="100%" height={stripCfg.height} viewBox={stripCfg.viewBox} preserveAspectRatio="xMidYMid meet">
-          <FaceIllustration index={face} leftEyeRy={leftEyeRy} rightEyeRy={rightEyeRy} eyeShiftX={eyeShiftX} />
+          <FaceIllustration index={face} leftEyeRy={leftEyeRy} rightEyeRy={rightEyeRy} eyeShiftX={eyeShiftX} color={tileEyeColor} />
         </Svg>
       </Animated.View>
     </View>
@@ -356,6 +508,9 @@ function FaceStrip({ faceIndex, selected, tileStripColor }: { faceIndex: number;
 
 export function Tile({ word, selected, onPress, shake, onShakeDone, faceIndex = 0, shuffleSignal = 0, shuffleDelay = 0, solving = false, solvingDelay = 0 }: TileProps) {
   const colors = useColors();
+  const { width, height } = useWindowDimensions();
+  const compactText = width <= 390 || height <= 700;
+  const fontSize = tileFontSize(word, compactText);
 
   const translateX = useSharedValue(0);
   const shuffleScale = useSharedValue(1);
@@ -408,6 +563,7 @@ export function Tile({ word, selected, onPress, shake, onShakeDone, faceIndex = 
   }, [shake]);
 
   const tileStrip = colors.tileStrip;
+  const tileEye = colors.tileEye;
   const tileSelected = colors.tileSelected;
   const tileDefault = colors.tileDefault;
 
@@ -427,11 +583,23 @@ export function Tile({ word, selected, onPress, shake, onShakeDone, faceIndex = 
   }));
 
   return (
-    <Pressable onPress={onPress} style={styles.pressable}>
+    <Pressable onPress={onPress} style={[styles.pressable, compactText && styles.pressableCompact]}>
       <Animated.View style={[styles.tile, { backgroundColor: tileStrip, shadowColor: colors.shadow }, tileAnimStyle]}>
-        <FaceStrip faceIndex={faceIndex} selected={selected} tileStripColor={tileStrip} />
+        <FaceStrip
+          faceIndex={faceIndex}
+          selected={selected}
+          shake={!!shake}
+          solving={solving}
+          tileStripColor={tileStrip}
+          tileEyeColor={tileEye}
+        />
         <Animated.View style={[styles.wordArea, wordAreaStyle]}>
-          <Text style={[styles.word, { color: colors.text1 }]} numberOfLines={2} adjustsFontSizeToFit>
+          <Text
+            style={[styles.word, { color: colors.text1, fontSize, lineHeight: Math.ceil(fontSize + 3) }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={compactText ? 0.72 : 0.82}
+          >
             {word.toUpperCase()}
           </Text>
         </Animated.View>
@@ -442,6 +610,7 @@ export function Tile({ word, selected, onPress, shake, onShakeDone, faceIndex = 
 
 const styles = StyleSheet.create({
   pressable: { flex: 1, margin: 4, zIndex: 0, overflow: 'visible' },
+  pressableCompact: { margin: 3 },
   tile: {
     flex: 1, borderRadius: 12, borderWidth: 2, overflow: 'hidden',
     shadowOffset: { width: 0, height: 3 },
@@ -450,6 +619,6 @@ const styles = StyleSheet.create({
   },
   faceStrip: { width: '100%', height: 10, borderBottomLeftRadius: 8, borderBottomRightRadius: 8 },
   faceInner: { flex: 1 },
-  wordArea: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6, paddingVertical: 6 },
-  word: { fontSize: 13, fontFamily: FONTS.extraBold, textAlign: 'center', letterSpacing: 0.8 },
+  wordArea: { flex: 1, minHeight: 30, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, paddingVertical: 0 },
+  word: { fontSize: 13, fontFamily: FONTS.extraBold, textAlign: 'center', letterSpacing: 0, includeFontPadding: false },
 });

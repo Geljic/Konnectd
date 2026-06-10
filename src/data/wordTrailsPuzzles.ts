@@ -573,4 +573,116 @@ export const WORD_TRAILS_PUZZLES: WordTrailsPuzzle[] = [
       { words: ['TREE', 'SHADE', 'BLANKET', 'PICNIC'], label: 'tree root', relation: 'association' },
     ],
   },
+
+  // ── Batch 2 (wt-051 … wt-062): authored to the design framework ──────────────
+  // 4 distinct domains per puzzle; difficulty from ordering, not grouping.
+  // Level 3+ include deliberate cross-path bait words (see docs).
+  {
+    id: 'wt-051', title: 'First Light', difficulty: 1,
+    trails: [
+      { words: ['SEED', 'SPROUT', 'FLOWER', 'FRUIT'], label: 'plant grows', relation: 'growth' },
+      { words: ['DAWN', 'NOON', 'DUSK', 'NIGHT'], label: 'day passes', relation: 'sequence' },
+      { words: ['FLOUR', 'DOUGH', 'OVEN', 'BREAD'], label: 'baking', relation: 'process' },
+      { words: ['CLOUD', 'RAIN', 'RIVER', 'SEA'], label: 'water cycle', relation: 'process' },
+    ],
+  },
+  {
+    id: 'wt-052', title: 'Building Blocks', difficulty: 1,
+    trails: [
+      { words: ['BRICK', 'WALL', 'HOUSE', 'STREET'], label: 'builds up', relation: 'growth' },
+      { words: ['BEAN', 'GRIND', 'BREW', 'CUP'], label: 'making coffee', relation: 'process' },
+      { words: ['EGG', 'LARVA', 'COCOON', 'BUTTERFLY'], label: 'metamorphosis', relation: 'growth' },
+      { words: ['WRITE', 'STAMP', 'POST', 'DELIVER'], label: 'sending mail', relation: 'sequence' },
+    ],
+  },
+  {
+    id: 'wt-053', title: 'Running Hot', difficulty: 2,
+    trails: [
+      { words: ['SYMPTOM', 'DOCTOR', 'TEST', 'DIAGNOSIS'], label: 'getting diagnosed', relation: 'process' },
+      { words: ['WATER', 'BOIL', 'PASTA', 'DRAIN'], label: 'cooking pasta', relation: 'sequence' },
+      { words: ['BREEZE', 'WIND', 'GALE', 'HURRICANE'], label: 'wind builds', relation: 'growth' },
+      { words: ['SCRIPT', 'FILMING', 'EDIT', 'PREMIERE'], label: 'making a film', relation: 'process' },
+    ],
+  },
+  {
+    id: 'wt-054', title: 'Slow Burn', difficulty: 2,
+    trails: [
+      { words: ['ACORN', 'SAPLING', 'OAK', 'FOREST'], label: 'tree grows', relation: 'growth' },
+      { words: ['SPARK', 'FLAME', 'BLAZE', 'ASH'], label: 'fire burns out', relation: 'sequence' },
+      { words: ['START', 'SPRINT', 'FINISH', 'MEDAL'], label: 'running a race', relation: 'sequence' },
+      { words: ['SLICE', 'TOASTER', 'TOAST', 'BUTTER'], label: 'making toast', relation: 'process' },
+    ],
+  },
+  {
+    id: 'wt-055', title: 'Catching Fire', difficulty: 3,
+    trails: [
+      { words: ['IDEA', 'SPARK', 'INVENTION', 'PATENT'], label: 'a bright idea', relation: 'process' },
+      { words: ['GLANCE', 'FLAME', 'KISS', 'WEDDING'], label: 'falling in love', relation: 'story' },
+      { words: ['LOG', 'EMBER', 'SMOKE', 'ASH'], label: 'campfire dies', relation: 'sequence' },
+      { words: ['SPAT', 'ROW', 'FIGHT', 'BREAKUP'], label: 'argument escalates', relation: 'growth' },
+    ],
+  },
+  {
+    id: 'wt-056', title: 'Order in the Court', difficulty: 3,
+    trails: [
+      { words: ['SERVE', 'RALLY', 'MATCH', 'TROPHY'], label: 'tennis', relation: 'sequence' },
+      { words: ['ARREST', 'COURT', 'VERDICT', 'SENTENCE'], label: 'the law', relation: 'process' },
+      { words: ['WORD', 'PHRASE', 'CLAUSE', 'PARAGRAPH'], label: 'building a text', relation: 'hierarchy' },
+      { words: ['NOTE', 'CHORD', 'MELODY', 'SONG'], label: 'building music', relation: 'hierarchy' },
+    ],
+  },
+  {
+    id: 'wt-057', title: 'Going Once', difficulty: 4,
+    trails: [
+      { words: ['DEMAND', 'PRICE', 'SUPPLY', 'SHORTAGE'], label: 'market forces', relation: 'cause' },
+      { words: ['OFFER', 'COUNTER', 'DEAL', 'HANDSHAKE'], label: 'negotiation', relation: 'sequence' },
+      { words: ['ANTE', 'BET', 'RAISE', 'SHOWDOWN'], label: 'poker round', relation: 'sequence' },
+      { words: ['LOT', 'BID', 'GAVEL', 'SOLD'], label: 'auction', relation: 'sequence' },
+    ],
+  },
+  {
+    id: 'wt-058', title: 'Rap Sheet', difficulty: 4,
+    trails: [
+      { words: ['CLUE', 'SUSPECT', 'MOTIVE', 'ARREST'], label: 'the investigation', relation: 'process' },
+      { words: ['PLAN', 'CREW', 'VAULT', 'ESCAPE'], label: 'the heist', relation: 'sequence' },
+      { words: ['CHARGE', 'EVIDENCE', 'JURY', 'VERDICT'], label: 'the trial', relation: 'process' },
+      { words: ['CELL', 'GUARD', 'YARD', 'PAROLE'], label: 'doing time', relation: 'sequence' },
+    ],
+  },
+  {
+    id: 'wt-059', title: 'Pressure Cooker', difficulty: 2,
+    trails: [
+      { words: ['MAGMA', 'ERUPTION', 'LAVA', 'ROCK'], label: 'volcano', relation: 'process' },
+      { words: ['CAMERA', 'SNAP', 'DEVELOP', 'PRINT'], label: 'taking a photo', relation: 'process' },
+      { words: ['GRAPE', 'CRUSH', 'FERMENT', 'WINE'], label: 'making wine', relation: 'process' },
+      { words: ['YAWN', 'PILLOW', 'DREAM', 'WAKE'], label: 'a good sleep', relation: 'sequence' },
+    ],
+  },
+  {
+    id: 'wt-060', title: 'Ringside', difficulty: 3,
+    trails: [
+      { words: ['BELL', 'JAB', 'KNOCKOUT', 'CHAMPION'], label: 'boxing match', relation: 'sequence' },
+      { words: ['PROPOSAL', 'RING', 'VOWS', 'HONEYMOON'], label: 'getting married', relation: 'sequence' },
+      { words: ['DIAL', 'RINGTONE', 'ANSWER', 'HANGUP'], label: 'a phone call', relation: 'sequence' },
+      { words: ['TENT', 'CLOWN', 'TRAPEZE', 'APPLAUSE'], label: 'at the circus', relation: 'place' },
+    ],
+  },
+  {
+    id: 'wt-061', title: 'Balancing Act', difficulty: 3,
+    trails: [
+      { words: ['DEPOSIT', 'BALANCE', 'INTEREST', 'SAVINGS'], label: 'a bank account', relation: 'process' },
+      { words: ['VAULT', 'BEAM', 'ROUTINE', 'SCORE'], label: 'gymnastics', relation: 'sequence' },
+      { words: ['TRAIL', 'SUMMIT', 'VIEW', 'DESCENT'], label: 'a hike', relation: 'sequence' },
+      { words: ['CHAPTER', 'PLOT', 'CLIMAX', 'ENDING'], label: 'a story', relation: 'story' },
+    ],
+  },
+  {
+    id: 'wt-062', title: 'Ship It', difficulty: 4,
+    trails: [
+      { words: ['CODE', 'COMPILE', 'DEBUG', 'DEPLOY'], label: 'shipping software', relation: 'process' },
+      { words: ['CIPHER', 'AGENT', 'MISSION', 'EXTRACT'], label: 'a spy op', relation: 'sequence' },
+      { words: ['TRACK', 'MIX', 'MASTER', 'RELEASE'], label: 'producing a song', relation: 'process' },
+      { words: ['COUNTDOWN', 'LAUNCH', 'ORBIT', 'SPLASHDOWN'], label: 'a space mission', relation: 'sequence' },
+    ],
+  },
 ];

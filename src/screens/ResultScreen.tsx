@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Share, Platform, Clipboard } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Share, Platform, Clipboard, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -28,9 +28,33 @@ type Props = { navigation: NativeStackNavigationProp<AppStackParamList, 'Result'
 
 export function ResultScreen({ navigation }: Props) {
   const colors = useColors();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { height } = useWindowDimensions();
+  const compact = height < 1100;
+  const tight = height < 820;
+  const styles = useMemo(() => makeStyles(colors, compact, tight), [colors, compact, tight]);
 
-  const { puzzle, status, mistakes, solvedOrder, reset, currentMode, currentPuzzleId, currentCollection, startTime, firstSolve, score, hintsUsed, hintPenalty } = useGameStore();
+  // Snapshot game state on mount so navigating back from a later game still shows
+  // the correct result (gameStore is reset when the next puzzle starts).
+  const [snap] = useState(() => {
+    const s = useGameStore.getState();
+    return {
+      puzzle: s.puzzle,
+      status: s.status,
+      mistakes: s.mistakes,
+      solvedOrder: s.solvedOrder,
+      currentMode: s.currentMode,
+      currentPuzzleId: s.currentPuzzleId,
+      currentCollection: s.currentCollection,
+      firstSolve: s.firstSolve,
+      score: s.score,
+      hintsUsed: s.hintsUsed,
+      hintPenalty: s.hintPenalty,
+    };
+  });
+  const reset = useGameStore(s => s.reset);
+
+  const { puzzle, status, mistakes, solvedOrder, currentMode, currentPuzzleId, currentCollection, firstSolve, score, hintsUsed, hintPenalty } = snap;
+
   const user = useAuthStore(s => s.user);
   const [showFriendPicker, setShowFriendPicker] = useState(false);
   const [sentToHandle, setSentToHandle] = useState<string | null>(null);
@@ -56,21 +80,21 @@ export function ResultScreen({ navigation }: Props) {
   }
 
   async function handleRate(value: 1 | -1) {
-    if (rating !== null || !puzzle) return;
+    if (!puzzle) return;
     setRating(value);
-    await ratePuzzle(puzzle.id, value);
+    await ratePuzzle(puzzle.id, value, currentCollection ?? 'puzzles');
   }
 
   async function handleNext() {
     reset();
     if (currentMode === 'nyt' && !currentPuzzleId) {
-      navigation.navigate('Game', { mode: 'nyt' });
+      navigation.push('Game', { mode: 'nyt' });
       return;
     }
     if (currentMode === 'freeplay' && currentPuzzleId && currentCollection) {
       const nextId = await fetchNextPuzzleId(currentPuzzleId, currentCollection);
       if (nextId) {
-        navigation.navigate('Game', { mode: 'freeplay', puzzleId: nextId, collection: currentCollection });
+        navigation.push('Game', { mode: 'freeplay', puzzleId: nextId, collection: currentCollection });
         return;
       }
     }
@@ -123,7 +147,14 @@ export function ResultScreen({ navigation }: Props) {
 
         <View style={styles.categories}>
           {allCategories.map((cat, i) => (
-            <CategoryReveal key={cat.name} category={cat} index={i} showExplanation={!won} />
+            <CategoryReveal
+              key={cat.name}
+              category={cat}
+              index={i}
+              showExplanation
+              compact={compact}
+              explanationLines={compact ? 1 : undefined}
+            />
           ))}
         </View>
 
@@ -132,16 +163,14 @@ export function ResultScreen({ navigation }: Props) {
           <Text style={styles.ratingLabel}>
             {rating === null ? 'How was this puzzle?' : rating === 1 ? 'Thanks for rating! 👍' : 'Thanks for the feedback! 👎'}
           </Text>
-          {rating === null && (
-            <View style={styles.ratingBtns}>
-              <Pressable style={styles.ratingBtn} onPress={() => handleRate(1)}>
-                <Text style={styles.ratingBtnText}>👍</Text>
-              </Pressable>
-              <Pressable style={styles.ratingBtn} onPress={() => handleRate(-1)}>
-                <Text style={styles.ratingBtnText}>👎</Text>
-              </Pressable>
-            </View>
-          )}
+          <View style={styles.ratingBtns}>
+            <Pressable style={[styles.ratingBtn, rating === 1 && styles.ratingBtnActive]} onPress={() => handleRate(1)}>
+              <Text style={styles.ratingBtnText}>👍</Text>
+            </Pressable>
+            <Pressable style={[styles.ratingBtn, rating === -1 && styles.ratingBtnActive]} onPress={() => handleRate(-1)}>
+              <Text style={styles.ratingBtnText}>👎</Text>
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.footer}>
@@ -164,53 +193,60 @@ export function ResultScreen({ navigation }: Props) {
             <HomeIcon color={colors.text2} />
             <Text style={styles.btnHomeText}>Home</Text>
           </Pressable>
-          <AdBanner />
+          {!compact && <AdBanner />}
         </View>
       </View>
     </SafeAreaView>
   );
 }
 
-function makeStyles(c: ColorTheme) {
+function makeStyles(c: ColorTheme, compact: boolean, tight: boolean) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: c.bgScreen },
-    container: { flex: 1, justifyContent: 'space-between', paddingVertical: 24 },
-    header: { alignItems: 'center', gap: 8, paddingTop: 16 },
-    emoji: { fontSize: 52 },
-    title: { fontSize: 26, fontFamily: FONTS.extraBold, color: c.text1 },
-    subtitle: { fontSize: 16, fontFamily: FONTS.bold, color: c.text2 },
-    scorePill: { backgroundColor: c.yellow, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 6, marginTop: 4 },
-    scoreText: { fontSize: 18, fontFamily: FONTS.extraBold, color: '#162219' },
-    hintNote: { fontSize: 13, fontFamily: FONTS.bold, color: c.text3, marginTop: 2 },
-    categories: { paddingHorizontal: 8, gap: 4 },
-    ratingRow: {
-      alignItems: 'center', gap: 10,
-      paddingVertical: 12, paddingHorizontal: 20,
+    container: { flex: 1, justifyContent: 'space-between', paddingVertical: tight ? 8 : compact ? 12 : 24 },
+    header: { alignItems: 'center', gap: tight ? 3 : compact ? 5 : 8, paddingTop: tight ? 2 : compact ? 6 : 16 },
+    emoji: { fontSize: tight ? 34 : compact ? 40 : 52 },
+    title: { fontSize: tight ? 21 : compact ? 23 : 26, fontFamily: FONTS.extraBold, color: c.text1 },
+    subtitle: { fontSize: tight ? 13 : compact ? 14 : 16, fontFamily: FONTS.bold, color: c.text2 },
+    scorePill: {
+      backgroundColor: c.yellow,
+      borderRadius: 20,
+      paddingHorizontal: compact ? 14 : 16,
+      paddingVertical: tight ? 4 : compact ? 5 : 6,
+      marginTop: compact ? 2 : 4,
     },
-    ratingLabel: { fontSize: 14, fontFamily: FONTS.bold, color: c.text2 },
-    ratingBtns: { flexDirection: 'row', gap: 16 },
+    scoreText: { fontSize: tight ? 15 : compact ? 16 : 18, fontFamily: FONTS.extraBold, color: '#162219' },
+    hintNote: { fontSize: tight ? 11 : compact ? 12 : 13, fontFamily: FONTS.bold, color: c.text3, marginTop: compact ? 0 : 2 },
+    categories: { paddingHorizontal: compact ? 4 : 8, gap: compact ? 0 : 4 },
+    ratingRow: {
+      alignItems: 'center', gap: tight ? 5 : compact ? 7 : 10,
+      paddingVertical: tight ? 5 : compact ? 7 : 12, paddingHorizontal: 20,
+    },
+    ratingLabel: { fontSize: tight ? 12 : compact ? 13 : 14, fontFamily: FONTS.bold, color: c.text2 },
+    ratingBtns: { flexDirection: 'row', gap: compact ? 12 : 16 },
     ratingBtn: {
-      width: 52, height: 52, borderRadius: 26,
+      width: tight ? 40 : compact ? 44 : 52, height: tight ? 40 : compact ? 44 : 52, borderRadius: 26,
       backgroundColor: c.bgBase, borderWidth: 1, borderColor: c.border,
       alignItems: 'center', justifyContent: 'center',
     },
-    ratingBtnText: { fontSize: 24 },
-    footer: { gap: 12 },
+    ratingBtnActive: { borderColor: c.green, backgroundColor: c.green + '33' },
+    ratingBtnText: { fontSize: tight ? 19 : compact ? 21 : 24 },
+    footer: { gap: tight ? 7 : compact ? 9 : 12 },
     buttons: { flexDirection: 'row', gap: 10, paddingHorizontal: 20 },
-    btnShare: { flex: 1, borderWidth: 1.5, borderColor: c.border, borderRadius: 12, padding: 14, alignItems: 'center' },
-    btnShareText: { fontSize: 15, fontFamily: FONTS.bold, color: c.text1 },
-    btnNext: { flex: 1, backgroundColor: c.text1, borderRadius: 12, padding: 14, alignItems: 'center' },
-    btnNextText: { fontSize: 15, fontFamily: FONTS.extraBold, color: c.bgScreen },
+    btnShare: { flex: 1, borderWidth: 1.5, borderColor: c.border, borderRadius: 12, padding: tight ? 10 : compact ? 12 : 14, alignItems: 'center' },
+    btnShareText: { fontSize: tight ? 13 : compact ? 14 : 15, fontFamily: FONTS.bold, color: c.text1 },
+    btnNext: { flex: 1, backgroundColor: c.text1, borderRadius: 12, padding: tight ? 10 : compact ? 12 : 14, alignItems: 'center' },
+    btnNextText: { fontSize: tight ? 13 : compact ? 14 : 15, fontFamily: FONTS.extraBold, color: c.bgScreen },
     btnHome: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
       backgroundColor: c.bgBase, borderRadius: 20,
-      paddingHorizontal: 20, paddingVertical: 10, alignSelf: 'center',
+      paddingHorizontal: compact ? 18 : 20, paddingVertical: tight ? 7 : compact ? 8 : 10, alignSelf: 'center',
     },
-    btnHomeText: { fontSize: 14, fontFamily: FONTS.bold, color: c.text2 },
+    btnHomeText: { fontSize: tight ? 12 : compact ? 13 : 14, fontFamily: FONTS.bold, color: c.text2 },
     btnChallenge: {
-      backgroundColor: '#E8903A', borderRadius: 12, padding: 15,
-      alignItems: 'center', marginHorizontal: 20, minHeight: 50, justifyContent: 'center',
+      backgroundColor: '#E8903A', borderRadius: 12, padding: tight ? 10 : compact ? 12 : 15,
+      alignItems: 'center', marginHorizontal: 20, minHeight: tight ? 40 : compact ? 44 : 50, justifyContent: 'center',
     },
-    btnChallengeText: { fontSize: 16, fontFamily: FONTS.extraBold, color: '#FFF' },
+    btnChallengeText: { fontSize: tight ? 14 : compact ? 15 : 16, fontFamily: FONTS.extraBold, color: '#FFF' },
   });
 }

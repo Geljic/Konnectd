@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 40" width="80" height="40" role="img" aria-label="Talking O tile face">
+  <rect data-part="strip" width="80" height="40" rx="8" fill="#8EC4AA"/>
+  <g data-part="cheeks" fill="#F49A8B" opacity="0.72">
+    <rect x="13" y="21" width="9" height="4" rx="2"/>
+    <rect x="58" y="21" width="9" height="4" rx="2"/>
+  </g>
+  <g data-part="eyes" fill="#12221A">
+    <ellipse cx="27" cy="17" rx="4.1" ry="5.9"/>
+    <ellipse cx="53" cy="17" rx="4.1" ry="5.9"/>
+    <circle cx="25.8" cy="14.8" r="1.35" fill="#FFFFFF" opacity="0.9"/>
+    <circle cx="51.8" cy="14.8" r="1.35" fill="#FFFFFF" opacity="0.9"/>
+  </g>
+  <g data-part="mouth">
+    <ellipse cx="40" cy="28.2" rx="4.3" ry="5.6" fill="#12221A"/>
+    <ellipse cx="40" cy="30.8" rx="2.2" ry="1.2" fill="#F49A8B"/>
+  </g>
+</svg>

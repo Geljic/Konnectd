@@ -56,6 +56,14 @@ function FireIcon({ color }: { color: string }) {
   );
 }
 
+function difficultyLabel(difficulty?: string) {
+  if (difficulty === 'yellow') return 'Easy';
+  if (difficulty === 'green') return 'Medium';
+  if (difficulty === 'blue') return 'Hard';
+  if (difficulty === 'purple') return 'Expert';
+  return 'Puzzle';
+}
+
 export function GameScreen({ route, navigation }: Props) {
   const { mode, puzzleId, collection, challengeId, recipientId, recipientName } = route.params;
   const colors = useColors();
@@ -84,15 +92,19 @@ export function GameScreen({ route, navigation }: Props) {
   const { play, playCorrect } = useSound();
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
+      setLoading(true);
       const s = useGameStore.getState();
       const resuming =
+        !recipientId &&
+        !challengeId &&
         mode !== 'nyt' &&
         s.status === 'playing' &&
         s.currentMode === mode &&
         (mode !== 'freeplay' || s.currentPuzzleId === puzzleId);
       if (resuming) {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
         return;
       }
       const p = mode === 'daily'
@@ -102,6 +114,7 @@ export function GameScreen({ route, navigation }: Props) {
         : collection === 'nyt_puzzles'
         ? await fetchNytPuzzleById(puzzleId!)
         : await fetchPuzzleById(puzzleId!);
+      if (cancelled) return;
       if (!p) {
         console.error(`[GameScreen] fetchPuzzle returned null for mode=${mode}`);
         navigation.goBack();
@@ -109,6 +122,7 @@ export function GameScreen({ route, navigation }: Props) {
       }
       const coll = collection ?? (mode === 'nyt' ? 'nyt_puzzles' : undefined);
       const completedIds = await getCompletedPuzzleIds();
+      if (cancelled) return;
       const firstSolve = !completedIds.has(p.id);
       loadPuzzle(p, mode, puzzleId, hardMode ? 'hard' : 'normal', coll as 'puzzles' | 'nyt_puzzles' | undefined, firstSolve);
 
@@ -120,10 +134,11 @@ export function GameScreen({ route, navigation }: Props) {
         }
       }
 
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     };
     load();
-  }, []);
+    return () => { cancelled = true; };
+  }, [mode, puzzleId, collection, challengeId, recipientId, hardMode, loadPuzzle, restoreProgress, navigation]);
 
   useEffect(() => {
     if (status !== 'playing' || mode !== 'freeplay' || !puzzleId || !collection) return;
@@ -156,81 +171,89 @@ export function GameScreen({ route, navigation }: Props) {
   }
 
   useEffect(() => {
-    if (status === 'won' || status === 'lost') {
-      const duration = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
-      const solvedOrder = useGameStore.getState().solvedOrder;
-      const gameMode = useGameStore.getState().gameMode;
-      const hintPenaltyFinal = useGameStore.getState().hintPenalty;
-      const score = status === 'won' ? calculateScore(solvedOrder, mistakes, duration, hintPenaltyFinal) : null;
-      setScore(score);
+    if (status !== 'won' && status !== 'lost') return;
 
-      if (puzzle) {
-        // Sequence: record session first so updateUserStats sees the new row
-        (async () => {
-          await recordPlaySession({
-            puzzleId: puzzle.id,
-            collection: currentCollection ?? 'puzzles',
-            completed: status === 'won',
-            mistakes,
-            durationSeconds: duration,
-            solvedOrder,
-            gameMode,
-            gameType: 'connections',
-            score: score ?? undefined,
-          });
-          await updateUserStats(status === 'won');
-          await useAuthStore.getState().refreshProfile();
-        })();
+    const duration = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+    const solvedOrder = useGameStore.getState().solvedOrder;
+    const gameMode = useGameStore.getState().gameMode;
+    const hintPenaltyFinal = useGameStore.getState().hintPenalty;
+    const score = status === 'won' ? calculateScore(solvedOrder, mistakes, duration, hintPenaltyFinal) : null;
+    setScore(score);
 
-        if (status === 'won') {
-          markPuzzleCompleted(puzzle.id, { durationSeconds: duration, mistakes, solvedOrder });
-        }
-        clearGameProgress();
-
-        if (challengeId) {
-          submitChallengeResult(challengeId, { mistakes, durationSeconds: duration, solvedOrder, score: score ?? undefined });
-        }
-      }
-
-      const delay = status === 'won' ? 1500 : 800;
-
-      if (recipientId && puzzle && !challengeId) {
-        const nytDate = puzzle.daily_date
-          ? new Date(puzzle.daily_date + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
-          : null;
-        const puzzleLabel = currentCollection === 'nyt_puzzles'
-          ? `NYT Puzzle${nytDate ? ` · ${nytDate}` : ''}`
-          : nytDate
-          ? `Daily Puzzle · ${nytDate}`
-          : 'Curated Puzzle';
-        createChallenge({
+    if (puzzle) {
+      // Sequence: record session first so updateUserStats sees the new row
+      (async () => {
+        await recordPlaySession({
           puzzleId: puzzle.id,
-          puzzleCollection: currentCollection ?? 'puzzles',
-          puzzleLabel,
+          collection: currentCollection ?? 'puzzles',
+          completed: status === 'won',
           mistakes,
           durationSeconds: duration,
           solvedOrder,
-          score: score ?? undefined,
-          gameType: 'connections',
           gameMode,
-          recipientId,
-        }).then(challenge => {
-          setTimeout(() => {
-            if (challenge) navigation.navigate('ChallengeResult', { challengeId: challenge.id });
-            else navigation.navigate('Result');
-          }, delay);
+          gameType: 'connections',
+          score: score ?? undefined,
         });
-        return;
-      }
+        await updateUserStats(status === 'won');
+        await useAuthStore.getState().refreshProfile();
+      })();
 
-      setTimeout(() => {
-        if (challengeId) {
-          navigation.navigate('ChallengeResult', { challengeId });
-        } else {
-          navigation.navigate('Result');
-        }
-      }, delay);
+      if (status === 'won') {
+        markPuzzleCompleted(puzzle.id, { durationSeconds: duration, mistakes, solvedOrder });
+      }
+      clearGameProgress();
+
+      if (challengeId) {
+        submitChallengeResult(challengeId, { mistakes, durationSeconds: duration, solvedOrder, score: score ?? undefined });
+      }
     }
+
+    const delay = status === 'won' ? 1500 : 800;
+
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    if (recipientId && puzzle && !challengeId) {
+      let cancelled = false;
+      const nytDate = puzzle.daily_date
+        ? new Date(puzzle.daily_date + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
+        : null;
+      const puzzleLabel = currentCollection === 'nyt_puzzles'
+        ? `NYT Puzzle${nytDate ? ` · ${nytDate}` : ''}`
+        : nytDate
+        ? `Daily Puzzle · ${nytDate}`
+        : 'Curated Puzzle';
+      createChallenge({
+        puzzleId: puzzle.id,
+        puzzleCollection: currentCollection ?? 'puzzles',
+        puzzleLabel,
+        mistakes,
+        durationSeconds: duration,
+        solvedOrder,
+        score: score ?? undefined,
+        gameType: 'connections',
+        gameMode,
+        recipientId,
+      }).then(challenge => {
+        if (cancelled) return;
+        timeoutId = setTimeout(() => {
+          if (!navigation.isFocused()) return;
+          if (challenge) navigation.navigate('ChallengeResult', { challengeId: challenge.id });
+          else navigation.navigate('Result');
+        }, delay);
+      });
+      return () => { cancelled = true; clearTimeout(timeoutId); };
+    }
+
+    timeoutId = setTimeout(() => {
+      if (!navigation.isFocused()) return;
+      if (challengeId) {
+        navigation.navigate('ChallengeResult', { challengeId });
+      } else {
+        navigation.navigate('Result');
+      }
+    }, delay);
+
+    return () => clearTimeout(timeoutId);
   }, [status]);
 
   function handleHintSelect(tier: HintTier) {
@@ -286,25 +309,47 @@ export function GameScreen({ route, navigation }: Props) {
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Pressable style={styles.iconBtn} onPress={handleLeave} hitSlop={12}>
-            <BackIcon color={colors.text1} />
-          </Pressable>
+          <View style={styles.leftCluster}>
+            <Pressable style={styles.iconBtn} onPress={handleLeave} hitSlop={12}>
+              <BackIcon color={colors.text1} />
+            </Pressable>
+            <Text style={styles.modeLabel}>Groups</Text>
+          </View>
 
           <View style={styles.headerCenter}>
             <View style={styles.titleRow}>
-              <Text style={styles.title}>Konnectd</Text>
+              <Text
+                style={styles.title}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.78}
+              >
+                {puzzle?.title ?? 'Konnectd'}
+              </Text>
               {hardMode && (
                 <View style={styles.hardBadge}>
                   <FireIcon color={colors.purple} />
                 </View>
               )}
             </View>
-            <Text style={styles.subtitle}>
-              {hardMode ? 'Hard mode: solve hardest first' : 'Create four groups of four!'}
+            <Text
+              style={styles.subtitle}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.82}
+            >
+              {hardMode ? `${difficultyLabel(puzzle?.difficulty_min)} · Hard mode` : difficultyLabel(puzzle?.difficulty_min)}
             </Text>
           </View>
 
           <View style={styles.rightCluster}>
+            <Pressable
+              style={styles.headerHintBtn}
+              onPress={() => setHintModalVisible(true)}
+              disabled={status !== 'playing'}
+            >
+              <Text style={styles.headerHintText}>💡 Hint</Text>
+            </Pressable>
             <View style={styles.timerBadge}>
               <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
             </View>
@@ -344,20 +389,6 @@ export function GameScreen({ route, navigation }: Props) {
               <Text style={styles.btnSubmitText}>Submit</Text>
             </Pressable>
           </View>
-          <Pressable
-            style={styles.btnHint}
-            onPress={() => setHintModalVisible(true)}
-            disabled={status !== 'playing'}
-          >
-            <Text style={styles.btnHintText}>
-              {isPremium
-                ? `⭐ Hint${hintPenalty > 0 ? ` (−${hintPenalty} pts)` : ''}`
-                : hintsUsed >= MAX_HINTS && rewardedHintTokens <= 0
-                ? '▶ Watch ad for a hint'
-                : `💡 Hint ${hintsUsed > 0 ? `(${Math.max(0, MAX_HINTS - hintsUsed)} left${rewardedHintTokens > 0 ? ` + ${rewardedHintTokens} ad` : ''} · −${hintPenalty} pts)` : `(${MAX_HINTS} free)`}`
-              }
-            </Text>
-          </Pressable>
         </View>
       </View>
 
@@ -391,17 +422,28 @@ function makeStyles(c: ColorTheme) {
     header: {
       flexDirection: 'row', alignItems: 'center',
       paddingVertical: 8, paddingHorizontal: 12, gap: 8,
+      position: 'relative',
     },
-    headerCenter: { flex: 1, alignItems: 'center', gap: 3 },
-    titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    title: { fontSize: 26, fontFamily: FONTS.extraBold, color: c.text1, letterSpacing: 0.5 },
+    leftCluster: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    modeLabel: { fontSize: 11, fontFamily: FONTS.extraBold, color: c.blue, letterSpacing: 1.2, textTransform: 'uppercase' },
+    headerCenter: { position: 'absolute', left: 104, right: 104, alignItems: 'center', gap: 3 },
+    titleRow: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 6 },
+    title: { maxWidth: '100%', flexShrink: 1, fontSize: 26, fontFamily: FONTS.extraBold, color: c.text1, letterSpacing: 0.5 },
     hardBadge: {
       width: 22, height: 22, borderRadius: 11,
       backgroundColor: c.bgBase, alignItems: 'center', justifyContent: 'center',
     },
-    subtitle: { fontSize: 13, fontFamily: FONTS.bold, color: c.text2 },
+    subtitle: { maxWidth: '100%', fontSize: 13, fontFamily: FONTS.bold, color: c.text2 },
     iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-    rightCluster: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+    rightCluster: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
+    headerHintBtn: {
+      borderWidth: 1.5,
+      borderColor: c.border,
+      borderRadius: 18,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    headerHintText: { fontSize: 12, fontFamily: FONTS.bold, color: c.text2 },
     timerBadge: { alignItems: 'flex-end', minWidth: 36 },
     timerText: { fontSize: 13, fontFamily: FONTS.bold, color: c.text2 },
     footer: { paddingHorizontal: 16, paddingVertical: 10, gap: 10, zIndex: 10, elevation: 10 },
@@ -411,10 +453,5 @@ function makeStyles(c: ColorTheme) {
     btnSubmit: { backgroundColor: c.actionBg, borderRadius: 24, paddingHorizontal: 24, paddingVertical: 10 },
     btnSubmitDisabled: { backgroundColor: c.text3 },
     btnSubmitText: { fontSize: 14, fontFamily: FONTS.extraBold, color: c.actionText },
-    btnHint: {
-      alignSelf: 'center', borderWidth: 1.5, borderColor: c.border,
-      borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,
-    },
-    btnHintText: { fontSize: 13, fontFamily: FONTS.bold, color: c.text2 },
   });
 }

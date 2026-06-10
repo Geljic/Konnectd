@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, View, Text, Pressable, StyleSheet, useWindowDimensions, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Path, Line } from 'react-native-svg';
+import Svg, { Circle, Ellipse, G, Path, Line, Rect } from 'react-native-svg';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { WORD_TRAILS_PUZZLES, type WordTrail, type WordTrailsPuzzle } from '@/data/wordTrailsPuzzles';
+import { type WordTrail, type WordTrailsPuzzle } from '@/data/wordTrailsPuzzles';
+import { getWordTrails } from '@/api/wordTrails';
 import {
   getDailyWordTrailsPuzzle,
   getRandomWordTrailsPuzzle,
@@ -31,6 +32,9 @@ type StepHint = 'same_path' | 'next_step' | 'path_label';
 
 const MAX_STEP_HINTS = 3;
 const HINT_PENALTY = 75;
+const SELECTED_FACE_SEQUENCE = [1, 13, 14, 13, 2, 15];
+const LOST_FACE_SEQUENCE = [12, 8, 10, 8];
+const WON_FACE_SEQUENCE = [2, 11, 15];
 
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60);
@@ -38,11 +42,12 @@ function formatTime(seconds: number) {
 }
 
 function resolvePuzzle(mode: 'daily' | 'random' | 'freeplay', puzzleId?: string): WordTrailsPuzzle {
-  if (mode === 'daily') return getDailyWordTrailsPuzzle(WORD_TRAILS_PUZZLES);
+  const puzzles = getWordTrails();
+  if (mode === 'daily') return getDailyWordTrailsPuzzle(puzzles);
   if (mode === 'freeplay' && puzzleId) {
-    return WORD_TRAILS_PUZZLES.find(p => p.id === puzzleId) ?? WORD_TRAILS_PUZZLES[0];
+    return puzzles.find(p => p.id === puzzleId) ?? puzzles[0];
   }
-  return getRandomWordTrailsPuzzle(WORD_TRAILS_PUZZLES);
+  return getRandomWordTrailsPuzzle(puzzles);
 }
 
 function BackIcon({ color }: { color: string }) {
@@ -66,7 +71,25 @@ function InfoIcon({ color }: { color: string }) {
 function faceIndexFor(word: string) {
   let h = 0;
   for (let i = 0; i < word.length; i++) h = (h * 31 + word.charCodeAt(i)) & 0xff;
-  return h % 6;
+  return h % 16;
+}
+
+function tileFontSize(word: string, compact = false) {
+  const length = word.length;
+  const size =
+    length >= 11 ? 11 :
+    length >= 10 ? 12.5 :
+    length >= 9 ? 13.5 :
+    length >= 8 ? 15 :
+    17;
+  return compact ? Math.max(10.5, size - 2) : size;
+}
+
+function difficultyLabel(level: WordTrailsPuzzle['difficulty']) {
+  if (level === 1) return 'Easy';
+  if (level === 2) return 'Medium';
+  if (level === 3) return 'Hard';
+  return 'Expert';
 }
 
 function WordlineFace({
@@ -74,50 +97,205 @@ function WordlineFace({
   faceIndex,
   blink,
   color,
+  stateOverride,
 }: {
   expression: 'idle' | 'selected' | 'sad';
   faceIndex: number;
   blink: boolean;
   color: string;
+  stateOverride?: number | null;
 }) {
-  const eyeY = 18 + (faceIndex % 2);
-  const mouth =
-    expression === 'sad'
-      ? 'M28 38 Q40 29 52 38'
-      : expression === 'selected'
-        ? 'M31 32 Q40 42 49 32 Q40 37 31 32'
-        : faceIndex % 3 === 0
-          ? 'M29 33 Q40 41 51 33'
-          : faceIndex % 3 === 1
-            ? 'M31 34 Q40 39 49 34'
-            : 'M32 35 Q40 35 48 35';
+  const state =
+    stateOverride != null
+      ? stateOverride
+      : expression === 'sad'
+        ? [8, 10, 12][faceIndex % 3]
+        : expression === 'selected'
+          ? [2, 11, 13, 14, 15][faceIndex % 5]
+          : faceIndex % 16;
+
+  const ink = color;
+  const cheek = '#F49A8B';
+  const tooth = '#FFF7D8';
+
+  function Cheeks({ strong = false }: { strong?: boolean }) {
+    return (
+      <G opacity={strong ? 0.82 : 0.72}>
+        <Rect x="13" y="22" width={strong ? 10 : 9} height={strong ? 4.3 : 4} rx={2} fill={cheek} />
+        <Rect x="58" y="22" width={strong ? 10 : 9} height={strong ? 4.3 : 4} rx={2} fill={cheek} />
+      </G>
+    );
+  }
+
+  function OpenEyes({ y = 17, small = false }: { y?: number; small?: boolean }) {
+    const rx = small ? 3.7 : 4.1;
+    const ry = small ? 5.3 : 5.9;
+    return (
+      <G>
+        <Ellipse cx="27" cy={y} rx={rx} ry={ry} fill={ink} />
+        <Ellipse cx="53" cy={y} rx={rx} ry={ry} fill={ink} />
+        <Circle cx="25.8" cy={y - 2.2} r={small ? 1.15 : 1.35} fill="#FFFFFF" opacity="0.9" />
+        <Circle cx="51.8" cy={y - 2.2} r={small ? 1.15 : 1.35} fill="#FFFFFF" opacity="0.9" />
+      </G>
+    );
+  }
+
+  function BlinkEyes() {
+    return (
+      <G>
+        <Path d="M22 18 Q27 14 32 18" stroke={ink} strokeWidth="3" fill="none" strokeLinecap="round" />
+        <Path d="M48 18 Q53 14 58 18" stroke={ink} strokeWidth="3" fill="none" strokeLinecap="round" />
+      </G>
+    );
+  }
+
+  function Smile() {
+    return <Path d="M33 26 Q40 31 47 26" stroke={ink} strokeWidth="2.7" fill="none" strokeLinecap="round" />;
+  }
+
+  function BigMouth({ wide = false }: { wide?: boolean }) {
+    return (
+      <G>
+        <Path d={wide ? 'M27 25 Q40 36 53 25 Z' : 'M29 25 Q40 35 51 25 Z'} fill={ink} />
+        <Path d={wide ? 'M30 25 Q40 29 50 25' : 'M32 25 Q40 28 48 25'} fill={tooth} />
+        <Path d="M35 31 Q40 28.5 45 31 Q42 34 40 34 Q38 34 35 31 Z" fill={cheek} />
+      </G>
+    );
+  }
+
+  function TalkO() {
+    return (
+      <G>
+        <Ellipse cx="40" cy="28" rx="4.4" ry="5.6" fill={ink} />
+        <Ellipse cx="40" cy="31" rx="2.2" ry="1.2" fill={cheek} />
+      </G>
+    );
+  }
+
+  const eyes = blink ? <BlinkEyes /> : null;
 
   return (
-    <Svg width="52" height="28" viewBox="0 0 80 50">
-      {blink ? (
-        <>
-          <Line x1="22" y1={eyeY} x2="32" y2={eyeY} stroke={color} strokeWidth="4" strokeLinecap="round" />
-          <Line x1="48" y1={eyeY} x2="58" y2={eyeY} stroke={color} strokeWidth="4" strokeLinecap="round" />
-        </>
-      ) : faceIndex === 4 ? (
-        <>
-          <Circle cx="26" cy={eyeY} r="5" fill={color} />
-          <Path d={`M49 ${eyeY} Q54 ${eyeY + 5} 59 ${eyeY}`} stroke={color} strokeWidth="4" fill="none" strokeLinecap="round" />
-        </>
-      ) : (
-        <>
-          <Circle cx="26" cy={eyeY} r={faceIndex === 2 ? 4 : 5} fill={color} />
-          <Circle cx="54" cy={eyeY} r={faceIndex === 2 ? 4 : 5} fill={color} />
-        </>
-      )}
-      <Path
-        d={mouth}
-        stroke={color}
-        strokeWidth={expression === 'selected' ? 0 : 3.2}
-        fill={expression === 'selected' ? color : 'none'}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <Svg width="64" height="32" viewBox="0 0 80 40">
+      {(() => {
+        switch (state) {
+          case 2:
+            return <>
+              <Cheeks />
+              <Path d="M22 18 Q27 12 32 18" stroke={ink} strokeWidth="3.1" fill="none" strokeLinecap="round" />
+              <Path d="M48 18 Q53 12 58 18" stroke={ink} strokeWidth="3.1" fill="none" strokeLinecap="round" />
+              <BigMouth wide />
+            </>;
+          case 3:
+            return <>
+              <Cheeks />
+              {eyes ?? <OpenEyes y={16} />}
+              <TalkO />
+            </>;
+          case 4:
+            return <>
+              <Cheeks />
+              <Path d="M22 18 Q27 21 32 18" stroke={ink} strokeWidth="2.8" fill="none" strokeLinecap="round" />
+              <Path d="M48 18 Q53 21 58 18" stroke={ink} strokeWidth="2.8" fill="none" strokeLinecap="round" />
+              <TalkO />
+            </>;
+          case 5:
+            return <>
+              <Cheeks />
+              <BlinkEyes />
+              <Line x1="36" y1="27" x2="44" y2="27" stroke={ink} strokeWidth="2.5" strokeLinecap="round" />
+            </>;
+          case 6:
+            return <>
+              <Cheeks />
+              {blink ? <BlinkEyes /> : <>
+                <Ellipse cx="27" cy="17" rx="4" ry="5.8" fill={ink} />
+                <Circle cx="25.8" cy="14.8" r="1.35" fill="#FFFFFF" opacity="0.9" />
+                <Path d="M48 17 Q53 21 58 17" stroke={ink} strokeWidth="2.9" fill="none" strokeLinecap="round" />
+              </>}
+              <Smile />
+            </>;
+          case 7:
+            return <>
+              <Cheeks strong />
+              <Path d="M22 11 Q27 8 32 11" stroke={ink} strokeWidth="2.3" fill="none" strokeLinecap="round" />
+              <Path d="M48 11 Q53 8 58 11" stroke={ink} strokeWidth="2.3" fill="none" strokeLinecap="round" />
+              {eyes ?? <OpenEyes y={18} />}
+              <Smile />
+            </>;
+          case 8:
+            return <>
+              <Cheeks />
+              <Path d="M20 12 L32 16" stroke={ink} strokeWidth="3" strokeLinecap="round" />
+              <Path d="M48 16 L60 12" stroke={ink} strokeWidth="3" strokeLinecap="round" />
+              {eyes ?? <OpenEyes y={19} small />}
+              <Path d="M31 31 Q40 25 49 31" stroke={ink} strokeWidth="2.7" fill="none" strokeLinecap="round" />
+            </>;
+          case 9:
+            return <>
+              <Cheeks />
+              <Path d="M22 15 L32 20" stroke={ink} strokeWidth="3.2" strokeLinecap="round" />
+              <Path d="M32 15 L22 20" stroke={ink} strokeWidth="3.2" strokeLinecap="round" />
+              <Line x1="48" y1="18" x2="58" y2="18" stroke={ink} strokeWidth="3.2" strokeLinecap="round" />
+              <Smile />
+            </>;
+          case 10:
+            return <>
+              <Cheeks />
+              <Path d="M28 12 C20 12 20 24 28 24 C35 24 35 14 28 14 C23 14 23 21 28 21" stroke={ink} strokeWidth="2.4" fill="none" strokeLinecap="round" />
+              <Path d="M54 12 C46 12 46 24 54 24 C61 24 61 14 54 14 C49 14 49 21 54 21" stroke={ink} strokeWidth="2.4" fill="none" strokeLinecap="round" />
+              <TalkO />
+            </>;
+          case 11:
+            return <>
+              <Cheeks />
+              <Path d="M23 15 L31 19 L23 23" stroke={ink} strokeWidth="3.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              <Path d="M57 15 L49 19 L57 23" stroke={ink} strokeWidth="3.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              <BigMouth />
+            </>;
+          case 12:
+            return <>
+              <Cheeks />
+              <Path d="M22 12 Q27 8 32 12" stroke={ink} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+              <Path d="M48 12 Q53 8 58 12" stroke={ink} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+              {eyes ?? <OpenEyes y={18} />}
+              <Path d="M34 30 Q37 26 40 30 Q43 34 46 30" stroke={ink} strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </>;
+          case 13:
+            return <>
+              <Cheeks />
+              {eyes ?? <OpenEyes />}
+              <Path d="M34 25 Q40 33 46 25 Z" fill={ink} />
+              <Path d="M36 25 Q40 27 44 25" fill={tooth} />
+              <Ellipse cx="40" cy="31" rx="3" ry="1.5" fill={cheek} />
+            </>;
+          case 14:
+            return <>
+              <Cheeks />
+              {eyes ?? <OpenEyes />}
+              <TalkO />
+            </>;
+          case 15:
+            return <>
+              <Cheeks />
+              <Path d="M22 17 Q27 21.5 32 17" stroke={ink} strokeWidth="3" fill="none" strokeLinecap="round" />
+              <Path d="M48 17 Q53 21.5 58 17" stroke={ink} strokeWidth="3" fill="none" strokeLinecap="round" />
+              <Smile />
+            </>;
+          case 1:
+            return <>
+              <Cheeks />
+              {eyes ?? <OpenEyes />}
+              <Smile />
+            </>;
+          case 0:
+          default:
+            return <>
+              <Cheeks />
+              {eyes ?? <OpenEyes />}
+              <Path d="M35 27 Q40 29 45 27" stroke={ink} strokeWidth="2.4" fill="none" strokeLinecap="round" />
+            </>;
+        }
+      })()}
     </Svg>
   );
 }
@@ -132,6 +310,7 @@ function WordlineTile({
   onPress,
   colors,
   styles,
+  compact,
 }: {
   word: string;
   selectedIndex: number;
@@ -142,9 +321,11 @@ function WordlineTile({
   onPress: () => void;
   colors: ColorTheme;
   styles: ReturnType<typeof makeStyles>;
+  compact: boolean;
 }) {
   const faceIndex = faceIndexFor(word);
   const [blink, setBlink] = useState(false);
+  const [motionFace, setMotionFace] = useState<number | null>(null);
   const bob = useRef(new Animated.Value(0)).current;
   const faceScale = useRef(new Animated.Value(1)).current;
   const shuffleKick = useRef(new Animated.Value(0)).current;
@@ -152,6 +333,7 @@ function WordlineTile({
   const shuffleRotate = useRef(new Animated.Value(0)).current;
   const stripCfg = useSettingsStore((s: { tileStripStyle: TileStripStyle }) => STRIP_CONFIG[s.tileStripStyle]);
   const selected = selectedIndex >= 0;
+  const fontSize = tileFontSize(word, compact);
 
   useEffect(() => {
     Animated.loop(
@@ -192,6 +374,41 @@ function WordlineTile({
   }, [faceScale, selected]);
 
   useEffect(() => {
+    if (status === 'won') {
+      let i = 0;
+      setMotionFace(WON_FACE_SEQUENCE[0]);
+      const interval = setInterval(() => {
+        i = (i + 1) % WON_FACE_SEQUENCE.length;
+        setMotionFace(WON_FACE_SEQUENCE[i]);
+      }, 220);
+      return () => clearInterval(interval);
+    }
+
+    if (status === 'lost') {
+      let i = 0;
+      setMotionFace(LOST_FACE_SEQUENCE[0]);
+      const interval = setInterval(() => {
+        i = (i + 1) % LOST_FACE_SEQUENCE.length;
+        setMotionFace(LOST_FACE_SEQUENCE[i]);
+      }, 160);
+      return () => clearInterval(interval);
+    }
+
+    if (selected) {
+      let i = 0;
+      setMotionFace(SELECTED_FACE_SEQUENCE[0]);
+      const interval = setInterval(() => {
+        i = (i + 1) % SELECTED_FACE_SEQUENCE.length;
+        setMotionFace(SELECTED_FACE_SEQUENCE[i]);
+      }, 170);
+      return () => clearInterval(interval);
+    }
+
+    setMotionFace(null);
+    return undefined;
+  }, [selected, status]);
+
+  useEffect(() => {
     if (shuffleSignal === 0) return;
     shuffleKick.setValue(0);
     const timeout = setTimeout(() => {
@@ -214,7 +431,7 @@ function WordlineTile({
   }, [faceIndex, shuffleDelay, shuffleKick, shuffleRotate, shuffleScale, shuffleSignal]);
 
   const expression = status === 'lost' ? 'sad' : selected ? 'selected' : 'idle';
-  const faceColor = colors.categoryText;
+  const faceColor = colors.tileEye;
 
   return (
     <Pressable disabled={disabled} onPress={onPress} style={styles.tilePressable}>
@@ -251,16 +468,22 @@ function WordlineTile({
               ],
             }}
           >
-            <WordlineFace expression={expression} faceIndex={faceIndex} blink={blink} color={faceColor} />
+            <WordlineFace
+              expression={expression}
+              faceIndex={faceIndex}
+              blink={blink}
+              color={faceColor}
+              stateOverride={motionFace}
+            />
           </Animated.View>
         </View>
         <View style={[styles.wordArea, selected && styles.wordAreaSelected]}>
           {selected && <Text style={styles.orderBadge}>{selectedIndex + 1}</Text>}
           <Text
-            style={styles.tileText}
+            style={[styles.tileText, { fontSize, lineHeight: Math.ceil(fontSize + 3) }]}
             numberOfLines={1}
             adjustsFontSizeToFit
-            minimumFontScale={0.72}
+            minimumFontScale={compact ? 0.72 : 0.82}
           >
             {word.toUpperCase()}
           </Text>
@@ -437,17 +660,35 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Pressable style={styles.iconBtn} onPress={handleBack} hitSlop={12}>
-            <BackIcon color={colors.text1} />
-          </Pressable>
+          <View style={styles.leftCluster}>
+            <Pressable style={styles.iconBtn} onPress={handleBack} hitSlop={12}>
+              <BackIcon color={colors.text1} />
+            </Pressable>
+            <Text style={styles.modeLabel}>Next Steps</Text>
+          </View>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.eyebrow}>Next Steps</Text>
-            <Text style={styles.title}>{puzzle.title}</Text>
-            <Text style={styles.subtitle}>Difficulty {puzzle.difficulty}</Text>
+            <Text
+              style={styles.title}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.78}
+            >
+              {puzzle.title}
+            </Text>
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {difficultyLabel(puzzle.difficulty)}
+            </Text>
           </View>
 
           <View style={styles.rightCluster}>
+            <Pressable
+              style={[styles.headerHintBtn, hintsUsed >= MAX_STEP_HINTS && styles.btnHintDisabled]}
+              onPress={() => setHintVisible(true)}
+              disabled={hintsUsed >= MAX_STEP_HINTS}
+            >
+              <Text style={styles.headerHintText}>💡 Hint</Text>
+            </Pressable>
             <View style={styles.timerBadge}>
               <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
             </View>
@@ -491,6 +732,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
                       onPress={() => toggleWord(word)}
                       colors={colors}
                       styles={styles}
+                      compact={compact}
                     />
                   );
                 })}
@@ -531,17 +773,6 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
                   <Text style={styles.btnSubmitText}>Submit</Text>
                 </Pressable>
               </View>
-              <Pressable
-                style={[styles.btnHint, hintsUsed >= MAX_STEP_HINTS && styles.btnHintDisabled]}
-                onPress={() => setHintVisible(true)}
-                disabled={hintsUsed >= MAX_STEP_HINTS}
-              >
-                <Text style={styles.btnHintText}>
-                  {hintsUsed === 0
-                    ? `💡 Hint (${MAX_STEP_HINTS} free)`
-                    : `💡 Hint (${MAX_STEP_HINTS - hintsUsed} left · −${HINT_PENALTY} pts)`}
-                </Text>
-              </Pressable>
             </>
           ) : (
             <View style={styles.actions}>
@@ -639,13 +870,22 @@ function makeStyles(c: ColorTheme, compact: boolean) {
       gap: compact ? 7 : 10,
       minHeight: 0,
     },
-    header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    headerCenter: { flex: 1, alignItems: 'center', gap: compact ? 3 : 5 },
+    header: { flexDirection: 'row', alignItems: 'center', gap: 8, position: 'relative' },
+    leftCluster: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    modeLabel: { fontSize: compact ? 9 : 10, fontFamily: FONTS.extraBold, color: c.blue, letterSpacing: 1.2, textTransform: 'uppercase' },
+    headerCenter: { position: 'absolute', left: compact ? 98 : 112, right: compact ? 98 : 112, alignItems: 'center', gap: compact ? 2 : 4 },
     iconBtn: { width: compact ? 32 : 36, height: compact ? 32 : 36, alignItems: 'center', justifyContent: 'center' },
-    eyebrow: { fontSize: compact ? 10 : 11, fontFamily: FONTS.extraBold, color: c.blue, letterSpacing: 1.5, textTransform: 'uppercase' },
-    title: { fontSize: compact ? 22 : 26, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
-    subtitle: { fontSize: compact ? 12 : 13, fontFamily: FONTS.bold, color: c.text2 },
-    rightCluster: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+    title: { maxWidth: '100%', fontSize: compact ? 22 : 26, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
+    subtitle: { maxWidth: '100%', fontSize: compact ? 12 : 13, fontFamily: FONTS.bold, color: c.text2 },
+    rightCluster: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: compact ? 3 : 4 },
+    headerHintBtn: {
+      borderWidth: 1.5,
+      borderColor: c.border,
+      borderRadius: 18,
+      paddingHorizontal: compact ? 8 : 10,
+      paddingVertical: compact ? 5 : 6,
+    },
+    headerHintText: { fontSize: compact ? 11 : 12, fontFamily: FONTS.bold, color: c.text2 },
     timerBadge: { alignItems: 'flex-end', minWidth: 36 },
     timerText: { fontSize: compact ? 11 : 13, fontFamily: FONTS.bold, color: c.text2 },
     messageBox: { backgroundColor: c.bgBase, borderRadius: 8, paddingVertical: compact ? 7 : 9, paddingHorizontal: 12, alignItems: 'center' },
@@ -696,8 +936,6 @@ function makeStyles(c: ColorTheme, compact: boolean) {
       height: compact ? 24 : 28,
       alignItems: 'center',
       justifyContent: 'center',
-      borderBottomLeftRadius: 8,
-      borderBottomRightRadius: 8,
       zIndex: 1,
     },
     wordArea: {
@@ -705,11 +943,11 @@ function makeStyles(c: ColorTheme, compact: boolean) {
       backgroundColor: c.tileDefault,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingHorizontal: 6,
-      paddingVertical: 6,
+      paddingHorizontal: compact ? 4 : 5,
+      paddingVertical: compact ? 2 : 4,
     },
     wordAreaSelected: { backgroundColor: c.tileSelected },
-    tileText: { fontSize: 13, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center', letterSpacing: 0.8 },
+    tileText: { fontSize: 17, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center', letterSpacing: 0, includeFontPadding: false },
     orderBadge: {
       position: 'absolute',
       top: compact ? 5 : 7,
@@ -742,16 +980,7 @@ function makeStyles(c: ColorTheme, compact: boolean) {
     },
     btnSubmitDisabled: { backgroundColor: c.text3 },
     btnSubmitText: { fontSize: compact ? 12 : 14, fontFamily: FONTS.extraBold, color: c.actionText },
-    btnHint: {
-      alignSelf: 'center',
-      borderWidth: 1.5,
-      borderColor: c.border,
-      borderRadius: 20,
-      paddingHorizontal: 16,
-      paddingVertical: compact ? 7 : 8,
-    },
     btnHintDisabled: { opacity: 0.45 },
-    btnHintText: { fontSize: compact ? 11 : 13, fontFamily: FONTS.bold, color: c.text2 },
     hintOverlay: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.5)',

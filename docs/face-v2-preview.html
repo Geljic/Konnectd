@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Face Assets v2 Preview</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #e8f4f1;
+    color: #162219;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding: 28px;
+  }
+  h1 {
+    font-size: 18px;
+    margin: 0 0 6px;
+    font-weight: 800;
+  }
+  p {
+    margin: 0 0 24px;
+    color: #52635d;
+    font-size: 13px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 16px;
+    max-width: 920px;
+  }
+  .sample {
+    display: grid;
+    gap: 8px;
+    justify-items: center;
+  }
+  .tile {
+    width: 120px;
+    height: 120px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 6px 16px rgba(18, 34, 26, 0.18);
+    display: grid;
+    grid-template-rows: 1fr 38px;
+  }
+  .word {
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+  .face {
+    width: 100%;
+    height: 38px;
+    object-fit: cover;
+  }
+  .name {
+    font-size: 11px;
+    font-weight: 800;
+    color: #52635d;
+  }
+  .sheet {
+    margin: 32px 0 0;
+    max-width: 920px;
+  }
+  .sheet img {
+    display: block;
+    width: min(100%, 760px);
+    border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(18, 34, 26, 0.12);
+  }
+</style>
+</head>
+<body>
+  <h1>Face Assets v2</h1>
+  <p>Animation-ready SVG states derived from the image-gen concept sheet.</p>
+
+  <div class="grid">
+    <div class="sample"><div class="tile"><div class="word">APPLE</div><img class="face" src="../assets/images/faces/v2/face-v2-00-neutral.svg" alt=""></div><div class="name">neutral</div></div>
+    <div class="sample"><div class="tile"><div class="word">RIVER</div><img class="face" src="../assets/images/faces/v2/face-v2-01-happy.svg" alt=""></div><div class="name">happy</div></div>
+    <div class="sample"><div class="tile"><div class="word">MANGO</div><img class="face" src="../assets/images/faces/v2/face-v2-02-big-smile.svg" alt=""></div><div class="name">big smile</div></div>
+    <div class="sample"><div class="tile"><div class="word">CORAL</div><img class="face" src="../assets/images/faces/v2/face-v2-03-surprised.svg" alt=""></div><div class="name">surprised</div></div>
+    <div class="sample"><div class="tile"><div class="word">STONE</div><img class="face" src="../assets/images/faces/v2/face-v2-04-sleepy.svg" alt=""></div><div class="name">sleepy</div></div>
+    <div class="sample"><div class="tile"><div class="word">HONEY</div><img class="face" src="../assets/images/faces/v2/face-v2-05-blink.svg" alt=""></div><div class="name">blink</div></div>
+    <div class="sample"><div class="tile"><div class="word">CIDER</div><img class="face" src="../assets/images/faces/v2/face-v2-06-wink.svg" alt=""></div><div class="name">wink</div></div>
+    <div class="sample"><div class="tile"><div class="word">CLOUD</div><img class="face" src="../assets/images/faces/v2/face-v2-07-shy.svg" alt=""></div><div class="name">shy</div></div>
+    <div class="sample"><div class="tile"><div class="word">PLUM</div><img class="face" src="../assets/images/faces/v2/face-v2-08-grumpy.svg" alt=""></div><div class="name">grumpy</div></div>
+    <div class="sample"><div class="tile"><div class="word">SPARK</div><img class="face" src="../assets/images/faces/v2/face-v2-09-squint.svg" alt=""></div><div class="name">squint</div></div>
+    <div class="sample"><div class="tile"><div class="word">BASIL</div><img class="face" src="../assets/images/faces/v2/face-v2-10-dizzy.svg" alt=""></div><div class="name">dizzy</div></div>
+    <div class="sample"><div class="tile"><div class="word">PEACH</div><img class="face" src="../assets/images/faces/v2/face-v2-11-laugh.svg" alt=""></div><div class="name">laugh</div></div>
+    <div class="sample"><div class="tile"><div class="word">MIST</div><img class="face" src="../assets/images/faces/v2/face-v2-12-worried.svg" alt=""></div><div class="name">worried</div></div>
+    <div class="sample"><div class="tile"><div class="word">SHELL</div><img class="face" src="../assets/images/faces/v2/face-v2-13-talk-a.svg" alt=""></div><div class="name">talk a</div></div>
+    <div class="sample"><div class="tile"><div class="word">BLOOM</div><img class="face" src="../assets/images/faces/v2/face-v2-14-talk-o.svg" alt=""></div><div class="name">talk o</div></div>
+    <div class="sample"><div class="tile"><div class="word">FERN</div><img class="face" src="../assets/images/faces/v2/face-v2-15-eyes-closed-smile.svg" alt=""></div><div class="name">closed smile</div></div>
+  </div>
+
+  <div class="sheet">
+    <h1>Image-Gen Concept Sheet</h1>
+    <p>Kept for visual reference while tuning the SVG states.</p>
+    <img src="../assets/images/faces/v2/face-v2-expression-sheet.png" alt="Generated face expression sheet">
+  </div>
+</body>
+</html>

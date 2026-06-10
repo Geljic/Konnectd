@@ -14,7 +14,7 @@ onRecordCreate((e) => {
 
     const challengerName = record.getString("challenger_name") || "Someone";
     const puzzleLabel = record.getString("puzzle_label") || "a puzzle";
-    const challengeId = record.getId();
+    const challengeId = record.id;
 
     $http.send({
       url: "https://exp.host/--/api/v2/push/send",

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 40" width="80" height="40" role="img" aria-label="Happy tile face">
+  <rect data-part="strip" width="80" height="40" rx="8" fill="#8EC4AA"/>
+  <g data-part="cheeks" fill="#F49A8B" opacity="0.72">
+    <rect x="13" y="21" width="9" height="4" rx="2"/>
+    <rect x="58" y="21" width="9" height="4" rx="2"/>
+  </g>
+  <g data-part="eyes" fill="#12221A">
+    <ellipse cx="27" cy="16.5" rx="4" ry="5.8"/>
+    <ellipse cx="53" cy="16.5" rx="4" ry="5.8"/>
+    <circle cx="25.8" cy="14.3" r="1.35" fill="#FFFFFF" opacity="0.9"/>
+    <circle cx="51.8" cy="14.3" r="1.35" fill="#FFFFFF" opacity="0.9"/>
+  </g>
+  <g data-part="mouth">
+    <path d="M33 25 Q40 31 47 25" stroke="#12221A" stroke-width="2.7" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

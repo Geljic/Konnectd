@@ -13,6 +13,7 @@ interface UserProfile {
   puzzlesPlayed: number;
   puzzlesWon: number;
   isPremium: boolean;
+  nytAccess: boolean;
   isGuest?: boolean;
 }
 
@@ -24,6 +25,9 @@ interface AuthState {
   restoreSession: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
+  updateProfile: (displayName: string) => Promise<void>;
   guestLogin: () => void;
   logout: () => void;
   clearError: () => void;
@@ -99,6 +103,73 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
+  async requestPasswordReset(email) {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      set({ error: 'Enter your email address first.' });
+      throw new Error('Email is required');
+    }
+    set({ isLoading: true, error: null });
+    try {
+      await pb.collection('users').requestPasswordReset(trimmedEmail);
+      set({ isLoading: false });
+    } catch (e: unknown) {
+      const message = getErrorMessage(e);
+      set({ error: message, isLoading: false });
+      throw e;
+    }
+  },
+
+  async changePassword(oldPassword, newPassword) {
+    const userId = pb.authStore.model?.id;
+    if (!userId) throw new Error('You need to be logged in to change your password.');
+    if (newPassword.length < 8) {
+      set({ error: 'New password must be at least 8 characters.' });
+      throw new Error('Password is too short');
+    }
+    set({ isLoading: true, error: null });
+    try {
+      const updated = await pb.collection('users').update(userId, {
+        oldPassword,
+        password: newPassword,
+        passwordConfirm: newPassword,
+      });
+      pb.authStore.save(pb.authStore.token, updated);
+      set({ user: mapModel(updated as unknown as Record<string, unknown>), isLoading: false });
+    } catch (e: unknown) {
+      const message = getErrorMessage(e);
+      set({ error: message, isLoading: false });
+      throw e;
+    }
+  },
+
+  async updateProfile(displayName) {
+    const userId = pb.authStore.model?.id;
+    const name = displayName.trim();
+    if (!userId) throw new Error('You need to be logged in to update your profile.');
+    if (name.length < 2) {
+      set({ error: 'Display name must be at least 2 characters.' });
+      throw new Error('Display name is too short');
+    }
+    if (name.length > 32) {
+      set({ error: 'Display name must be 32 characters or fewer.' });
+      throw new Error('Display name is too long');
+    }
+    set({ isLoading: true, error: null });
+    try {
+      const updated = await pb.collection('users').update(userId, {
+        name,
+        display_name: name,
+      });
+      pb.authStore.save(pb.authStore.token, updated);
+      set({ user: mapModel(updated as unknown as Record<string, unknown>), isLoading: false });
+    } catch (e: unknown) {
+      const message = getErrorMessage(e);
+      set({ error: message, isLoading: false });
+      throw e;
+    }
+  },
+
   guestLogin() {
     set({
       user: {
@@ -112,6 +183,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         puzzlesPlayed: 0,
         puzzlesWon: 0,
         isPremium: false,
+        nytAccess: false,
         isGuest: true,
       },
     });
@@ -127,11 +199,20 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (!userId) return;
     set({ isLoading: true, error: null });
     try {
-      // Delete all play sessions first
-      const sessions = await pb.collection('play_sessions').getFullList({
-        filter: `user = '${userId}'`,
-      });
-      await Promise.all(sessions.map(s => pb.collection('play_sessions').delete(s.id)));
+      const [sessions, friendships, ownedChallenges] = await Promise.all([
+        pb.collection('play_sessions').getFullList({ filter: `user = '${userId}'` }),
+        pb.collection('friendships').getFullList({
+          filter: `requester = '${userId}' || addressee = '${userId}'`,
+        }),
+        pb.collection('challenges').getFullList({ filter: `challenger = '${userId}'` }),
+      ]);
+
+      await Promise.all([
+        ...sessions.map(s => pb.collection('play_sessions').delete(s.id)),
+        ...friendships.map(f => pb.collection('friendships').delete(f.id)),
+        ...ownedChallenges.map(c => pb.collection('challenges').delete(c.id)),
+      ]);
+
       // Delete the user record
       await pb.collection('users').delete(userId);
       pb.authStore.clear();
@@ -178,6 +259,7 @@ function mapModel(record: Record<string, unknown>): UserProfile {
     puzzlesPlayed: (record.puzzles_played as number) || 0,
     puzzlesWon: (record.puzzles_won as number) || 0,
     isPremium: (record.is_premium as boolean) || false,
+    nytAccess: (record.nyt_access as boolean) || false,
   };
 }
 

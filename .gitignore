@@ -15,3 +15,6 @@ web-build/
 google-services.json
 GoogleService-Info.plist
 docker/pb_data/
+
+# Generated NYT style guide + originality index (derived from archive — keep local)
+scripts/data/

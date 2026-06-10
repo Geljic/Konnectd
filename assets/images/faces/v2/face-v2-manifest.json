@@ -1,0 +1,47 @@
+{
+  "version": 2,
+  "source": {
+    "conceptSheet": "face-v2-expression-sheet.png",
+    "generator": "built-in image_gen",
+    "promptUseCase": "stylized-concept",
+    "reference": "User-provided Threes-style screenshot plus existing v1 SVG face strips"
+  },
+  "geometry": {
+    "viewBox": "0 0 80 40",
+    "stripFill": "#8EC4AA",
+    "ink": "#12221A",
+    "cheek": "#F49A8B",
+    "tooth": "#FFF7D8"
+  },
+  "animationHooks": [
+    "strip",
+    "eyes",
+    "mouth",
+    "cheeks",
+    "brows"
+  ],
+  "states": [
+    { "id": "neutral", "file": "face-v2-00-neutral.svg", "tags": ["idle", "base"] },
+    { "id": "happy", "file": "face-v2-01-happy.svg", "tags": ["idle", "positive"] },
+    { "id": "big-smile", "file": "face-v2-02-big-smile.svg", "tags": ["success", "positive", "open-mouth"] },
+    { "id": "surprised", "file": "face-v2-03-surprised.svg", "tags": ["one-away", "open-mouth"] },
+    { "id": "sleepy", "file": "face-v2-04-sleepy.svg", "tags": ["idle", "eyes-closed", "open-mouth"] },
+    { "id": "blink", "file": "face-v2-05-blink.svg", "tags": ["transition", "eyes-closed"] },
+    { "id": "wink", "file": "face-v2-06-wink.svg", "tags": ["tap", "positive"] },
+    { "id": "shy", "file": "face-v2-07-shy.svg", "tags": ["idle", "positive"] },
+    { "id": "grumpy", "file": "face-v2-08-grumpy.svg", "tags": ["wrong", "negative"] },
+    { "id": "squint", "file": "face-v2-09-squint.svg", "tags": ["thinking", "tap"] },
+    { "id": "dizzy", "file": "face-v2-10-dizzy.svg", "tags": ["wrong", "negative", "open-mouth"] },
+    { "id": "laugh", "file": "face-v2-11-laugh.svg", "tags": ["success", "positive", "open-mouth"] },
+    { "id": "worried", "file": "face-v2-12-worried.svg", "tags": ["one-away", "negative"] },
+    { "id": "talk-a", "file": "face-v2-13-talk-a.svg", "tags": ["talk", "phoneme-a", "open-mouth"] },
+    { "id": "talk-o", "file": "face-v2-14-talk-o.svg", "tags": ["talk", "phoneme-o", "open-mouth"] },
+    { "id": "eyes-closed-smile", "file": "face-v2-15-eyes-closed-smile.svg", "tags": ["success", "eyes-closed", "positive"] }
+  ],
+  "suggestedSequences": {
+    "blink": ["neutral", "blink", "neutral"],
+    "talk": ["neutral", "talk-a", "talk-o", "talk-a", "neutral"],
+    "success": ["happy", "big-smile", "laugh", "eyes-closed-smile"],
+    "wrong": ["neutral", "worried", "grumpy", "dizzy"]
+  }
+}

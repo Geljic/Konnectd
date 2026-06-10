@@ -9,6 +9,7 @@ import { useFonts } from 'expo-font';
 import { useAuthStore } from '@/store/authStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useMonetisationStore } from '@/store/monetisationStore';
+import { loadWordTrails } from '@/api/wordTrails';
 import { WelcomeScreen } from '@/screens/WelcomeScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
 import { SignUpScreen } from '@/screens/SignUpScreen';
@@ -206,6 +207,8 @@ export default function App() {
       }).catch(() => {});
     }
     Promise.all([restoreSession(), loadSettings(), loadMonetisation()]).finally(() => setReady(true));
+    // Warm the Next Steps cache from the DB (non-blocking; static fallback meanwhile).
+    loadWordTrails();
   }, []);
 
   // Once the user is authenticated and pending navigation exists, resolve it

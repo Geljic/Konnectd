@@ -151,6 +151,7 @@ export async function fetchFriendSummaries(friends: Friendship[]): Promise<Frien
     openChallengeId: string | null;
     lastPlayedAt: string | null;
     coStreak: number;
+    challengeStreak: number;
   };
 
   const statsMap: FriendStats[] = friends.map(friendship => {

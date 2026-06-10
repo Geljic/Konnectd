@@ -28,7 +28,7 @@ export function GameBoard({ shakeWords = [], onShakeDone, shuffleSignal = 0 }: G
   function faceIndexFor(word: string) {
     let h = 0;
     for (let i = 0; i < word.length; i++) h = (h * 31 + word.charCodeAt(i)) & 0xff;
-    return h % 8;
+    return h % 16;
   }
 
   const rows = [];

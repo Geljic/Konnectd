@@ -7,5 +7,11 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src", "scripts", "*.ts", "*.tsx"]
+  "include": ["src", "scripts", "*.ts", "*.tsx"],
+  "ts-node": {
+    "compilerOptions": {
+      "module": "CommonJS",
+      "moduleResolution": "node"
+    }
+  }
 }

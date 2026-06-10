@@ -12,6 +12,7 @@ import { FONTS } from '@/constants/fonts';
 import { fetchMatchHistory, type ChallengeMatch } from '@/api/social';
 import { fetchActiveChallengesWithFriend, subscribeToChallengeChanges, type Challenge } from '@/api/challenges';
 import { removeFriendship } from '@/api/friends';
+import { blockUser, createReport } from '@/api/safety';
 import pb from '@/api/pb';
 import type { AppStackParamList } from '../App';
 import { GAME_TYPE_LABELS, RULESET_LABELS } from '@/constants/gameModes';
@@ -183,6 +184,54 @@ export function FriendDetailScreen({ navigation, route }: Props) {
     );
   }
 
+  async function handleReportUser(reason: string) {
+    const ok = await createReport({
+      targetType: 'user',
+      targetId: friendId,
+      targetUserId: friendId,
+      reason,
+      details: `Reported from friend profile: ${friendHandle}`,
+    });
+    Alert.alert(ok ? 'Report sent' : 'Report failed', ok
+      ? 'Thanks. We will review this account.'
+      : 'Please try again in a moment.');
+  }
+
+  function handleReportPress() {
+    Alert.alert(
+      'Report User',
+      `Tell us what is wrong with ${friendDisplayName}.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Inappropriate name', onPress: () => handleReportUser('Inappropriate name') },
+        { text: 'Behaviour or spam', onPress: () => handleReportUser('Behaviour or spam') },
+      ],
+    );
+  }
+
+  function handleBlockPress() {
+    Alert.alert(
+      'Block User',
+      `Block ${friendDisplayName}? This removes them from your friends and stops new direct challenges or friend requests between you.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: async () => {
+            const ok = await blockUser(friendId);
+            if (ok) {
+              await removeFriendship(friendshipId);
+              navigation.goBack();
+            } else {
+              Alert.alert('Block failed', 'Please try again in a moment.');
+            }
+          },
+        },
+      ],
+    );
+  }
+
   const atLimit = activeChallenges.length >= CHALLENGE_LIMIT;
 
   type ListItem =
@@ -193,6 +242,7 @@ export function FriendDetailScreen({ navigation, route }: Props) {
     | { type: 'matchesHeader' }
     | { type: 'match'; match: ChallengeMatch; matchNumber: number }
     | { type: 'emptyMatches' }
+    | { type: 'safetyActions' }
     | { type: 'removeBtn' };
 
   const listData = useMemo<ListItem[]>(() => {
@@ -207,6 +257,7 @@ export function FriendDetailScreen({ navigation, route }: Props) {
     } else {
       matches.forEach((m: ChallengeMatch, i: number) => items.push({ type: 'match', match: m, matchNumber: matches.length - i }));
     }
+    items.push({ type: 'safetyActions' });
     items.push({ type: 'removeBtn' });
     return items;
   }, [activeChallenges, matches]);
@@ -293,6 +344,18 @@ export function FriendDetailScreen({ navigation, route }: Props) {
           <Text style={styles.emptyText}>
             No completed matches yet — win a puzzle and challenge them from the result screen!
           </Text>
+        );
+
+      case 'safetyActions':
+        return (
+          <View style={styles.safetyRow}>
+            <Pressable style={styles.safetyBtn} onPress={handleReportPress}>
+              <Text style={styles.safetyBtnText}>Report User</Text>
+            </Pressable>
+            <Pressable style={styles.blockBtn} onPress={handleBlockPress}>
+              <Text style={styles.blockBtnText}>Block User</Text>
+            </Pressable>
+          </View>
         );
 
       case 'removeBtn':
@@ -474,8 +537,40 @@ function makeStyles(c: ColorTheme) {
       fontFamily: FONTS.extraBold,
     },
 
+    safetyRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 28,
+    },
+    safetyBtn: {
+      flex: 1,
+      borderWidth: 1.5,
+      borderColor: c.border,
+      borderRadius: 14,
+      paddingVertical: 13,
+      alignItems: 'center',
+    },
+    safetyBtnText: {
+      fontSize: 14,
+      fontFamily: FONTS.extraBold,
+      color: c.text2,
+    },
+    blockBtn: {
+      flex: 1,
+      borderWidth: 1.5,
+      borderColor: c.errorFlash,
+      borderRadius: 14,
+      paddingVertical: 13,
+      alignItems: 'center',
+    },
+    blockBtnText: {
+      fontSize: 14,
+      fontFamily: FONTS.extraBold,
+      color: c.errorFlash,
+    },
+
     removeBtn: {
-      marginTop: 32,
+      marginTop: 10,
       borderWidth: 1.5,
       borderColor: c.errorFlash,
       borderRadius: 14,

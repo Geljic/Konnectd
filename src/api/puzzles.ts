@@ -19,6 +19,7 @@ export interface PuzzleCategory {
 
 export interface Puzzle {
   id: string;
+  title?: string;
   words: string[];
   categories: PuzzleCategory[];
   difficulty_min: CategoryColour;
@@ -26,10 +27,15 @@ export interface Puzzle {
   play_count: number;
 }
 
+export type PuzzleSource = 'curated' | 'generated';
+
 export interface PuzzleListItem {
   id: string;
   difficulty_min: CategoryColour;
   play_count: number;
+  thumbs_up_count?: number;
+  daily_date?: string;
+  source?: string;
 }
 
 export interface DailyPuzzleListItem extends PuzzleListItem {
@@ -54,9 +60,10 @@ const CACHE_TTL = 1000 * 60 * 60 * 6;
 export async function fetchDailyPuzzle(): Promise<Puzzle | null> {
   const today = new Date().toISOString().slice(0, 10);
   try {
-    // Try assigned daily puzzle first
+    // Any puzzle with today's daily_date — no status filter so admin can set up
+    // puzzles in advance without needing to also flip status to 'published'
     const record = await pb.collection('puzzles').getFirstListItem(
-      `status = 'published' && daily_date = '${today}'`,
+      `daily_date = '${today}'`,
       { requestKey: null }
     );
     return record as unknown as Puzzle;
@@ -80,26 +87,31 @@ export async function fetchDailyPuzzle(): Promise<Puzzle | null> {
   }
 }
 
-export type PuzzleSortMode = 'date_asc' | 'date_desc' | 'diff_asc' | 'diff_desc';
+export type PuzzleSortMode = 'date_asc' | 'date_desc' | 'diff_asc' | 'diff_desc' | 'top_rated';
 
 export async function fetchPuzzlesPage(
   page: number,
   difficulty?: CategoryColour,
   sortMode: PuzzleSortMode = 'date_desc',
+  source?: PuzzleSource,
 ): Promise<PageResult<PuzzleListItem>> {
-  const filter = difficulty
-    ? `status = 'published' && difficulty_min = '${difficulty}'`
-    : `status = 'published'`;
+  const today = new Date().toISOString().slice(0, 10);
+  // Include published puzzles plus any past daily puzzles (regardless of status)
+  const clauses = [`(status = 'published' || (daily_date != '' && daily_date <= '${today}'))`];
+  if (difficulty) clauses.push(`difficulty_min = '${difficulty}'`);
+  if (source) clauses.push(`source = '${source}'`);
+  const filter = clauses.join(' && ');
   const sortField =
     sortMode === 'date_asc' ? 'id' :
     sortMode === 'date_desc' ? '-id' :
     sortMode === 'diff_asc' ? 'difficulty_order,id' :
+    sortMode === 'top_rated' ? '-thumbs_up_count,-id' :
     '-difficulty_order,-id';
   try {
     const result = await pb.collection('puzzles').getList(page, 10, {
       filter,
       sort: sortField,
-      fields: 'id,difficulty_min,play_count',
+      fields: 'id,difficulty_min,play_count,thumbs_up_count,daily_date,source',
       requestKey: null,
     });
     return {
@@ -118,8 +130,8 @@ export async function fetchDailyPuzzlesPage(
   search = '',
 ): Promise<PageResult<DailyPuzzleListItem>> {
   const today = new Date().toISOString().slice(0, 10);
+  // No status filter — any puzzle with a daily_date is a valid past daily puzzle
   const filters = [
-    `status = 'published'`,
     `daily_date != ''`,
     `daily_date >= '${DAILY_PUZZLE_LAUNCH_DATE}'`,
     `daily_date <= '${today}'`,
@@ -310,7 +322,25 @@ export async function recordPlaySession(params: {
   } catch { /* non-critical */ }
 }
 
-export async function ratePuzzle(puzzleId: string, rating: 1 | -1): Promise<void> {
+export async function getUserRatingForPuzzle(puzzleId: string): Promise<1 | -1 | null> {
+  if (!pb.authStore.isValid) return null;
+  try {
+    const session = await pb.collection('play_sessions').getFirstListItem(
+      `user = '${pb.authStore.model?.id}' && puzzle = '${puzzleId}' && game_type = 'connections'`,
+      { fields: 'rating' },
+    );
+    const r = session['rating'];
+    return r === 1 ? 1 : r === -1 ? -1 : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function ratePuzzle(
+  puzzleId: string,
+  rating: 1 | -1,
+  _collection: 'puzzles' | 'nyt_puzzles' = 'puzzles',
+): Promise<void> {
   if (!pb.authStore.isValid) return;
   try {
     const session = await pb.collection('play_sessions').getFirstListItem(
@@ -513,11 +543,23 @@ export async function fetchNextPuzzleId(
       );
       return next.id;
     } else {
-      const next = await pb.collection('puzzles').getFirstListItem(
-        `status = 'published' && id > '${currentId}'`,
-        { sort: 'id', fields: 'id' },
-      );
-      return next.id;
+      // The Curated list is sorted by -id, so "Next" should follow that order:
+      // the next lower id. PocketBase ids are random strings, so ordering by id
+      // is arbitrary but stable — this keeps Next moving through the list instead
+      // of jumping randomly. Wrap back to the top once we hit the end.
+      try {
+        const next = await pb.collection('puzzles').getFirstListItem(
+          `status = 'published' && id < '${currentId}'`,
+          { sort: '-id', fields: 'id' },
+        );
+        return next.id;
+      } catch {
+        const top = await pb.collection('puzzles').getFirstListItem(
+          `status = 'published'`,
+          { sort: '-id', fields: 'id' },
+        );
+        return top.id !== currentId ? top.id : null;
+      }
     }
   } catch {
     return null;

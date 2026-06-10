@@ -37,6 +37,12 @@ export const MONETISATION_PRODUCTS = {
 
 // Web base URL for shareable links — update when domain changes
 export const WEB_BASE_URL = process.env.EXPO_PUBLIC_WEB_BASE_URL ?? 'https://konnectd.xyz';
+export const IAP_ENABLED = process.env.EXPO_PUBLIC_IAP_ENABLED === 'true';
+export const LEGAL_URLS = {
+  privacy: `${WEB_BASE_URL}/privacy`,
+  terms: `${WEB_BASE_URL}/terms`,
+  support: `${WEB_BASE_URL}/support`,
+} as const;
 export const DAILY_PUZZLE_LAUNCH_DATE = process.env.EXPO_PUBLIC_DAILY_PUZZLE_LAUNCH_DATE ?? '2026-06-09';
 
 export const MAX_MISTAKES = 4;

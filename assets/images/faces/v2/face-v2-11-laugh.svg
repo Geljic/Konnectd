@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 40" width="80" height="40" role="img" aria-label="Laughing tile face">
+  <rect data-part="strip" width="80" height="40" rx="8" fill="#8EC4AA"/>
+  <g data-part="cheeks" fill="#F49A8B" opacity="0.78">
+    <rect x="13" y="21" width="9" height="4" rx="2"/>
+    <rect x="58" y="21" width="9" height="4" rx="2"/>
+  </g>
+  <g data-part="eyes" stroke="#12221A" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M23 14 L31 18 L23 22"/>
+    <path d="M57 14 L49 18 L57 22"/>
+  </g>
+  <g data-part="mouth">
+    <path d="M29 24.5 Q40 35 51 24.5 Z" fill="#12221A"/>
+    <path d="M32 24.5 Q40 28 48 24.5" fill="#FFF7D8"/>
+    <path d="M35 31 Q40 28.5 45 31 Q42 34 40 34 Q38 34 35 31 Z" fill="#F49A8B"/>
+  </g>
+</svg>

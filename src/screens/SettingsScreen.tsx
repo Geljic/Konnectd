@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Switch, StyleSheet, Alert, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Switch, StyleSheet, Alert, Pressable, ScrollView, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Line, Ellipse } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -7,7 +7,7 @@ import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { useSettingsStore, STRIP_CONFIG, type TileStripStyle, type CosmeticTheme } from '@/store/settingsStore';
 import { useMonetisationStore } from '@/store/monetisationStore';
-import { MONETISATION_PRODUCTS } from '@/constants/config';
+import { IAP_ENABLED, LEGAL_URLS, MONETISATION_PRODUCTS } from '@/constants/config';
 import { FONTS } from '@/constants/fonts';
 import {
   requestNotificationPermission,
@@ -213,7 +213,7 @@ export function SettingsScreen() {
 
   const { hardMode, notificationsEnabled, challengeNotificationsEnabled, darkMode, load, setHardMode, setNotificationsEnabled, setChallengeNotificationsEnabled, setDarkMode, setCosmeticTheme } = useSettingsStore();
   const { buyProduct, restore, isCosmeticPackOwned, isSupporter, purchasingProductId } = useMonetisationStore();
-  const cosmeticPackOwned = isCosmeticPackOwned();
+  const cosmeticPackOwned = !IAP_ENABLED || isCosmeticPackOwned();
   const supporter = isSupporter();
 
   useEffect(() => {
@@ -277,6 +277,12 @@ export function SettingsScreen() {
     }
   }
 
+  function openUrl(url: string) {
+    Linking.openURL(url).catch(() => {
+      Alert.alert('Could not open link', url);
+    });
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -285,32 +291,53 @@ export function SettingsScreen() {
         <Text style={styles.sectionHeader}>APPEARANCE</Text>
         <View style={styles.section}>
           <Row label="Dark Mode" description="Easy on the eyes at night." value={darkMode} onChange={setDarkMode} colors={colors} />
-          <ThemePicker colors={colors} locked={!cosmeticPackOwned} onBuy={buyCosmeticPack} />
+          <ThemePicker colors={colors} locked={IAP_ENABLED && !cosmeticPackOwned} onBuy={buyCosmeticPack} />
           <TileStylePicker colors={colors} />
         </View>
 
         <Text style={styles.sectionHeader}>SUPPORT</Text>
         <View style={styles.section}>
-          <ProductCard
-            title={MONETISATION_PRODUCTS.cosmeticsPack.label}
-            description="Unlock the Garden Pop board theme and future cosmetic variants."
-            price={MONETISATION_PRODUCTS.cosmeticsPack.priceLabel}
-            owned={cosmeticPackOwned}
-            loading={purchasingProductId === MONETISATION_PRODUCTS.cosmeticsPack.id}
-            onPress={buyCosmeticPack}
-            colors={colors}
-          />
-          <ProductCard
-            title={MONETISATION_PRODUCTS.supportPass.label}
-            description="One-time support purchase with unlimited hints, ad-free play and cosmetics vault access."
-            price={MONETISATION_PRODUCTS.supportPass.priceLabel}
-            owned={supporter}
-            loading={purchasingProductId === MONETISATION_PRODUCTS.supportPass.id}
-            onPress={buySupportPass}
-            colors={colors}
-          />
-          <Pressable style={styles.restoreBtn} onPress={restoreOwnedPurchases}>
-            <Text style={styles.restoreBtnText}>Restore purchases</Text>
+          {IAP_ENABLED ? (
+            <>
+              <ProductCard
+                title={MONETISATION_PRODUCTS.cosmeticsPack.label}
+                description="Unlock the Garden Pop board theme and future cosmetic variants."
+                price={MONETISATION_PRODUCTS.cosmeticsPack.priceLabel}
+                owned={cosmeticPackOwned}
+                loading={purchasingProductId === MONETISATION_PRODUCTS.cosmeticsPack.id}
+                onPress={buyCosmeticPack}
+                colors={colors}
+              />
+              <ProductCard
+                title={MONETISATION_PRODUCTS.supportPass.label}
+                description="One-time support purchase with unlimited hints, ad-free play and cosmetics vault access."
+                price={MONETISATION_PRODUCTS.supportPass.priceLabel}
+                owned={supporter}
+                loading={purchasingProductId === MONETISATION_PRODUCTS.supportPass.id}
+                onPress={buySupportPass}
+                colors={colors}
+              />
+              <Pressable style={styles.restoreBtn} onPress={restoreOwnedPurchases}>
+                <Text style={styles.restoreBtnText}>Restore purchases</Text>
+              </Pressable>
+            </>
+          ) : (
+            <View style={styles.infoRow}>
+              <Text style={styles.rowLabel}>Free for launch</Text>
+              <Text style={styles.rowDesc}>Cosmetics are unlocked while store purchases are paused for v1.</Text>
+            </View>
+          )}
+          <Pressable style={styles.linkRow} onPress={() => openUrl(LEGAL_URLS.support)}>
+            <Text style={styles.rowLabel}>Contact support</Text>
+            <Text style={styles.linkArrow}>→</Text>
+          </Pressable>
+          <Pressable style={styles.linkRow} onPress={() => openUrl(LEGAL_URLS.privacy)}>
+            <Text style={styles.rowLabel}>Privacy Policy</Text>
+            <Text style={styles.linkArrow}>→</Text>
+          </Pressable>
+          <Pressable style={styles.linkRow} onPress={() => openUrl(LEGAL_URLS.terms)}>
+            <Text style={styles.rowLabel}>Terms of Use</Text>
+            <Text style={styles.linkArrow}>→</Text>
           </Pressable>
         </View>
 
@@ -370,6 +397,9 @@ function makeStyles(c: ColorTheme) {
     rowText: { flex: 1, gap: 2, marginRight: 12 },
     rowLabel: { fontSize: 16, fontFamily: FONTS.bold, color: c.text1 },
     rowDesc: { fontSize: 13, fontFamily: FONTS.bold, color: c.text3 },
+    infoRow: { padding: 16, borderBottomWidth: 1, borderBottomColor: c.border, gap: 2 },
+    linkRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderTopWidth: 1, borderTopColor: c.border },
+    linkArrow: { fontSize: 20, fontFamily: FONTS.extraBold, color: c.text3 },
     // Tile style picker
     pickerRow: { padding: 16, gap: 10 },
     pickerLabelRow: { gap: 2 },

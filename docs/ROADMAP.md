@@ -18,10 +18,11 @@ Konnectd is social-first: challenging, collaborating, and competing are built in
 | 1 | UX polish — dark mode, scoring, share, branding | ✅ Done |
 | 2 | Challenge a Friend (in-app, friends-system) | ✅ Done |
 | 3 | Social — usernames, friends, leaderboard, social hub, co-streaks | ✅ Done |
-| 4 | Hints system + push notifications | 🚧 In progress |
-| 5 | Monetisation — cosmetics, first puzzle pack, subscription | 🔲 Next |
+| 4 | Hints system + push notifications | 🚧 Mostly built, needs production verification |
+| 5 | Monetisation — cosmetics, rewarded ads, supporter pass | 🚧 Built slice, needs store/ad verification |
 | 6 | Blitz Mode — 90-second speed round, daily leaderboard | 🔲 Planned |
-| 7 | Next Steps — ordered-path mode + mode-aware stats/matches | 🔲 Planned |
+| 7 | Next Steps — ordered-path mode + mode-aware stats/matches | 🚧 Almost complete |
+| 8 | Launch readiness — stability, QA, app-store prep | 🔲 Next |
 
 ---
 
@@ -62,14 +63,18 @@ Konnectd already has strong retention hooks (daily habit, streaks, co-streaks, s
 - Daily puzzle (assigned date or deterministic fallback)
 - NYT puzzle archive
 - Curated puzzle library with difficulty badges + pagination
+- Top-rated curated puzzle sort driven by `thumbs_up_count`
 - Post-game category explanations (shown on loss)
 - Puzzle rating (👍/👎 per play session)
+- Completed puzzle review modal with full board/category reveal and editable rating
 
 ### Accounts & Auth
 - Email + password auth via PocketBase
 - Guest play (no account required, prompts to sign up)
 - Steam-style handles: `Simon#7911` — searchable by name or full handle
-- Profile screen with handle copy, email, log out, delete account
+- Forgot-password reset request from login
+- Profile screen with handle copy, email, editable display name, password change, stats summary, log out, delete account
+- Account deletion cleans up play sessions, friendships, owned challenges, and challenge relations cascade at the database layer
 
 ### Scoring System
 - Points per row by difficulty: Purple 400 / Blue 300 / Green 200 / Yellow 100
@@ -82,11 +87,13 @@ Konnectd already has strong retention hooks (daily habit, streaks, co-streaks, s
 
 ### Social & Friends
 - `friendships` collection: send / accept / remove
+- `user_blocks` collection: block a user, remove friendship, and stop direct friend requests/challenges between blocked users
+- `reports` collection: users can report other users and puzzle issues for admin review
 - Snapchat-style Social hub (replaces old Friends screen)
   - Auto-calculated relationship labels: Friend / New Rival / Frenemy / Their Nemesis / Your Nemesis / Best Frenemy
   - Colour-coded badges per label
   - Collapsible search bar, pull-to-refresh
-- Friend detail screen: profile card, open challenge button, match history, remove friend
+- Friend detail screen: profile card, open challenge button, match history, mode pills, report/block, remove friend
 - User search by display name or `Name#tag`
 - Co-streaks: consecutive days both friends played the daily puzzle; badge shown on friend rows
 
@@ -122,11 +129,17 @@ Konnectd already has strong retention hooks (daily habit, streaks, co-streaks, s
 - Konnectd wordmark on Home, Game screen, and all share text
 - Web layout: max 430px centred with dark `#0A120D` gutter
 - Home screen footer nav anchored below scroll
+- Groups and Next Steps tiles shrink long words to one line and share the same face-strip bottom edge treatment
+- Settings includes Privacy Policy, Terms of Use, and Support links
 
 ### Backend / Infrastructure
 - PocketBase on Docker (port 8092), nginx on 8080
 - Cloudflare Tunnel → konnectd.xyz
 - Migrations for all collections: users, puzzles, nyt_puzzles, play_sessions, friendships, challenges
+- Challenge update rule tightened so arbitrary logged-in users cannot update private challenges
+- Challenge relation cascade delete prevents account deletion from failing on old challenge records
+- Safety collections added for user blocks and reports
+- Server hook keeps curated puzzle `thumbs_up_count` in sync from play session ratings
 - `updateUserStats` recomputes from session count on each game end (self-healing)
 - `listRule` on users allows friend search while protecting private data
 
@@ -155,7 +168,7 @@ Rules: max 2–3 hints per game, deducted from score, shown on result screen. Hi
 
 ---
 
-## WHERE WE ARE AT - Phase 5 — Monetisation 🔲
+## WHERE WE ARE AT - Phase 5 — Monetisation 🚧 Paused for IAP, Ads Active
 
 ### Principles
 - Free players get: full daily puzzle, all challenges, leaderboard, social features, 3 hints/day
@@ -171,7 +184,9 @@ Rules: max 2–3 hints per game, deducted from score, shown on result screen. Hi
 
 
 ### First milestone
-Ship **one cosmetic pack** + **Reward Video for Hints** + **One time purhase to support development and hosting etc**
+Current launch decision: **hide IAP for v1**, keep Garden Pop cosmetics unlocked, and keep ads/rewarded ads available if production AdMob verification passes.
+
+Future milestone: ship **one cosmetic pack** + **Reward Video for Hints** + **one-time purchase to support development and hosting** after real store purchase/restore is integrated.
 
 ---
 
@@ -196,7 +211,7 @@ Ship **one cosmetic pack** + **Reward Video for Hints** + **One time purhase to 
 
 ---
 
-## Phase 7 — Next Steps Mode 🔲
+## Phase 7 — Next Steps Mode 🚧 Almost Complete
 
 ### Concept
 Single-player ordered word-path puzzle. The player sees 16 mixed words and must untangle 4 hidden paths of 4 words. Each path is ordered: every word connects to the next by meaning, cause/effect, phrase, hierarchy, process, place, or story logic.
@@ -228,11 +243,13 @@ Groups asks "what belongs together?" Next Steps asks "what order do these ideas 
 - Share result differentiates Next Steps from Groups
 
 ### First playable slice
-- Home screen game switcher swaps Groups / Next Steps actions in-place with animation
-- Daily / Random Next Steps route into the ordered-path game screen
-- Free Play routes into the Next Steps archive screen
-- Local completion state stored with AsyncStorage
-- Next Steps play sessions record as `game_type = 'word_trails'`, `game_mode = 'classic'`
+- ✅ Home screen game switcher swaps Groups / Next Steps actions in-place
+- ✅ Daily / Random Next Steps route into the ordered-path game screen
+- ✅ Free Play routes into the Next Steps archive screen
+- ✅ Local completion state stored with AsyncStorage
+- ✅ Next Steps play sessions record as `game_type = 'word_trails'`, `game_mode = 'classic'`
+- ✅ Next Steps stats and leaderboard tabs are mode-aware
+- 🚧 Final QA pass needed on mobile layout, result/share language, daily archive behavior, and no-regression checks against Groups
 
 ### Mode-aware stats and matches
 From this phase onward, every play session and challenge must include:
@@ -242,11 +259,62 @@ From this phase onward, every play session and challenge must include:
 This keeps future stats, leaderboards, match history, and challenge inboxes from mixing unrelated modes.
 
 ### Backend changes
-- `play_sessions.game_type`
-- `play_sessions.game_mode` remains ruleset, not product-level mode
-- `challenges.game_type`
-- `challenges.game_mode`
-- Existing records backfill as `connections` / `normal`
+- ✅ `play_sessions.game_type`
+- ✅ `play_sessions.game_mode` remains ruleset, not product-level mode
+- ✅ `challenges.game_type`
+- ✅ `challenges.game_mode`
+- ✅ Existing records backfill as `connections` / `normal`
+
+### Remaining Phase 7 Closeout
+- Verify all 50 curated Next Steps puzzles have 16 unique visible words, clear path logic, and no accidental duplicate answers
+- Add/verify Next Steps result share text and archive completion badges across web/native
+- Confirm mode-aware stats do not mix Groups and Next Steps in recent games, leaderboards, or friend detail match history
+- Decide whether Next Steps friend challenges are launch-blocking or post-launch; current recommendation is post-launch
+
+---
+
+## Phase 8 — Launch Readiness 🔲 Next
+
+### Goal
+Get Konnectd from "feature-complete beta" to a stable public launch. This phase should bias toward reliability, content quality, onboarding clarity, and production configuration over new modes.
+
+### App Store / Play Store blockers
+- **Monetisation decision:** paid products are hidden for v1 via `IAP_ENABLED`; keep it off unless real IAP/RevenueCat restore/receipt handling is implemented. Ads can remain if AdMob production verification passes.
+- **Privacy, terms, and support URLs:** starter static pages exist in `docs/static_site`; publish them at `/privacy`, `/terms`, and `/support`, then add those URLs to App Store Connect / Google Play Console.
+- **Privacy disclosures:** complete Apple App Privacy and Google Play Data Safety forms for PocketBase accounts, play history, friend graph, push tokens, AdMob, crash/error logging, and any analytics added for launch.
+- **Account deletion:** deletion is implemented and now cleans linked records; verify on production-like data, including incoming challenge records and report/block records.
+- **Social safety:** report user, block user, and report puzzle are implemented as a v1 baseline; add admin review workflow and blocked-user filtering QA before broad launch.
+- **Ads compliance:** declare "contains ads" on Google Play if AdMob remains in native builds. Verify AdMob production app IDs/ad unit IDs, non-personalized/request settings, and banner suppression for supporters.
+- **Review access:** prepare a reviewer demo account, review notes, backend health check, and live PocketBase/nginx/Cloudflare production environment before submission.
+- **Android target SDK:** confirm the EAS production Android build targets the current Google Play requirement (Android 15 / API 35+ as of the 2025 Play requirement).
+
+### Production engineering blockers
+- Run PocketBase migrations on a clean data directory and on a copy of production data; verify users, challenges, sessions, ratings, `thumbs_up_count`, and mode fields survive upgrade/rollback paths.
+- Confirm password reset emails are configured in PocketBase with correct sender, HTTPS reset URL, production SMTP, and deliverability checks.
+- Verify PocketBase backup/restore, TLS, admin credentials, collection rules, server hooks, and migration deployment order.
+- Add production observability: client error logging, basic backend error visibility, and a release checklist for checking the tunnel/backend after each deploy.
+- Full regression pass for daily puzzle selection, curated archive filters, challenge acceptance/completion, stats recompute, leaderboard queries, guest play, account creation, guest-to-account conversion, logout, and account deletion.
+- Verify the Challenge Again stale-state fix: new challenge-again puzzle routes should not inherit the previous completed game state or jump straight to "Still waiting".
+
+### Quality-of-life backlog
+- App links in Settings/Profile: Privacy Policy, Terms, Support are in Settings; add Profile shortcuts if testing shows users miss them
+- Restore Purchases remains hidden until IAP is enabled
+- Account email change flow with verification email
+- Privacy controls: hide from global leaderboard, friend-request permissions, searchable handle toggle
+- Notification preferences: daily reminder time, quiet days, challenge-only mode
+- Data controls: export game history, reset stats, delete only local cached progress
+- Profile cosmetics: avatar colour/initial, share-card theme, favourite mode badge
+- Support and feedback: in-app feedback/contact, report puzzle issue, report user/block user
+- Accessibility: reduced motion, larger text layout pass, colour-blind-safe category palette
+- First-run onboarding: 2-3 screen explanation of Groups vs Next Steps, account benefits, and optional notifications
+
+### Launch checklist
+- Create a repeatable QA script covering web, iOS, and Android
+- Add smoke tests or scripted manual checks for auth, daily play, challenge flow, account deletion, and purchase restore / hidden-purchase state
+- Capture final screenshots for iPhone, iPad decision if applicable, and Android phone/tablet targets
+- Audit app-store metadata, screenshots, age rating, privacy labels, terms/privacy pages, support URL, ads declaration, and review notes
+- Content review: daily queue coverage for at least 60 days plus a curated archive users can browse on day one
+- Beta rollout: invite 10-25 testers, review crashes/support tickets/retention, fix top issues, then expand to 100+ before public release
 
 ### Future async co-op extension
 Once the solo mode is proven, add co-op Next Steps using the existing friends graph:
@@ -271,9 +339,9 @@ Once the solo mode is proven, add co-op Next Steps using the existing friends gr
 | Hints system | ❌ | Partial | 🚧 |
 | Push notifications | ❌ | ❌ | 🚧 |
 | Blitz mode | ❌ | ❌ | Paused |
-| Next Steps ordered-path mode | ❌ | ❌ | 🔲 |
+| Next Steps ordered-path mode | ❌ | ❌ | 🚧 |
 | Async co-op mode | ❌ | ❌ | 🔲 |
-| Cosmetics / themes | ❌ | ❌ | 🔲 |
+| Cosmetics / themes | ❌ | ❌ | 🚧 |
 | Australian content pack | ❌ | ❌ | 🔲 |
 | Branded image share | ❌ | ❌ | 🔲 |
 | Offline mode | ❌ | ❌ | 🔲 |
@@ -295,20 +363,28 @@ Once the solo mode is proven, add co-op Next Steps using the existing friends gr
 | Notifications | `expo-notifications` (Phase 4) |
 | Puzzle AI | Claude API `claude-sonnet-4-6` (batch generation scripts) |
 
-# Known Bugs
-- When you click challenge again you then select a puzzle - it then loads the puzzle and looks like you can play before the screen changes too "Still waiting…
-Your opponent hasn't accepted yet."
+## Known Bugs / QA Items
+- Verify Challenge Again no longer reuses stale completed game state after selecting a new puzzle.
+- Next Steps win-state buttons can overlap; align the result actions with the Groups/Connections result layout.
+- Completed Next Steps game modal is missing score, and the Play Again button has poor dark-mode contrast.
+- Next Steps timer can continue after completion, causing the score to keep decreasing after the win.
+- Verify the Next Steps stats fix: wins/recent matches should appear in Stats and remain separated from Groups.
+- Persist the selected Home game mode so returning Home keeps the last selected game.
 
-- I really like the garden pop theme you made- maybe it should be default instead - thoughts? the dark mode looks better than classic for sure
+## Product / Visual Decisions
+- Consider making Garden Pop the default light theme, or make it the first-run recommended theme. Dark mode currently feels stronger than Classic.
+- Next Steps logo direction: add a fourth node and reuse Groups category colours for the four steps.
+- Apply the same Groups category colour language to Next Steps free-play difficulty filters if it improves scanability without implying exact Groups difficulty.
 
-- Next Steps game Logo - make a 4th node in the logo and use the colours from Groups for each step and apply that to free play difficulty filter button colours too - thoughts on this colour change? 
+## Social QoL Candidates
+- Friend rows could show cross-game relationship context: consecutive-day match streaks, most-played friend, nemesis if they lead by 3+ wins.
+- Add a notification hub/bell so friend requests, challenges, and future turn-based modes do not compete for separate badges.
 
-- Next Steps - when you win a game buttons overlap on each other - follow groups/connections screen more closely
-- When you look at a completed game the modal is missing your score and the 'Play Again' button on dark mode is white on white text
--When you finish a game of next steps the score goes down because the timer does not stop
-- next Steps game not saving in stats screen - no recent matches or wins etc
-- What game you select when you go home stay on that game
+## Next Steps Challenge Mode
+Recommendation: post-launch unless social challenges are the main launch promise.
 
-- Friends screen - Match history should include both game types and have a pill so you know which game mode it was on the match itself - also if i have matches with that friend on consequtive days - that's a dtreak and should have fire icon on my friend. If we have the most matches played between each other then we are best friends, if they win more than me by 3 games they are my nemisis - 
-
-how hard would it be to implement challenge mode for next steps game mode?
+Estimated difficulty: medium. The existing challenge collection already has `game_type` and `game_mode`, so the backend shape is close. The bigger work is UI and result handling:
+- Let challenge creation choose `word_trails` puzzles and route to `WordlinesGame`.
+- Teach `WordlinesGame` to submit challenge results and navigate to a mode-aware challenge result.
+- Extend `ChallengeResultScreen` to render ordered-path results instead of Groups emoji rows.
+- Update challenge inbox/friend match history to show mode pills and avoid mixing scoring rules.

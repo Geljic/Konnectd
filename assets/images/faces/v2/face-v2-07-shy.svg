@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 40" width="80" height="40" role="img" aria-label="Shy tile face">
+  <rect data-part="strip" width="80" height="40" rx="8" fill="#8EC4AA"/>
+  <g data-part="cheeks" fill="#F49A8B" opacity="0.82">
+    <rect x="12" y="22" width="10" height="4.3" rx="2.15"/>
+    <rect x="58" y="22" width="10" height="4.3" rx="2.15"/>
+  </g>
+  <g data-part="brows">
+    <path d="M22 10 Q27 7 32 10" stroke="#12221A" stroke-width="2.3" fill="none" stroke-linecap="round"/>
+    <path d="M48 10 Q53 7 58 10" stroke="#12221A" stroke-width="2.3" fill="none" stroke-linecap="round"/>
+  </g>
+  <g data-part="eyes" fill="#12221A">
+    <ellipse cx="27" cy="17" rx="4" ry="5.8"/>
+    <ellipse cx="53" cy="17" rx="4" ry="5.8"/>
+    <circle cx="25.8" cy="14.8" r="1.35" fill="#FFFFFF" opacity="0.9"/>
+    <circle cx="51.8" cy="14.8" r="1.35" fill="#FFFFFF" opacity="0.9"/>
+  </g>
+  <g data-part="mouth">
+    <path d="M35 26.5 Q40 29.5 45 26.5" stroke="#12221A" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

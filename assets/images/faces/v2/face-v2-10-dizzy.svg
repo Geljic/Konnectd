@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 40" width="80" height="40" role="img" aria-label="Dizzy tile face">
+  <rect data-part="strip" width="80" height="40" rx="8" fill="#8EC4AA"/>
+  <g data-part="cheeks" fill="#F49A8B" opacity="0.65">
+    <rect x="13" y="22" width="9" height="4" rx="2"/>
+    <rect x="58" y="22" width="9" height="4" rx="2"/>
+  </g>
+  <g data-part="eyes" stroke="#12221A" stroke-width="2.4" fill="none" stroke-linecap="round">
+    <path d="M28 12 C20 12 20 24 28 24 C35 24 35 14 28 14 C23 14 23 21 28 21"/>
+    <path d="M54 12 C46 12 46 24 54 24 C61 24 61 14 54 14 C49 14 49 21 54 21"/>
+  </g>
+  <g data-part="mouth">
+    <ellipse cx="40" cy="29" rx="3.6" ry="4.7" fill="#12221A"/>
+    <ellipse cx="40" cy="31.4" rx="1.8" ry="1.1" fill="#F49A8B"/>
+  </g>
+</svg>

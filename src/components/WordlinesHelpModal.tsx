@@ -91,7 +91,7 @@ export function WordlinesHelpModal({ visible, onClose }: { visible: boolean; onC
             <View style={styles.tipCard}>
               <Text style={styles.tipTitle}>Path logic</Text>
               <Text style={styles.tipText}>
-                A set can be correct but still fail if the order is wrong. For example, <Text style={styles.bold}>MATCH -> SPARK -> FIRE -> SMOKE</Text> works because the ideas flow forward.
+                A set can be correct but still fail if the order is wrong. For example, <Text style={styles.bold}>{'MATCH -> SPARK -> FIRE -> SMOKE'}</Text> works because the ideas flow forward.
               </Text>
             </View>
 

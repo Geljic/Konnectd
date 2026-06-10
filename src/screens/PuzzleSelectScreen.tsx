@@ -10,9 +10,11 @@ import { CATEGORY_COLOURS, type CategoryColour, CATEGORY_ORDER, type ColorTheme 
 import {
   fetchPuzzlesPage, fetchDailyPuzzlesPage, fetchNytPuzzlesPage, getCompletedPuzzleIds,
   type PuzzleListItem, type DailyPuzzleListItem, type NytPuzzleListItem, type PuzzleSortMode,
+  type PuzzleSource,
 } from '@/api/puzzles';
 import { GameResultModal } from '@/components/GameResultModal';
 import { AdBanner } from '@/components/BannerAd';
+import { useAuthStore } from '@/store/authStore';
 import { FONTS } from '@/constants/fonts';
 import type { AppStackParamList } from '../App';
 
@@ -28,9 +30,9 @@ function formatNytDate(dateStr: string) {
   return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-const SORT_CYCLE: PuzzleSortMode[] = ['date_desc', 'date_asc', 'diff_asc', 'diff_desc'];
+const SORT_CYCLE: PuzzleSortMode[] = ['date_desc', 'date_asc', 'diff_asc', 'diff_desc', 'top_rated'];
 const SORT_LABELS: Record<PuzzleSortMode, string> = {
-  date_desc: '↓ Newest', date_asc: '↑ Oldest', diff_asc: '↑ Easiest', diff_desc: '↓ Hardest',
+  date_desc: '↓ Newest', date_asc: '↑ Oldest', diff_asc: '↑ Easiest', diff_desc: '↓ Hardest', top_rated: '⭐ Top Rated',
 };
 
 export function PuzzleSelectScreen({ navigation, route }: Props) {
@@ -38,9 +40,12 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
   const recipientName = route.params?.recipientName;
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  // NYT archive is gated behind a per-user flag; locked users never see the tab.
+  const nytAccess = useAuthStore(s => !!s.user?.nytAccess);
 
-  const [collection, setCollection] = useState<Collection>('nyt');
+  const [collection, setCollection] = useState<Collection>(nytAccess ? 'nyt' : 'generated');
   const [difficulty, setDifficulty] = useState<CategoryColour | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<'all' | PuzzleSource>('all');
   const [search, setSearch] = useState('');
   const [sortMode, setSortMode] = useState<PuzzleSortMode>('date_desc');
   const [dailySortAsc, setDailySortAsc] = useState(false);
@@ -68,12 +73,12 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
 
   const loadGenerated = useCallback(async (page: number, diff: CategoryColour | null, mode: PuzzleSortMode, reset = false) => {
     setGenLoading(true);
-    const result = await fetchPuzzlesPage(page, diff ?? undefined, mode);
+    const result = await fetchPuzzlesPage(page, diff ?? undefined, mode, sourceFilter === 'all' ? undefined : sourceFilter);
     setGenItems(prev => reset ? result.items : [...prev, ...result.items]);
     setGenPage(page);
     setGenTotalPages(result.totalPages);
     setGenLoading(false);
-  }, []);
+  }, [sourceFilter]);
 
   const loadDaily = useCallback(async (page: number, asc: boolean, q: string, reset = false) => {
     setDailyLoading(true);
@@ -94,7 +99,7 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
   }, []);
 
   useEffect(() => {
-    loadNyt(1, nytSortAsc, '', true);
+    if (nytAccess) loadNyt(1, nytSortAsc, '', true);
     loadDaily(1, dailySortAsc, '', true);
     loadGenerated(1, null, sortMode, true);
     getCompletedPuzzleIds().then(setCompletedIds);
@@ -102,7 +107,7 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     if (collection === 'generated') loadGenerated(1, difficulty, sortMode, true);
-  }, [difficulty, sortMode]);
+  }, [difficulty, sortMode, sourceFilter]);
 
   useEffect(() => {
     if (collection === 'daily') loadDaily(1, dailySortAsc, search, true);
@@ -138,14 +143,14 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
       setModalLabel(label);
       setModalCollection(coll);
     } else {
-      navigation.navigate('Game', { mode: 'freeplay', puzzleId: id, collection: coll, recipientId, recipientName });
+      navigation.push('Game', { mode: 'freeplay', puzzleId: id, collection: coll, recipientId, recipientName });
     }
   }
 
   function handlePlayAgain() {
     setModalPuzzleId(null);
     if (modalPuzzleId) {
-      navigation.navigate('Game', { mode: 'freeplay', puzzleId: modalPuzzleId, collection: modalCollection, recipientId, recipientName });
+      navigation.push('Game', { mode: 'freeplay', puzzleId: modalPuzzleId, collection: modalCollection, recipientId, recipientName });
     }
   }
 
@@ -165,13 +170,22 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
 
   const renderGenItem: ListRenderItem<PuzzleListItem> = ({ item, index }) => {
     const done = completedIds.has(item.id);
+    const playCount = Math.max(item.play_count ?? 0, done ? 1 : 0);
+    const hasDate = !!(item.daily_date && item.daily_date !== '');
+    const label = hasDate
+      ? `Daily · ${formatNytDate(item.daily_date!)}`
+      : `Puzzle #${index + 1}`;
     return (
-      <Pressable style={styles.row} onPress={() => openPuzzle(item.id, `Puzzle #${(genPage - 1) * 10 + index + 1}`, 'puzzles')}>
+      <Pressable style={styles.row} onPress={() => openPuzzle(item.id, label, 'puzzles')}>
         <View style={[styles.diffBadge, { backgroundColor: CATEGORY_COLOURS[item.difficulty_min] }]}>
           <Text style={styles.diffBadgeText}>{DIFFICULTY_LABELS[item.difficulty_min]}</Text>
         </View>
-        <Text style={styles.rowTitle}>Puzzle #{(genPage - 1) * 10 + index + 1}</Text>
-        <Text style={styles.rowMeta}>{item.play_count} plays</Text>
+        <View style={styles.rowContent}>
+          <Text style={styles.rowTitle}>{hasDate ? 'Daily Puzzle' : `Puzzle #${index + 1}`}</Text>
+          {hasDate && <Text style={styles.rowMeta}>{formatNytDate(item.daily_date!)}</Text>}
+        </View>
+        {item.source === 'curated' && <View style={styles.curatedPill}><Text style={styles.curatedPillText}>✨ Curated</Text></View>}
+        {!hasDate && <Text style={styles.rowMeta}>{playCount} play{playCount === 1 ? '' : 's'}</Text>}
         {done && <View style={styles.donePill}><Text style={styles.donePillText}>✓ Done</Text></View>}
       </Pressable>
     );
@@ -224,9 +238,11 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
           <Pressable style={[styles.tab, isDaily && styles.tabActive]} onPress={() => handleCollectionSwitch('daily')}>
             <Text style={[styles.tabText, isDaily && styles.tabTextActive]}>Daily</Text>
           </Pressable>
-          <Pressable style={[styles.tab, isNyt && styles.tabActive]} onPress={() => handleCollectionSwitch('nyt')}>
-            <Text style={[styles.tabText, isNyt && styles.tabTextActive]}>NYT Puzzles</Text>
-          </Pressable>
+          {nytAccess && (
+            <Pressable style={[styles.tab, isNyt && styles.tabActive]} onPress={() => handleCollectionSwitch('nyt')}>
+              <Text style={[styles.tabText, isNyt && styles.tabTextActive]}>NYT Puzzles</Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.searchRow}>
@@ -253,6 +269,22 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
             </Pressable>
           )}
         </View>
+
+        {collection === 'generated' && (
+          <View style={styles.chips}>
+            {(['all', 'curated', 'generated'] as const).map(s => (
+              <Pressable
+                key={s}
+                style={[styles.chip, sourceFilter === s && styles.chipActive]}
+                onPress={() => setSourceFilter(s)}
+              >
+                <Text style={[styles.chipText, sourceFilter === s && styles.chipTextActive]}>
+                  {s === 'all' ? 'All' : s === 'curated' ? '✨ Curated' : 'Generated'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
 
         {collection === 'generated' && (
           <View style={styles.chips}>
@@ -320,6 +352,7 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
       <GameResultModal
         visible={!!modalPuzzleId}
         puzzleId={modalPuzzleId}
+        collection={modalCollection}
         label={modalLabel}
         onClose={() => setModalPuzzleId(null)}
         onPlayAgain={handlePlayAgain}
@@ -365,6 +398,8 @@ function makeStyles(c: ColorTheme) {
     rowMeta: { fontSize: 13, fontFamily: FONTS.bold, color: c.text3 },
     donePill: { backgroundColor: c.green, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
     donePillText: { fontSize: 12, fontFamily: FONTS.extraBold, color: '#162219' },
+    curatedPill: { backgroundColor: '#E7B43A', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+    curatedPillText: { fontSize: 12, fontFamily: FONTS.extraBold, color: '#3A2E00' },
     loadMore: { marginTop: 16, alignItems: 'center', paddingVertical: 14, borderRadius: 12, borderWidth: 1.5, borderColor: c.border },
     loadMoreText: { fontSize: 14, fontFamily: FONTS.bold, color: c.text2 },
   });

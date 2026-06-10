@@ -16,9 +16,11 @@ interface CategoryRevealProps {
   category: PuzzleCategory;
   index: number;
   showExplanation?: boolean;
+  compact?: boolean;
+  explanationLines?: number;
 }
 
-export function CategoryReveal({ category, index, showExplanation = false }: CategoryRevealProps) {
+export function CategoryReveal({ category, index, showExplanation = false, compact = false, explanationLines }: CategoryRevealProps) {
   const translateY = useSharedValue(-40);
   const scaleY     = useSharedValue(0.4);
   const opacity    = useSharedValue(0);
@@ -41,17 +43,24 @@ export function CategoryReveal({ category, index, showExplanation = false }: Cat
   const bg = CATEGORY_COLOURS[category.colour as CategoryColour];
 
   return (
-    <Animated.View style={[styles.banner, { backgroundColor: bg }, animStyle]}>
-      <Text style={styles.name}>{category.name.toUpperCase()}</Text>
-      <View style={styles.wordTiles}>
+    <Animated.View style={[styles.banner, compact && styles.bannerCompact, { backgroundColor: bg }, animStyle]}>
+      <Text style={[styles.name, compact && styles.nameCompact]}>{category.name.toUpperCase()}</Text>
+      <View style={[styles.wordTiles, compact && styles.wordTilesCompact]}>
         {category.words.map(word => (
-          <View key={word} style={styles.wordTile}>
-            <Text style={styles.wordTileText}>{word}</Text>
+          <View key={word} style={[styles.wordTile, compact && styles.wordTileCompact]}>
+            <Text style={[styles.wordTileText, compact && styles.wordTileTextCompact]}>{word}</Text>
           </View>
         ))}
       </View>
       {showExplanation && category.explanation ? (
-        <Text style={styles.explanation}>{category.explanation}</Text>
+        <Text
+          style={[styles.explanation, compact && styles.explanationCompact]}
+          numberOfLines={explanationLines}
+          adjustsFontSizeToFit={explanationLines === 1}
+          minimumFontScale={0.86}
+        >
+          {category.explanation}
+        </Text>
       ) : null}
     </Animated.View>
   );
@@ -65,12 +74,22 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     alignItems: 'center',
   },
+  bannerCompact: {
+    borderRadius: 10,
+    padding: 9,
+    marginVertical: 2,
+    marginHorizontal: 4,
+  },
   name: {
     fontSize: 14,
     fontFamily: FONTS.extraBold,
     color: LIGHT_COLORS.categoryText,
     letterSpacing: 1,
     marginBottom: 4,
+  },
+  nameCompact: {
+    fontSize: 13,
+    marginBottom: 2,
   },
   wordTiles: {
     flexDirection: 'row',
@@ -79,17 +98,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 2,
   },
+  wordTilesCompact: {
+    gap: 5,
+    marginTop: 1,
+  },
   wordTile: {
     backgroundColor: 'rgba(0,0,0,0.18)',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
+  wordTileCompact: {
+    borderRadius: 7,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
   wordTileText: {
     fontSize: 11,
     fontFamily: FONTS.extraBold,
     color: LIGHT_COLORS.categoryText,
     letterSpacing: 0.6,
+  },
+  wordTileTextCompact: {
+    fontSize: 10,
+    letterSpacing: 0.3,
   },
   explanation: {
     fontSize: 11,
@@ -99,5 +131,9 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontStyle: 'italic',
     textAlign: 'center',
+  },
+  explanationCompact: {
+    fontSize: 10,
+    marginTop: 4,
   },
 });

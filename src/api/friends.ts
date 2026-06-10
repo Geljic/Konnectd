@@ -1,4 +1,5 @@
 import pb from './pb';
+import { hasBlockBetween } from './safety';
 
 export interface FriendUser {
   id: string;
@@ -156,6 +157,7 @@ export async function fetchPendingRequests(): Promise<Friendship[]> {
 export async function sendFriendRequest(userId: string): Promise<boolean> {
   if (!pb.authStore.isValid) return false;
   try {
+    if (await hasBlockBetween(userId)) return false;
     await pb.collection('friendships').create({
       requester: pb.authStore.model?.id,
       addressee: userId,

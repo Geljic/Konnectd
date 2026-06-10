@@ -115,3 +115,25 @@ Fix strategy: keep the strongest single path per puzzle, replace the other 3 wit
 When using Claude to generate new puzzles, include these constraints:
 
 > Each of the 4 paths must come from a clearly different domain or topic area. No two paths should share the same theme. Every word in the puzzle must obviously belong to only one path — a player should never look at a word and think "that could be in path 2 or path 3". Difficulty comes entirely from the ordering within each path, not from ambiguity about which path a word belongs to. For levels 1–2, use completely unrelated domains. For levels 3–4, you may use loosely related domains if each path has a distinct ordering logic. For level 5, use one anchor word that means four different things across four different domains.
+
+---
+
+## External research corroboration (June 2026)
+
+Reviewed adjacent puzzle genres; our framework holds up:
+
+- **NYT Connections — red herrings.** Editor Wyna Liu deliberately plants words that *look* like they fit multiple groups but belong to one; the trick is overlap, not obscurity. This is exactly our **bait word** lever (Level 3–4). A useful construction test from Connections: _"if I remove these four, does it make the rest easier?"_ — a good path/group should clarify the remainder, not muddy it.
+- **Word ladders — progression clarity.** The genre's rule is that each step changes *minimally and unambiguously*; if a step is arguable, the ladder is broken. Our equivalent: **each path must have exactly one defensible order.** Word-ladder lore also warns against reusing a word and against words that are too short/long — mirrors our "16 unique words" and readable-length rules.
+- **Takeaway:** keep difficulty in the **ordering and the bait**, never in "which path does this even go in." Wide, recognisable domains (idiom, process, pop culture, science) keep it fresh.
+
+Sources: [Connections red herrings](https://ladypuzzle.pro/connections-two-years-red-herrings) · [Word ladder best practices](https://www.sporcle.com/blog/2011/03/sporcle-word-ladders-best-practices/) · [Word ladder (Wikipedia)](https://en.wikipedia.org/wiki/Word_ladder)
+
+---
+
+## Authoring workflow (the "puzzle creator")
+
+1. Write puzzles in `src/data/wordTrailsPuzzles.ts` (4 paths, distinct domains, ordered logic, bait at L3+).
+2. `python3 scripts/validate_word_trails.py` — checks 4 trails × 4 words, 16 unique, valid difficulty/relation, unique ids (structure only; ordering/fairness is human-judged).
+3. `npx ts-node scripts/import_word_trails.ts --publish --replace` — push to the `word_trails` DB collection. The app reads from there (cached), so no rebuild needed for content changes.
+
+Batch 2 (`wt-051`…`wt-062`, June 2026) was authored to this framework: 4 distinct domains each, deliberate cross-path bait at Level 3+ (e.g. SPARK/FLAME split across creativity vs romance in wt-055; COURT/VERDICT/SENTENCE across tennis/law/grammar in wt-056; VAULT across bank vs gymnastics in wt-061).

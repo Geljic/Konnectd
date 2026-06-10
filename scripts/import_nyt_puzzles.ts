@@ -90,7 +90,7 @@ async function main() {
   }
 
   const pb = new PocketBase(PB_URL);
-  await pb.admins.authWithPassword(
+  await pb.collection('_superusers').authWithPassword(
     process.env.POCKETBASE_ADMIN_EMAIL ?? '',
     process.env.POCKETBASE_ADMIN_PASSWORD ?? ''
   );

@@ -4,15 +4,12 @@ import Animated, {
   useSharedValue, useAnimatedStyle, useAnimatedProps,
   withRepeat, withSequence, withTiming, withDelay, Easing,
 } from 'react-native-reanimated';
-import Svg, { Rect, Path } from 'react-native-svg';
-import Ellipse from 'react-native-svg';
+import Svg, { Rect, Path, Ellipse } from 'react-native-svg';
 import { LIGHT_COLORS, type ColorTheme } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
 import { FONTS } from '@/constants/fonts';
 
-const AnimatedEllipse = Animated.createAnimatedComponent(
-  require('react-native-svg').Ellipse
-);
+const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
 
 const TILE_COLORS = [
   LIGHT_COLORS.yellow,
@@ -68,8 +65,8 @@ function AnimatedTile({ color, bobDelay }: { color: string; bobDelay: number }) 
     transform: [{ translateY: translateY.value }],
   }));
 
-  const leftEyeProps  = useAnimatedProps(() => ({ ry: leftRY.value  as unknown as string }));
-  const rightEyeProps = useAnimatedProps(() => ({ ry: rightRY.value as unknown as string }));
+  const leftEyeProps  = useAnimatedProps(() => ({ ry: leftRY.value }));
+  const rightEyeProps = useAnimatedProps(() => ({ ry: rightRY.value }));
 
   return (
     <Animated.View style={[styles.tile, containerStyle]}>
