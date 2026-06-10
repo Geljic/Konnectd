@@ -29,6 +29,7 @@ import type { AppStackParamList } from '../App';
 type Props = NativeStackScreenProps<AppStackParamList, 'WordlinesGame'>;
 type GameStatus = 'playing' | 'won' | 'lost';
 type StepHint = 'same_path' | 'next_step' | 'path_label';
+type TileTextDensity = 'regular' | 'compact' | 'tight';
 
 const MAX_STEP_HINTS = 3;
 const HINT_PENALTY = 75;
@@ -74,15 +75,18 @@ function faceIndexFor(word: string) {
   return h % 16;
 }
 
-function tileFontSize(word: string, compact = false) {
+function tileFontSize(word: string, density: TileTextDensity = 'regular') {
   const length = word.length;
   const size =
-    length >= 11 ? 11 :
-    length >= 10 ? 12.5 :
-    length >= 9 ? 13.5 :
-    length >= 8 ? 15 :
-    17;
-  return compact ? Math.max(10.5, size - 2) : size;
+    length >= 11 ? 10.5 :
+    length >= 10 ? 11 :
+    length >= 9 ? 12 :
+    length >= 8 ? 13 :
+    length >= 7 ? 13.5 :
+    15;
+  if (density === 'tight') return Math.max(9.5, size - 2);
+  if (density === 'compact') return Math.max(10, size - 1);
+  return size;
 }
 
 function difficultyLabel(level: WordTrailsPuzzle['difficulty']) {
@@ -310,7 +314,7 @@ function WordlineTile({
   onPress,
   colors,
   styles,
-  compact,
+  density,
 }: {
   word: string;
   selectedIndex: number;
@@ -321,7 +325,7 @@ function WordlineTile({
   onPress: () => void;
   colors: ColorTheme;
   styles: ReturnType<typeof makeStyles>;
-  compact: boolean;
+  density: TileTextDensity;
 }) {
   const faceIndex = faceIndexFor(word);
   const [blink, setBlink] = useState(false);
@@ -333,7 +337,8 @@ function WordlineTile({
   const shuffleRotate = useRef(new Animated.Value(0)).current;
   const stripCfg = useSettingsStore((s: { tileStripStyle: TileStripStyle }) => STRIP_CONFIG[s.tileStripStyle]);
   const selected = selectedIndex >= 0;
-  const fontSize = tileFontSize(word, compact);
+  const fontSize = tileFontSize(word, density);
+  const compactText = density !== 'regular';
 
   useEffect(() => {
     Animated.loop(
@@ -483,7 +488,8 @@ function WordlineTile({
             style={[styles.tileText, { fontSize, lineHeight: Math.ceil(fontSize + 3) }]}
             numberOfLines={1}
             adjustsFontSizeToFit
-            minimumFontScale={compact ? 0.72 : 0.82}
+            minimumFontScale={compactText ? 0.7 : 0.78}
+            maxFontSizeMultiplier={1.05}
           >
             {word.toUpperCase()}
           </Text>
@@ -495,9 +501,11 @@ function WordlineTile({
 
 export function WordlinesGameScreen({ route, navigation }: Props) {
   const colors = useColors();
-  const { height } = useWindowDimensions();
-  const compact = height < 760;
-  const styles = useMemo(() => makeStyles(colors, compact), [colors, compact]);
+  const { width, height } = useWindowDimensions();
+  const density: TileTextDensity = width <= 390 || height <= 700 ? 'tight' : width <= 480 || height <= 760 ? 'compact' : 'regular';
+  const compact = density !== 'regular';
+  const tight = density === 'tight';
+  const styles = useMemo(() => makeStyles(colors, compact, tight), [colors, compact, tight]);
   const sound = useSound();
 
   const puzzle = useMemo(
@@ -654,7 +662,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
   for (let i = 0; i < boardWords.length; i += 4) {
     rows.push(boardWords.slice(i, i + 4));
   }
-  while (rows.length < 4) rows.push([]);
+  const sparseBoard = rows.length > 0 && rows.length < 4;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -715,9 +723,9 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
         )}
 
         {status === 'playing' && (
-          <View style={styles.board}>
+          <View style={[styles.board, sparseBoard && styles.sparseBoard]}>
             {rows.map((row, rowIndex) => (
-              <View key={rowIndex} style={styles.gridRow}>
+              <View key={rowIndex} style={[styles.gridRow, sparseBoard && styles.sparseGridRow]}>
                 {row.map((word, colIndex) => {
                   const selectedIndex = selectedWords.indexOf(word);
                   return (
@@ -732,13 +740,10 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
                       onPress={() => toggleWord(word)}
                       colors={colors}
                       styles={styles}
-                      compact={compact}
+                      density={density}
                     />
                   );
                 })}
-                {row.length < 4 && Array.from({ length: 4 - row.length }).map((_, fillerIndex) => (
-                  <View key={`empty-${rowIndex}-${fillerIndex}`} style={styles.tilePressable} />
-                ))}
               </View>
             ))}
           </View>
@@ -859,7 +864,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
 
 const trailColors = ['#F5C842', '#3DBE8A', '#4AAEC8', '#9D6EC8'];
 
-function makeStyles(c: ColorTheme, compact: boolean) {
+function makeStyles(c: ColorTheme, compact: boolean, tight: boolean) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: c.bgScreen },
     container: {
@@ -871,22 +876,29 @@ function makeStyles(c: ColorTheme, compact: boolean) {
       minHeight: 0,
     },
     header: { flexDirection: 'row', alignItems: 'center', gap: 8, position: 'relative' },
-    leftCluster: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
-    modeLabel: { fontSize: compact ? 9 : 10, fontFamily: FONTS.extraBold, color: c.blue, letterSpacing: 1.2, textTransform: 'uppercase' },
-    headerCenter: { position: 'absolute', left: compact ? 98 : 112, right: compact ? 98 : 112, alignItems: 'center', gap: compact ? 2 : 4 },
+    leftCluster: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, zIndex: 1 },
+    modeLabel: { fontSize: tight ? 8 : compact ? 9 : 10, fontFamily: FONTS.extraBold, color: c.blue, letterSpacing: 1.2, textTransform: 'uppercase' },
+    headerCenter: {
+      position: 'absolute',
+      left: tight ? 112 : compact ? 124 : 132,
+      right: tight ? 120 : compact ? 132 : 140,
+      alignItems: 'center',
+      gap: compact ? 2 : 4,
+      zIndex: 0,
+    },
     iconBtn: { width: compact ? 32 : 36, height: compact ? 32 : 36, alignItems: 'center', justifyContent: 'center' },
-    title: { maxWidth: '100%', fontSize: compact ? 22 : 26, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
-    subtitle: { maxWidth: '100%', fontSize: compact ? 12 : 13, fontFamily: FONTS.bold, color: c.text2 },
-    rightCluster: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: compact ? 3 : 4 },
+    title: { width: '100%', maxWidth: '100%', fontSize: tight ? 18 : compact ? 20 : 24, fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
+    subtitle: { width: '100%', maxWidth: '100%', fontSize: compact ? 11 : 13, fontFamily: FONTS.bold, color: c.text2, textAlign: 'center' },
+    rightCluster: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: tight ? 1 : compact ? 2 : 4, zIndex: 1 },
     headerHintBtn: {
       borderWidth: 1.5,
       borderColor: c.border,
       borderRadius: 18,
-      paddingHorizontal: compact ? 8 : 10,
+      paddingHorizontal: tight ? 6 : compact ? 8 : 10,
       paddingVertical: compact ? 5 : 6,
     },
-    headerHintText: { fontSize: compact ? 11 : 12, fontFamily: FONTS.bold, color: c.text2 },
-    timerBadge: { alignItems: 'flex-end', minWidth: 36 },
+    headerHintText: { fontSize: tight ? 10 : compact ? 11 : 12, fontFamily: FONTS.bold, color: c.text2 },
+    timerBadge: { alignItems: 'flex-end', minWidth: tight ? 32 : 36 },
     timerText: { fontSize: compact ? 11 : 13, fontFamily: FONTS.bold, color: c.text2 },
     messageBox: { backgroundColor: c.bgBase, borderRadius: 8, paddingVertical: compact ? 7 : 9, paddingHorizontal: 12, alignItems: 'center' },
     messageText: { fontSize: compact ? 12 : 14, fontFamily: FONTS.bold, color: c.text2, textAlign: 'center' },
@@ -909,9 +921,12 @@ function makeStyles(c: ColorTheme, compact: boolean) {
       borderRadius: 16,
       paddingHorizontal: compact ? 5 : 8,
       paddingVertical: compact ? 5 : 6,
+      justifyContent: 'flex-start',
       overflow: 'visible',
     },
+    sparseBoard: { flex: 0 },
     gridRow: { flex: 1, flexDirection: 'row', overflow: 'visible' },
+    sparseGridRow: { flex: 0, height: tight ? 92 : compact ? 104 : 122 },
     tilePressable: { flex: 1, margin: compact ? 3 : 4, overflow: 'visible' },
     tile: {
       flex: 1,

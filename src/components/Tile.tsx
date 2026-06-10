@@ -38,16 +38,20 @@ const FACE_COUNT = 16;
 const SELECTED_FACE_SEQUENCE = [1, 13, 14, 13, 2, 15];
 const WRONG_FACE_SEQUENCE = [12, 8, 10, 8];
 const SUCCESS_FACE_SEQUENCE = [2, 11, 15];
+type TileTextDensity = 'regular' | 'compact' | 'tight';
 
-function tileFontSize(word: string, compact = false) {
+function tileFontSize(word: string, density: TileTextDensity = 'regular') {
   const length = word.length;
   const size =
-    length >= 11 ? 11 :
-    length >= 10 ? 12.5 :
-    length >= 9 ? 13.5 :
-    length >= 8 ? 15 :
-    17;
-  return compact ? Math.max(10.5, size - 2) : size;
+    length >= 11 ? 10.5 :
+    length >= 10 ? 11 :
+    length >= 9 ? 12 :
+    length >= 8 ? 13 :
+    length >= 7 ? 13.5 :
+    15;
+  if (density === 'tight') return Math.max(9.5, size - 2);
+  if (density === 'compact') return Math.max(10, size - 1);
+  return size;
 }
 
 // Eye config per face — null means no blinkable eye on that side
@@ -509,8 +513,9 @@ function FaceStrip({
 export function Tile({ word, selected, onPress, shake, onShakeDone, faceIndex = 0, shuffleSignal = 0, shuffleDelay = 0, solving = false, solvingDelay = 0 }: TileProps) {
   const colors = useColors();
   const { width, height } = useWindowDimensions();
-  const compactText = width <= 390 || height <= 700;
-  const fontSize = tileFontSize(word, compactText);
+  const density: TileTextDensity = width <= 390 || height <= 700 ? 'tight' : width <= 480 || height <= 760 ? 'compact' : 'regular';
+  const compactText = density !== 'regular';
+  const fontSize = tileFontSize(word, density);
 
   const translateX = useSharedValue(0);
   const shuffleScale = useSharedValue(1);
@@ -598,7 +603,8 @@ export function Tile({ word, selected, onPress, shake, onShakeDone, faceIndex = 
             style={[styles.word, { color: colors.text1, fontSize, lineHeight: Math.ceil(fontSize + 3) }]}
             numberOfLines={1}
             adjustsFontSizeToFit
-            minimumFontScale={compactText ? 0.72 : 0.82}
+            minimumFontScale={compactText ? 0.7 : 0.78}
+            maxFontSizeMultiplier={1.05}
           >
             {word.toUpperCase()}
           </Text>

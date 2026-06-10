@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Line, Circle } from 'react-native-svg';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -67,7 +67,10 @@ function difficultyLabel(difficulty?: string) {
 export function GameScreen({ route, navigation }: Props) {
   const { mode, puzzleId, collection, challengeId, recipientId, recipientName } = route.params;
   const colors = useColors();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { width, height } = useWindowDimensions();
+  const compact = width <= 480 || height <= 760;
+  const tight = width <= 390 || height <= 700;
+  const styles = useMemo(() => makeStyles(colors, compact, tight), [colors, compact, tight]);
 
   const [loading, setLoading] = useState(true);
   const [shakeWords, setShakeWords] = useState<string[]>([]);
@@ -414,7 +417,7 @@ export function GameScreen({ route, navigation }: Props) {
   );
 }
 
-function makeStyles(c: ColorTheme) {
+function makeStyles(c: ColorTheme, compact: boolean, tight: boolean) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: c.bgScreen },
     container: { flex: 1, paddingVertical: 12 },
@@ -424,28 +427,35 @@ function makeStyles(c: ColorTheme) {
       paddingVertical: 8, paddingHorizontal: 12, gap: 8,
       position: 'relative',
     },
-    leftCluster: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
-    modeLabel: { fontSize: 11, fontFamily: FONTS.extraBold, color: c.blue, letterSpacing: 1.2, textTransform: 'uppercase' },
-    headerCenter: { position: 'absolute', left: 104, right: 104, alignItems: 'center', gap: 3 },
+    leftCluster: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, zIndex: 1 },
+    modeLabel: { fontSize: tight ? 9 : compact ? 10 : 11, fontFamily: FONTS.extraBold, color: c.blue, letterSpacing: 1.2, textTransform: 'uppercase' },
+    headerCenter: {
+      position: 'absolute',
+      left: tight ? 112 : compact ? 124 : 132,
+      right: tight ? 120 : compact ? 132 : 140,
+      alignItems: 'center',
+      gap: 3,
+      zIndex: 0,
+    },
     titleRow: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 6 },
-    title: { maxWidth: '100%', flexShrink: 1, fontSize: 26, fontFamily: FONTS.extraBold, color: c.text1, letterSpacing: 0.5 },
+    title: { maxWidth: '100%', flexShrink: 1, fontSize: tight ? 18 : compact ? 20 : 24, fontFamily: FONTS.extraBold, color: c.text1, letterSpacing: 0 },
     hardBadge: {
       width: 22, height: 22, borderRadius: 11,
       backgroundColor: c.bgBase, alignItems: 'center', justifyContent: 'center',
     },
-    subtitle: { maxWidth: '100%', fontSize: 13, fontFamily: FONTS.bold, color: c.text2 },
+    subtitle: { width: '100%', maxWidth: '100%', fontSize: compact ? 11 : 13, fontFamily: FONTS.bold, color: c.text2, textAlign: 'center' },
     iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-    rightCluster: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
+    rightCluster: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: tight ? 1 : compact ? 2 : 4, zIndex: 1 },
     headerHintBtn: {
       borderWidth: 1.5,
       borderColor: c.border,
       borderRadius: 18,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
+      paddingHorizontal: tight ? 6 : compact ? 8 : 10,
+      paddingVertical: compact ? 5 : 6,
     },
-    headerHintText: { fontSize: 12, fontFamily: FONTS.bold, color: c.text2 },
-    timerBadge: { alignItems: 'flex-end', minWidth: 36 },
-    timerText: { fontSize: 13, fontFamily: FONTS.bold, color: c.text2 },
+    headerHintText: { fontSize: tight ? 10 : compact ? 11 : 12, fontFamily: FONTS.bold, color: c.text2 },
+    timerBadge: { alignItems: 'flex-end', minWidth: tight ? 32 : 36 },
+    timerText: { fontSize: compact ? 11 : 13, fontFamily: FONTS.bold, color: c.text2 },
     footer: { paddingHorizontal: 16, paddingVertical: 10, gap: 10, zIndex: 10, elevation: 10 },
     actions: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
     btnSecondary: { borderWidth: 1.5, borderColor: c.border, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 10 },
