@@ -6,6 +6,7 @@ import { fetchChallenge, subscribeToChallenge, isMine, type Challenge } from '@/
 import { CATEGORY_COLOURS, type CategoryColour, type ColorTheme } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
 import { FONTS } from '@/constants/fonts';
+import { GAME_TYPE_LABELS } from '@/constants/gameModes';
 import type { AppStackParamList } from '../App';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ChallengeResult'>;
@@ -146,6 +147,13 @@ export function ChallengeResultScreen({ route, navigation }: Props) {
   const opponentIsWinner = winner === 'opponent';
   const tie = winner === 'tie';
   const iWon = (mine && challengerIsWinner) || (!mine && opponentIsWinner);
+  const gameType = challenge.gameType;
+
+  function goToNextPuzzle() {
+    if (gameType === 'word_trails') navigation.navigate('WordlinesSelect');
+    else if (gameType === 'crossed_signals') navigation.navigate('CrossedSignalsSelect');
+    else navigation.navigate('PuzzleSelect');
+  }
 
   function EmojiGrid({ solvedOrder }: { solvedOrder: CategoryColour[] }) {
     return (
@@ -170,9 +178,13 @@ export function ChallengeResultScreen({ route, navigation }: Props) {
         {isWinner && <Text style={styles.winnerBadge}>👑 Winner</Text>}
         <Text style={styles.cardName}>{isYou ? 'You' : name}</Text>
         {score !== null && <Text style={styles.cardScore}>⭐ {score} pts</Text>}
-        <EmojiGrid solvedOrder={solvedOrder} />
+        {solvedOrder.length > 0 && <EmojiGrid solvedOrder={solvedOrder} />}
         <Text style={styles.cardTime}>{formatTime(duration)}</Text>
-        <Text style={styles.cardMistakes}>{mistakes} mistake{mistakes !== 1 ? 's' : ''}</Text>
+        <Text style={styles.cardMistakes}>
+          {gameType === 'crossed_signals'
+            ? `${mistakes} Noise`
+            : `${mistakes} mistake${mistakes !== 1 ? 's' : ''}`}
+        </Text>
       </View>
     );
   }
@@ -186,6 +198,7 @@ export function ChallengeResultScreen({ route, navigation }: Props) {
             {tie ? "It's a tie!" : iWon ? 'You won!' : `${mine ? challenge.opponentName : challenge.challengerName} won!`}
           </Text>
           <Text style={styles.headerSub}>{challenge.puzzleLabel}</Text>
+          <Text style={styles.headerMode}>{GAME_TYPE_LABELS[gameType]}</Text>
         </View>
 
         <View style={styles.cards}>
@@ -211,15 +224,17 @@ export function ChallengeResultScreen({ route, navigation }: Props) {
         </View>
 
         <View style={styles.footer}>
-          <Pressable style={styles.btnChallengeAgain} onPress={() => {
-            const opponentId = mine ? challenge.opponent : challenge.challenger;
-            const opponentName = mine ? (challenge.opponentName ?? 'them') : challenge.challengerName;
-            navigation.navigate('PuzzleSelect', { recipientId: opponentId ?? undefined, recipientName: opponentName ?? undefined });
-          }}>
-            <Text style={styles.btnChallengeAgainText}>⚡ Challenge Again</Text>
-          </Pressable>
+          {gameType === 'connections' && (
+            <Pressable style={styles.btnChallengeAgain} onPress={() => {
+              const opponentId = mine ? challenge.opponent : challenge.challenger;
+              const opponentName = mine ? (challenge.opponentName ?? 'them') : challenge.challengerName;
+              navigation.navigate('PuzzleSelect', { recipientId: opponentId ?? undefined, recipientName: opponentName ?? undefined });
+            }}>
+              <Text style={styles.btnChallengeAgainText}>⚡ Challenge Again</Text>
+            </Pressable>
+          )}
           <View style={styles.footerRow}>
-            <Pressable style={styles.btnNextPuzzle} onPress={() => navigation.navigate('PuzzleSelect')}>
+            <Pressable style={styles.btnNextPuzzle} onPress={goToNextPuzzle}>
               <Text style={styles.btnNextPuzzleText}>Next Puzzle →</Text>
             </Pressable>
             <Pressable style={styles.btnShare} onPress={handleShare}>
@@ -244,6 +259,7 @@ function makeStyles(c: ColorTheme) {
     headerEmoji: { fontSize: 52 },
     headerTitle: { fontSize: 26, fontFamily: FONTS.extraBold, color: c.text1 },
     headerSub: { fontSize: 14, fontFamily: FONTS.bold, color: c.text3 },
+    headerMode: { fontSize: 11, fontFamily: FONTS.extraBold, color: c.blue, letterSpacing: 1, textTransform: 'uppercase' },
     cards: { flexDirection: 'row', gap: 8, alignItems: 'center' },
     card: { flex: 1, backgroundColor: c.bgSurface, borderRadius: 16, padding: 14, alignItems: 'center', gap: 6, borderWidth: 2, borderColor: 'transparent' },
     cardWinner: { borderColor: c.yellow },

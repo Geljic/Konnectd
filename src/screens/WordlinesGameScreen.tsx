@@ -14,8 +14,9 @@ import {
 import { shuffle } from '@/utils/shuffle';
 import { recordPlaySession } from '@/api/puzzles';
 import { useColors } from '@/hooks/useColors';
-import { type ColorTheme } from '@/constants/colors';
+import { type ColorTheme, CATEGORY_ORDER } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
+import { useChallengeFinish } from '@/hooks/useChallengeFinish';
 import { MAX_MISTAKES } from '@/constants/config';
 import { useSound } from '@/hooks/useSound';
 import { MistakeDots } from '@/components/MistakeDots';
@@ -319,6 +320,11 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
   const [shuffleSignal, setShuffleSignal] = useState(0);
   const startedAt = useRef(Date.now());
   const recorded = useRef(false);
+  const { isChallenge, finishChallenge } = useChallengeFinish({
+    challengeId: route.params.challengeId,
+    recipientId: route.params.recipientId,
+    recipientName: route.params.recipientName,
+  });
 
   useEffect(() => {
     if (status !== 'playing') return;
@@ -348,6 +354,22 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
       gameMode: 'classic',
       score,
     }).catch(e => console.error('[WordlinesGameScreen] record session error:', e));
+    if (isChallenge) {
+      const solvedOrder = solvedTrails.map((_, i) => CATEGORY_ORDER[i % CATEGORY_ORDER.length]);
+      const timeout = setTimeout(() => {
+        void finishChallenge({
+          gameType: 'word_trails',
+          gameMode: 'classic',
+          puzzleId: puzzle.id,
+          puzzleLabel: `Next Steps · ${puzzle.title}`,
+          mistakes,
+          durationSeconds,
+          solvedOrder,
+          score,
+        });
+      }, status === 'won' ? 700 : 400);
+      return () => clearTimeout(timeout);
+    }
     if (status === 'won') {
       const timeout = setTimeout(() => setResultVisible(true), 700);
       return () => clearTimeout(timeout);

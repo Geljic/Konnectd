@@ -7,6 +7,7 @@ import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
 import { useSound } from '@/hooks/useSound';
+import { useChallengeFinish } from '@/hooks/useChallengeFinish';
 import { AdBanner } from '@/components/BannerAd';
 import { Confetti } from '@/components/Confetti';
 import { ShuffleIcon, ScanIcon, CheckIcon } from '@/components/GameIcons';
@@ -313,6 +314,11 @@ export function CrossedSignalsGameScreen({ navigation, route }: Props) {
   const [score, setScore] = useState<number | null>(null);
   const [helpVisible, setHelpVisible] = useState(false);
   const [resultVisible, setResultVisible] = useState(false);
+  const { isChallenge, finishChallenge } = useChallengeFinish({
+    challengeId: route.params.challengeId,
+    recipientId: route.params.recipientId,
+    recipientName: route.params.recipientName,
+  });
 
   useEffect(() => {
     if (status !== 'playing') return;
@@ -481,7 +487,22 @@ export function CrossedSignalsGameScreen({ navigation, route }: Props) {
     setScore(nextScore);
     setStatus(nextStatus);
     sound.play(nextStatus === 'won' ? 'win' : 'lose');
-    setTimeout(() => setResultVisible(true), nextStatus === 'won' ? 800 : 500);
+    if (isChallenge) {
+      setTimeout(() => {
+        void finishChallenge({
+          gameType: 'crossed_signals',
+          gameMode: 'classic',
+          puzzleId: puzzle.id,
+          puzzleLabel: `Crossed Signals · ${puzzle.title}`,
+          mistakes: nextNoise,
+          durationSeconds,
+          solvedOrder: [],
+          score: nextScore,
+        });
+      }, nextStatus === 'won' ? 800 : 500);
+    } else {
+      setTimeout(() => setResultVisible(true), nextStatus === 'won' ? 800 : 500);
+    }
     await markCrossedSignalsCompleted(puzzle.id, {
       completed: nextStatus === 'won',
       noise: nextNoise,

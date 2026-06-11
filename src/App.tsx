@@ -64,11 +64,17 @@ export type AppStackParamList = {
   WordlinesGame: {
     mode: 'daily' | 'random' | 'freeplay';
     puzzleId?: string;
+    challengeId?: string;
+    recipientId?: string;
+    recipientName?: string;
   };
   WordlinesSelect: undefined;
   CrossedSignalsGame: {
     mode: 'daily' | 'random' | 'freeplay';
     puzzleId?: string;
+    challengeId?: string;
+    recipientId?: string;
+    recipientName?: string;
   };
   CrossedSignalsSelect: undefined;
 };

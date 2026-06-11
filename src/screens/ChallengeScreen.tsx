@@ -72,6 +72,22 @@ export function ChallengeScreen({ route, navigation }: Props) {
 
   function handlePlay() {
     if (!challenge) return;
+    if (challenge.gameType === 'word_trails') {
+      navigation.replace('WordlinesGame', {
+        mode: 'freeplay',
+        puzzleId: challenge.puzzleId,
+        challengeId: challenge.id,
+      });
+      return;
+    }
+    if (challenge.gameType === 'crossed_signals') {
+      navigation.replace('CrossedSignalsGame', {
+        mode: 'freeplay',
+        puzzleId: challenge.puzzleId,
+        challengeId: challenge.id,
+      });
+      return;
+    }
     navigation.replace('Game', {
       mode: 'freeplay',
       puzzleId: challenge.puzzleId,

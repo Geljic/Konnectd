@@ -198,6 +198,24 @@ Difficulty knobs:
 - Less literal intersections.
 - Fewer obvious anchors.
 
+## Generation Pipeline
+
+Crossed Signals now mirrors the Connections puzzle pipeline:
+
+- `scripts/learn_crossed_signals_style.ts` distils construction guidance from local hand-written Crossed Signals seeds, optional NYT Connections style principles, and optional NYT archive samples used only for association-quality calibration.
+- `scripts/generate_crossed_signals_puzzles.ts` calls the LLM, validates the 4x4 structure, requires single-word answers and per-cell explanations, judges puzzle quality, rejects duplicates, and writes accepted candidates offline.
+- Accepted candidates are written to `src/data/crossedSignalsGeneratedPuzzles.ts`, which is imported by `src/data/crossedSignalsPuzzles.ts`, so they automatically appear in freeplay and daily rotation.
+- Candidate metadata and judge notes are also written to `scripts/data/crossed_signals_candidates.json` for review before PocketBase migration.
+
+Recommended generation loop:
+
+```sh
+npx ts-node scripts/learn_crossed_signals_style.ts
+npx ts-node scripts/generate_crossed_signals_puzzles.ts --count=20 --difficulty=mixed --min-score=7.5
+```
+
+Keep generated puzzles as review candidates until playtested. Difficulty labels should be treated as `easy`, `medium`, `hard`, and `expert`; the current app still stores them as numeric values for compatibility.
+
 ## UI Direction
 
 Use Konnectd design language:
