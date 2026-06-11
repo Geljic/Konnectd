@@ -20,6 +20,14 @@ const EXAMPLE_GRID = [
   ['SAUCE', 'VIDEO', 'MATCH', 'RIVER'],
 ];
 
+// Full walkthrough of the highlighted top row: "Can be cracked".
+const WORKED_ROW = [
+  { word: 'EGG', col: 'Food' },
+  { word: 'PASSWORD', col: 'Tech' },
+  { word: 'BAT', col: 'Sport' },
+  { word: 'ICE', col: 'Nature' },
+];
+
 const SCAN_LEGEND: { tag: string; colourKey: keyof ColorTheme; desc: string }[] = [
   { tag: 'Correct', colourKey: 'green', desc: 'Right row and right column.' },
   { tag: 'Row', colourKey: 'blue', desc: 'Right row, wrong column.' },
@@ -77,7 +85,7 @@ export function CrossedSignalsHelpModal({ visible, onClose }: { visible: boolean
             <View style={styles.divider} />
 
             <Text style={styles.sectionTitle}>Example Grid</Text>
-            <Text style={styles.sectionSub}>EGG can be cracked and is food. PASSWORD can be cracked and is tech.</Text>
+            <Text style={styles.sectionSub}>Look at the highlighted top row — every word in it &ldquo;can be cracked&rdquo;.</Text>
 
             <View style={styles.grid}>
               <View style={styles.gridRow}>
@@ -94,13 +102,38 @@ export function CrossedSignalsHelpModal({ visible, onClose }: { visible: boolean
                     <Text style={styles.rowHeadText} numberOfLines={2}>{EXAMPLE_ROWS[r]}</Text>
                   </View>
                   {row.map((word, ci) => (
-                    <View key={word} style={[styles.cell, ci === 0 && r === 0 && styles.cellHighlight]}>
+                    <View key={word} style={[styles.cell, r === 0 && styles.cellHighlight]}>
                       <Text style={styles.cellText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{word}</Text>
                     </View>
                   ))}
                 </View>
               ))}
             </View>
+
+            <Text style={[styles.sectionSub, { marginTop: 16, marginBottom: 10 }]}>
+              The <Text style={styles.bold}>row signal</Text> stays the same across the row. Each <Text style={styles.bold}>column</Text> adds a second meaning — find the word that fits <Text style={styles.bold}>both</Text>:
+            </Text>
+            <View style={styles.workedList}>
+              {WORKED_ROW.map(item => (
+                <View key={item.word} style={styles.workedRow}>
+                  <View style={styles.workedWord}>
+                    <Text style={styles.workedWordText}>{item.word}</Text>
+                  </View>
+                  <View style={styles.workedCross}>
+                    <View style={styles.workedChip}>
+                      <Text style={styles.workedChipText}>Cracked</Text>
+                    </View>
+                    <Text style={styles.workedPlus}>×</Text>
+                    <View style={[styles.workedChip, styles.workedChipCol]}>
+                      <Text style={styles.workedChipText}>{item.col}</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+            <Text style={[styles.sectionSub, { marginTop: 10, marginBottom: 0 }]}>
+              So EGG goes under <Text style={styles.bold}>Food</Text>, PASSWORD under <Text style={styles.bold}>Tech</Text>, and so on — one word per crossing.
+            </Text>
 
             <View style={styles.divider} />
 
@@ -171,6 +204,18 @@ function makeStyles(c: ColorTheme) {
     cell: { flex: 1, minHeight: 34, borderRadius: 6, backgroundColor: c.bgBase, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
     cellHighlight: { backgroundColor: c.green + '33', borderWidth: 1, borderColor: c.green },
     cellText: { fontSize: 9.5, fontFamily: FONTS.extraBold, color: c.text1 },
+    workedList: { gap: 8 },
+    workedRow: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      backgroundColor: c.bgBase, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12,
+    },
+    workedWord: { minWidth: 86 },
+    workedWordText: { fontSize: 14, fontFamily: FONTS.extraBold, color: c.text1 },
+    workedCross: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    workedChip: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: c.blue + '22' },
+    workedChipCol: { backgroundColor: c.purple + '22' },
+    workedChipText: { fontSize: 11, fontFamily: FONTS.extraBold, color: c.text2 },
+    workedPlus: { fontSize: 13, fontFamily: FONTS.extraBold, color: c.text3 },
     legendList: { gap: 10 },
     legendRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     legendPill: { minWidth: 64, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, alignItems: 'center' },

@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
+import { BottomNav } from '@/components/BottomNav';
 
 export function ProfileScreen() {
   const colors = useColors();
@@ -88,7 +89,7 @@ export function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{user.displayName[0]?.toUpperCase()}</Text>
         </View>
@@ -241,6 +242,7 @@ export function ProfileScreen() {
           </>
         )}
       </ScrollView>
+      <BottomNav active="profile" />
     </SafeAreaView>
   );
 }

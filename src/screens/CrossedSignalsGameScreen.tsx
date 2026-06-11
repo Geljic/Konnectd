@@ -13,6 +13,7 @@ import { Confetti } from '@/components/Confetti';
 import { ShuffleIcon, ScanIcon, CheckIcon } from '@/components/GameIcons';
 import { CrossedSignalsHelpModal } from '@/components/CrossedSignalsHelpModal';
 import { CrossedSignalsResultModal } from '@/components/CrossedSignalsResultModal';
+import { KonnectFace, faceIndexFor } from '@/components/KonnectFace';
 import type { AppStackParamList } from '../App';
 import {
   calculateCrossedSignalsScore,
@@ -129,6 +130,7 @@ interface SignalTileProps {
   tileLocked: boolean;
   lineState?: 'ready' | 'solved';
   lineColour?: string;
+  faceColour?: string;
   rowTrace?: string | null;
   columnTrace?: string | null;
   disabled: boolean;
@@ -151,6 +153,7 @@ function SignalTile({
   tileLocked,
   lineState,
   lineColour,
+  faceColour,
   rowTrace,
   columnTrace,
   disabled,
@@ -275,6 +278,18 @@ function SignalTile({
         {moved && <View style={styles.movedDot} />}
         {lineState === 'solved' && <Text style={[styles.lockPill, lineColour ? { backgroundColor: lineColour } : null]}>Solved</Text>}
         {tileLocked && <Text style={styles.tileLockPill}>Locked</Text>}
+        {lineState && (
+          <View pointerEvents="none" style={styles.tileFace}>
+            <KonnectFace
+              expression={revealState === 'incorrect' ? 'sad' : selected ? 'selected' : 'idle'}
+              faceIndex={faceIndexFor(word)}
+              blink={false}
+              color={faceColour ?? '#162219'}
+              width={40}
+              height={20}
+            />
+          </View>
+        )}
         <Text style={[styles.tileText, { fontSize: tileFontSize(word) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} selectable={false}>
           {word}
         </Text>
@@ -691,7 +706,7 @@ export function CrossedSignalsGameScreen({ navigation, route }: Props) {
                       <Text style={[styles.stateChipText, solved ? styles.stateChipTextSolved : { color: lineColour }]}>{solved ? 'SOLVED' : 'READY'}</Text>
                     </View>
                   )}
-                  <View style={styles.railNotchColumn} />
+                  <View style={[styles.railNotchColumn, (ready || solved) && { backgroundColor: lineColour }]} />
                 </Pressable>
               );
             })}
@@ -720,7 +735,7 @@ export function CrossedSignalsGameScreen({ navigation, route }: Props) {
                     onPress={() => toggleReadyLine('row', rowIndex)}
                     disabled={status !== 'playing'}
                   >
-                    <View style={styles.railNotchRow} />
+                    <View style={[styles.railNotchRow, (ready || solved) && { backgroundColor: lineColour }]} />
                     <Text style={[styles.lineLabelText, solved && styles.lineLabelTextSolved]} numberOfLines={2}>{row.label}</Text>
                     {(ready || solved) && (
                       <View style={[styles.stateChip, solved ? { backgroundColor: lineColour } : { backgroundColor: lineColour + '30' }]}>
@@ -763,6 +778,7 @@ export function CrossedSignalsGameScreen({ navigation, route }: Props) {
                     tileLocked={status === 'playing' && lineState !== 'solved' && lockedTiles.has(index)}
                     lineState={status === 'playing' ? lineState : undefined}
                     lineColour={lineColour}
+                    faceColour={lineColour ?? colors.tileEye}
                     rowTrace={rowTrace}
                     columnTrace={columnTrace}
                     disabled={status !== 'playing'}
@@ -780,6 +796,21 @@ export function CrossedSignalsGameScreen({ navigation, route }: Props) {
               })}
             </View>
           ))}
+        </View>
+
+        <View style={styles.legend}>
+          <View style={styles.legendItem}>
+            <View style={styles.legendTab} />
+            <Text style={styles.legendText}>Row marked</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={styles.legendPill} />
+            <Text style={styles.legendText}>Column marked</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <KonnectFace expression="idle" faceIndex={3} blink={false} color={colors.text2} width={26} height={14} />
+            <Text style={styles.legendText}>Ready to submit</Text>
+          </View>
         </View>
 
         <View style={styles.noiseBlock}>
@@ -925,23 +956,27 @@ function makeStyles(c: ColorTheme) {
     stateChipTextSolved: { color: c.categoryText },
     railNotchRow: {
       position: 'absolute',
-      right: -6,
+      right: -5,
       top: '50%',
-      marginTop: -6,
-      width: 12,
-      height: 12,
-      borderRadius: 6,
-      backgroundColor: c.bgSurface,
+      marginTop: -5,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      borderWidth: 2,
+      borderColor: c.bgSurface,
+      backgroundColor: c.tileStrip,
     },
     railNotchColumn: {
       position: 'absolute',
-      bottom: -6,
+      bottom: -5,
       left: '50%',
-      marginLeft: -6,
-      width: 12,
-      height: 12,
-      borderRadius: 6,
-      backgroundColor: c.bgSurface,
+      marginLeft: -5,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      borderWidth: 2,
+      borderColor: c.bgSurface,
+      backgroundColor: c.tileStrip,
     },
     traceH: {
       position: 'absolute',
@@ -1050,7 +1085,13 @@ function makeStyles(c: ColorTheme) {
       backgroundColor: c.green,
       paddingVertical: 2,
     },
+    tileFace: { marginBottom: 3 },
     tileText: { fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
+    legend: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 16 },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    legendTab: { width: 16, height: 18, borderRadius: 5, borderWidth: 2, borderColor: c.tileStrip, backgroundColor: c.bgBase },
+    legendPill: { width: 22, height: 13, borderRadius: 5, borderWidth: 2, borderColor: c.tileStrip, backgroundColor: c.bgBase },
+    legendText: { fontSize: 11, fontFamily: FONTS.bold, color: c.text2 },
     noiseBlock: { alignItems: 'center', gap: 2 },
     noiseLabel: { fontSize: 13, fontFamily: FONTS.bold, color: c.text2 },
     noiseRow: { flexDirection: 'row', gap: 12 },

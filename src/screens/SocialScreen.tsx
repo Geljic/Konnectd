@@ -15,6 +15,7 @@ import { fetchFriendSummaries, type FriendSummary } from '@/api/social';
 import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
+import { BottomNav } from '@/components/BottomNav';
 import type { AppStackParamList } from '../App';
 
 type Props = { navigation: NativeStackNavigationProp<AppStackParamList, 'Friends'> };
@@ -428,6 +429,7 @@ export function SocialScreen({ navigation }: Props) {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <FlatList
         data={listData}
+        style={{ flex: 1 }}
         renderItem={renderItem}
         keyExtractor={(item, idx) => {
           if (item.type === 'searchResult') return `search-${item.user.id}`;
@@ -441,6 +443,7 @@ export function SocialScreen({ navigation }: Props) {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.text3} />
         }
       />
+      <BottomNav active="friends" />
     </SafeAreaView>
   );
 }

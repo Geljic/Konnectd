@@ -16,6 +16,7 @@ import {
 } from '@/utils/crossedSignals';
 import { GameResultModal } from '@/components/GameResultModal';
 import { AdBanner } from '@/components/BannerAd';
+import { BottomNav } from '@/components/BottomNav';
 import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
@@ -196,6 +197,7 @@ export function StatsScreen() {
           if (gameTab === 'word_trails') return <WtRow item={item as WordTrailsSessionItem} index={index} />;
           return <CsRow item={item as CrossedSignalsSessionItem} />;
         }}
+        style={{ flex: 1 }}
         contentContainerStyle={styles.container}
         ListHeaderComponent={() => (
           <>
@@ -326,6 +328,8 @@ export function StatsScreen() {
         )}
         ListEmptyComponent={null}
       />
+
+      <BottomNav active="stats" />
 
       <GameResultModal
         visible={!!selectedSession}
