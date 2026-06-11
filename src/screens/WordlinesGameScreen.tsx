@@ -505,7 +505,8 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
   const density: TileTextDensity = width <= 390 || height <= 700 ? 'tight' : width <= 480 || height <= 760 ? 'compact' : 'regular';
   const compact = density !== 'regular';
   const tight = density === 'tight';
-  const styles = useMemo(() => makeStyles(colors, compact, tight), [colors, compact, tight]);
+  const sparseRowHeight = tight ? 92 : compact ? 104 : 122;
+  const styles = useMemo(() => makeStyles(colors, compact, tight, sparseRowHeight), [colors, compact, tight, sparseRowHeight]);
   const sound = useSound();
 
   const puzzle = useMemo(
@@ -663,6 +664,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
     rows.push(boardWords.slice(i, i + 4));
   }
   const sparseBoard = rows.length > 0 && rows.length < 4;
+  const sparseBoardHeight = rows.length * sparseRowHeight + (compact ? 10 : 12);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -723,7 +725,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
         )}
 
         {status === 'playing' && (
-          <View style={[styles.board, sparseBoard && styles.sparseBoard]}>
+          <View style={[styles.board, sparseBoard && styles.sparseBoard, sparseBoard && { height: sparseBoardHeight }]}>
             {rows.map((row, rowIndex) => (
               <View key={rowIndex} style={[styles.gridRow, sparseBoard && styles.sparseGridRow]}>
                 {row.map((word, colIndex) => {
@@ -864,7 +866,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
 
 const trailColors = ['#F5C842', '#3DBE8A', '#4AAEC8', '#9D6EC8'];
 
-function makeStyles(c: ColorTheme, compact: boolean, tight: boolean) {
+function makeStyles(c: ColorTheme, compact: boolean, tight: boolean, sparseRowHeight: number) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: c.bgScreen },
     container: {
@@ -926,7 +928,7 @@ function makeStyles(c: ColorTheme, compact: boolean, tight: boolean) {
     },
     sparseBoard: { flex: 0 },
     gridRow: { flex: 1, flexDirection: 'row', overflow: 'visible' },
-    sparseGridRow: { flex: 0, height: tight ? 92 : compact ? 104 : 122 },
+    sparseGridRow: { flex: 0, height: sparseRowHeight },
     tilePressable: { flex: 1, margin: compact ? 3 : 4, overflow: 'visible' },
     tile: {
       flex: 1,
