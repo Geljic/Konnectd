@@ -23,6 +23,7 @@ Konnectd is social-first: challenging, collaborating, and competing are built in
 | 6 | Blitz Mode — 90-second speed round, daily leaderboard | 🔲 Planned |
 | 7 | Next Steps — ordered-path mode + mode-aware stats/matches | 🚧 Almost complete |
 | 8 | Launch readiness — stability, QA, app-store prep | 🔲 Next |
+| 9 | Crossed Signals — semantic intersection grid mode | 🚧 Local MVP built |
 
 ---
 
@@ -41,8 +42,9 @@ Konnectd already has strong retention hooks (daily habit, streaks, co-streaks, s
 
 ### New mode order
 1. **Next Steps first** — original single-player ordered-path mode, instant to play at launch, gives the app a second daily loop without requiring friends to be online
-2. **Async co-op Next Steps second** — use the friends graph after the solo mode has proven the mechanic and built shared vocabulary
-3. **Blitz Mode later** — paused for now because clock-based leaderboards invite cheating
+2. **Crossed Signals second** — a more ownable tense semantic-deduction mode where words sit at intersections of row and column meanings
+3. **Async co-op Next Steps / Crossed Signals later** — use the friends graph after solo mechanics have proven themselves
+4. **Blitz Mode later** — paused for now because clock-based leaderboards invite cheating
 
 ### Why Next Steps over Codenames Duet for launch
 - Single-player is easier to launch: users can install, play, understand, and share without needing a friend already in the app
@@ -322,6 +324,51 @@ Once the solo mode is proven, add co-op Next Steps using the existing friends gr
 - The other friend tries to complete the path
 - PocketBase subscriptions notify when it is your turn
 - Notification hub / bell badge should collect turns, challenges, and friend requests
+
+---
+
+## Phase 9 — Crossed Signals 🚧 Local MVP Built
+
+### Concept
+Crossed Signals is a tense semantic-deduction mode. The player solves a 4x4 grid where every word belongs at the crossing of one row signal and one column signal.
+
+Example:
+- Row signal: `Can be cracked`
+- Column signal: `Food`
+- Answer: `EGG`
+
+It keeps the Konnectd theme of meanings connecting, but avoids being another grouping or ordering puzzle.
+
+### Differentiation
+- Not Codenames: no agents, spymasters, assassin, teams, or clue-number turns.
+- Not Connections/Groups: the goal is exact intersection placement, not finding four groups.
+- Not Next Steps: there is no sequence/path ordering.
+- Not Semantle: no open-ended word guessing or embedding-proximity chase.
+
+### Rules Direction
+- 4 row signals and 4 column signals.
+- 16 scrambled word tiles.
+- Tap/swap tiles into the 4x4 grid.
+- Submit validates the board.
+- Wrong submits add `Noise`; 4 Noise loses.
+- Limited `Scans` reveal whether one tile has correct row, correct column, both, or neither.
+- Score rewards speed, low Noise, and low Scan use.
+
+### Build Direction
+- First create a game-mode registry so Home, Stats, Leaderboards, match history, and future modes are not hardcoded per mode.
+- Then build Crossed Signals using the existing Konnectd tile template, result modal pattern, share language, stats layout, and free-play/daily/archive structure.
+
+Detailed spec: `docs/CROSSED_SIGNALS_SPEC.md`
+
+### First Playable Slice
+- ✅ `crossed_signals` game type added to mode labels/ruleset normalization
+- ✅ Five starter puzzles in `src/data/crossedSignalsPuzzles.ts`
+- ✅ Local rules/scoring/storage helpers in `src/utils/crossedSignals.ts`
+- ✅ Daily/random/free-play game screen
+- ✅ Archive/select screen
+- ✅ Home selector card and daily completion state
+- ✅ Local Stats tab
+- 🚧 Needs TypeScript check, mobile QA, puzzle quality pass, and dedicated solution review modal
 
 ---
 

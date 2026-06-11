@@ -16,6 +16,7 @@ import { GameBoard } from '@/components/GameBoard';
 import { MistakeDots } from '@/components/MistakeDots';
 import { OneAwayToast } from '@/components/OneAwayToast';
 import { Confetti } from '@/components/Confetti';
+import { ShuffleIcon, DeselectIcon, CheckIcon } from '@/components/GameIcons';
 import { HelpModal } from '@/components/HelpModal';
 import { HintModal, HintResultBanner } from '@/components/HintModal';
 import { useSound } from '@/hooks/useSound';
@@ -379,9 +380,11 @@ export function GameScreen({ route, navigation }: Props) {
           )}
           <View style={styles.actions}>
             <Pressable style={styles.btnSecondary} onPress={handleShuffle}>
+              <ShuffleIcon color={colors.text1} />
               <Text style={styles.btnSecondaryText}>Shuffle</Text>
             </Pressable>
             <Pressable style={styles.btnSecondary} onPress={clearSelection}>
+              <DeselectIcon color={colors.text1} />
               <Text style={styles.btnSecondaryText}>Deselect</Text>
             </Pressable>
             <Pressable
@@ -389,6 +392,7 @@ export function GameScreen({ route, navigation }: Props) {
               onPress={handleSubmit}
               disabled={selectedWords.length !== 4}
             >
+              <CheckIcon color={colors.actionText} />
               <Text style={styles.btnSubmitText}>Submit</Text>
             </Pressable>
           </View>
@@ -458,9 +462,9 @@ function makeStyles(c: ColorTheme, compact: boolean, tight: boolean) {
     timerText: { fontSize: compact ? 11 : 13, fontFamily: FONTS.bold, color: c.text2 },
     footer: { paddingHorizontal: 16, paddingVertical: 10, gap: 10, zIndex: 10, elevation: 10 },
     actions: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
-    btnSecondary: { borderWidth: 1.5, borderColor: c.border, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 10 },
+    btnSecondary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1.5, borderColor: c.border, borderRadius: 24, paddingHorizontal: 16, paddingVertical: 10 },
     btnSecondaryText: { fontSize: 14, fontFamily: FONTS.bold, color: c.text1 },
-    btnSubmit: { backgroundColor: c.actionBg, borderRadius: 24, paddingHorizontal: 24, paddingVertical: 10 },
+    btnSubmit: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: c.actionBg, borderRadius: 24, paddingHorizontal: 22, paddingVertical: 10 },
     btnSubmitDisabled: { backgroundColor: c.text3 },
     btnSubmitText: { fontSize: 14, fontFamily: FONTS.extraBold, color: c.actionText },
   });

@@ -31,6 +31,7 @@ export type PuzzleSource = 'curated' | 'generated';
 
 export interface PuzzleListItem {
   id: string;
+  title?: string;
   difficulty_min: CategoryColour;
   play_count: number;
   thumbs_up_count?: number;
@@ -111,7 +112,7 @@ export async function fetchPuzzlesPage(
     const result = await pb.collection('puzzles').getList(page, 10, {
       filter,
       sort: sortField,
-      fields: 'id,difficulty_min,play_count,thumbs_up_count,daily_date,source',
+      fields: 'id,title,difficulty_min,play_count,thumbs_up_count,daily_date,source',
       requestKey: null,
     });
     return {

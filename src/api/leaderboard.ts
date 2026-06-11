@@ -116,11 +116,11 @@ export async function fetchFriendsLeaderboard(gameType: GameType = 'connections'
     // Include myself in the leaderboard
     const allIds = [myId, ...friendIds];
     if (allIds.length === 0) return [];
-    if (gameType === 'word_trails') {
+    if (gameType !== 'connections') {
       const idFilter = allIds.map(id => `user = '${id}'`).join(' || ');
       const [sessions, users] = await Promise.all([
         pb.collection('play_sessions').getFullList({
-          filter: `(${idFilter}) && game_type = 'word_trails'`,
+          filter: `(${idFilter}) && game_type = '${gameType}'`,
           fields: 'user,completed,duration_seconds,mistakes',
           requestKey: null,
         }),
@@ -144,9 +144,9 @@ export async function fetchGlobalLeaderboard(gameType: GameType = 'connections')
   if (!pb.authStore.isValid) return [];
   const myId = pb.authStore.model?.id!;
   try {
-    if (gameType === 'word_trails') {
+    if (gameType !== 'connections') {
       const sessions = await pb.collection('play_sessions').getFullList({
-        filter: `game_type = 'word_trails'`,
+        filter: `game_type = '${gameType}'`,
         fields: 'user,completed,duration_seconds,mistakes',
         requestKey: null,
       });

@@ -172,16 +172,16 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
     const done = completedIds.has(item.id);
     const playCount = Math.max(item.play_count ?? 0, done ? 1 : 0);
     const hasDate = !!(item.daily_date && item.daily_date !== '');
-    const label = hasDate
-      ? `Daily · ${formatNytDate(item.daily_date!)}`
-      : `Puzzle #${index + 1}`;
+    const named = item.title?.trim();
+    const rowTitle = hasDate ? 'Daily Puzzle' : named || `Puzzle #${index + 1}`;
+    const label = hasDate ? `Daily · ${formatNytDate(item.daily_date!)}` : rowTitle;
     return (
       <Pressable style={styles.row} onPress={() => openPuzzle(item.id, label, 'puzzles')}>
         <View style={[styles.diffBadge, { backgroundColor: CATEGORY_COLOURS[item.difficulty_min] }]}>
           <Text style={styles.diffBadgeText}>{DIFFICULTY_LABELS[item.difficulty_min]}</Text>
         </View>
         <View style={styles.rowContent}>
-          <Text style={styles.rowTitle}>{hasDate ? 'Daily Puzzle' : `Puzzle #${index + 1}`}</Text>
+          <Text style={styles.rowTitle}>{rowTitle}</Text>
           {hasDate && <Text style={styles.rowMeta}>{formatNytDate(item.daily_date!)}</Text>}
         </View>
         {item.source === 'curated' && <View style={styles.curatedPill}><Text style={styles.curatedPillText}>✨ Curated</Text></View>}

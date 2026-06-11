@@ -45,6 +45,7 @@ function wordKey(words: string[]): string {
 function buildRecord(seed: CuratedSeed) {
   const words = seed.categories.flatMap(c => c.words);
   return {
+    title: seed.title,
     words: shuffle(words),
     categories: seed.categories.map(c => ({
       name: c.name,

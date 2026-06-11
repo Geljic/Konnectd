@@ -9,6 +9,11 @@ import {
   computeWordTrailsStreak,
   type WordTrailsSessionItem,
 } from '@/utils/wordTrails';
+import {
+  computeCrossedSignalsStreak,
+  fetchLocalCrossedSignalsSessions,
+  type CrossedSignalsSessionItem,
+} from '@/utils/crossedSignals';
 import { GameResultModal } from '@/components/GameResultModal';
 import { AdBanner } from '@/components/BannerAd';
 import { useColors } from '@/hooks/useColors';
@@ -24,8 +29,14 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-type GameTab = 'connections' | 'word_trails';
+type GameTab = 'connections' | 'word_trails' | 'crossed_signals';
 type ConnectionsMode = 'normal' | 'hard';
+type StatsSessionItem = PlaySessionItem | WordTrailsSessionItem | CrossedSignalsSessionItem;
+
+function getSessionScore(session: StatsSessionItem): number | null {
+  if (!('score' in session)) return null;
+  return typeof session.score === 'number' ? session.score : null;
+}
 
 export function StatsScreen() {
   const colors = useColors();
@@ -34,6 +45,7 @@ export function StatsScreen() {
   const user = useAuthStore(s => s.user);
   const [sessions, setSessions] = useState<PlaySessionItem[]>([]);
   const [wtSessions, setWtSessions] = useState<WordTrailsSessionItem[]>([]);
+  const [csSessions, setCsSessions] = useState<CrossedSignalsSessionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState<PlaySessionItem | null>(null);
   const [gameTab, setGameTab] = useState<GameTab>('connections');
@@ -46,10 +58,12 @@ export function StatsScreen() {
       Promise.all([
         fetchRecentSessions(500),
         fetchLocalWordTrailsSessions(),
+        fetchLocalCrossedSignalsSessions(),
         refreshProfile(),
-      ]).then(([all, wt]) => {
+      ]).then(([all, wt, cs]) => {
         setSessions(all);
         setWtSessions(wt);
+        setCsSessions(cs);
         setLoading(false);
       });
     }, [])
@@ -72,8 +86,9 @@ export function StatsScreen() {
 
   // Word trails stats (from local AsyncStorage)
   const wtFiltered = wtSessions;
+  const csFiltered = csSessions;
 
-  const activeList = gameTab === 'connections' ? filtered : wtFiltered;
+  const activeList = gameTab === 'connections' ? filtered : gameTab === 'word_trails' ? wtFiltered : csFiltered;
   const played = activeList.length;
   const won = activeList.filter(s => s.completed).length;
   const losses = played - won;
@@ -88,19 +103,27 @@ export function StatsScreen() {
   if (gameTab === 'connections') {
     streakCurrent = user.streakCurrent ?? 0;
     streakBest = user.streakBest ?? 0;
-  } else {
+  } else if (gameTab === 'word_trails') {
     const wtStreak = computeWordTrailsStreak(wtSessions);
     streakCurrent = wtStreak.current;
     streakBest = wtStreak.best;
+  } else {
+    const csStreak = computeCrossedSignalsStreak(csSessions);
+    streakCurrent = csStreak.current;
+    streakBest = csStreak.best;
   }
 
-  const scoredSessions = filtered.filter(s => s.completed && s.score !== undefined && s.score > 0);
-  const bestScore = scoredSessions.length > 0
-    ? Math.max(...scoredSessions.map(s => s.score!))
+  const scoreValues = activeList
+    .filter(s => s.completed)
+    .map(getSessionScore)
+    .filter((score): score is number => score !== null && score > 0);
+  const bestScore = scoreValues.length > 0
+    ? Math.max(...scoreValues)
     : null;
 
   const recentConnections = filtered.slice(0, 15);
   const recentWt = wtFiltered.slice(0, 15);
+  const recentCs = csFiltered.slice(0, 15);
 
   function ConnectionsRow({ item, index }: { item: PlaySessionItem; index: number }) {
     return (
@@ -142,16 +165,37 @@ export function StatsScreen() {
     );
   }
 
+  function CsRow({ item }: { item: CrossedSignalsSessionItem }) {
+    return (
+      <View style={styles.sessionRow}>
+        <View style={[styles.sessionOutcome, { backgroundColor: item.completed ? colors.green : colors.purple }]}>
+          <Text style={styles.sessionOutcomeText}>{item.completed ? '✓' : '✗'}</Text>
+        </View>
+        <View style={styles.sessionMeta}>
+          <Text style={styles.sessionLabel}>{item.puzzle.replace(/^cs_\d+_/, '').replace(/_/g, ' ').toUpperCase()}</Text>
+          <Text style={styles.sessionDate}>{formatDate(item.created)}</Text>
+        </View>
+        <View style={styles.sessionStats}>
+          <Text style={styles.sessionTime}>{formatTime(item.durationSeconds)}</Text>
+          <Text style={styles.sessionMistakes}>{item.mistakes} Noise · {item.scansUsed} Scan{item.scansUsed !== 1 ? 's' : ''}</Text>
+          {item.completed && item.score > 0 && (
+            <Text style={styles.sessionScore}>⭐ {item.score}</Text>
+          )}
+        </View>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <FlatList
-        data={gameTab === 'connections' ? recentConnections : recentWt}
+        data={gameTab === 'connections' ? recentConnections : gameTab === 'word_trails' ? recentWt : recentCs}
         keyExtractor={s => s.id}
-        renderItem={({ item, index }) =>
-          gameTab === 'connections'
-            ? <ConnectionsRow item={item as PlaySessionItem} index={index} />
-            : <WtRow item={item as WordTrailsSessionItem} index={index} />
-        }
+        renderItem={({ item, index }) => {
+          if (gameTab === 'connections') return <ConnectionsRow item={item as PlaySessionItem} index={index} />;
+          if (gameTab === 'word_trails') return <WtRow item={item as WordTrailsSessionItem} index={index} />;
+          return <CsRow item={item as CrossedSignalsSessionItem} />;
+        }}
         contentContainerStyle={styles.container}
         ListHeaderComponent={() => (
           <>
@@ -174,6 +218,14 @@ export function StatsScreen() {
               >
                 <Text style={[styles.gameTypeBtnText, gameTab === 'word_trails' && styles.gameTypeBtnTextActive]}>
                   Next Steps
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.gameTypeBtn, gameTab === 'crossed_signals' && styles.gameTypeBtnCsActive]}
+                onPress={() => setGameTab('crossed_signals')}
+              >
+                <Text style={[styles.gameTypeBtnText, gameTab === 'crossed_signals' && styles.gameTypeBtnTextActive]}>
+                  Signals
                 </Text>
               </Pressable>
             </View>
@@ -223,7 +275,7 @@ export function StatsScreen() {
                   <Text style={styles.avgTimeValue}>{formatTime(avgTimeSecs)}</Text>
                   <Text style={styles.avgTimeLabel}>Avg solve time</Text>
                 </View>
-                {bestScore !== null && gameTab === 'connections' && (
+                {bestScore !== null && gameTab !== 'word_trails' && (
                   <View style={styles.avgTimeBox}>
                     <Text style={styles.avgTimeValue}>⭐ {bestScore}</Text>
                     <Text style={styles.avgTimeLabel}>Best score</Text>
@@ -249,6 +301,8 @@ export function StatsScreen() {
                 <Text style={styles.emptyHint}>
                   {gameTab === 'word_trails'
                     ? 'No Next Steps games yet.'
+                    : gameTab === 'crossed_signals'
+                      ? 'No Crossed Signals games yet.'
                     : connectionsMode === 'hard'
                       ? 'No hard mode games yet. Enable hard mode in Settings.'
                       : 'Play your first puzzle to see stats here.'}
@@ -261,6 +315,8 @@ export function StatsScreen() {
               <Text style={styles.emptyHint}>
                 {gameTab === 'word_trails'
                   ? 'No Next Steps games recorded yet.'
+                  : gameTab === 'crossed_signals'
+                    ? 'No Crossed Signals games recorded yet.'
                   : connectionsMode === 'hard'
                     ? 'No hard mode games recorded yet.'
                     : 'No games recorded yet.'}
@@ -302,6 +358,7 @@ function makeStyles(c: ColorTheme) {
     },
     gameTypeBtnActive: { backgroundColor: c.text1, borderColor: c.text1 },
     gameTypeBtnWtActive: { backgroundColor: c.blue, borderColor: c.blue },
+    gameTypeBtnCsActive: { backgroundColor: c.purple, borderColor: c.purple },
     gameTypeBtnText: { fontSize: 15, fontFamily: FONTS.extraBold, color: c.text2 },
     gameTypeBtnTextActive: { color: c.bgScreen },
 

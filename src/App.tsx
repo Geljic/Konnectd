@@ -28,6 +28,8 @@ import { FriendDetailScreen } from '@/screens/FriendDetailScreen';
 import { LeaderboardScreen } from '@/screens/LeaderboardScreen';
 import { WordlinesGameScreen } from '@/screens/WordlinesGameScreen';
 import { WordlinesSelectScreen } from '@/screens/WordlinesSelectScreen';
+import { CrossedSignalsGameScreen } from '@/screens/CrossedSignalsGameScreen';
+import { CrossedSignalsSelectScreen } from '@/screens/CrossedSignalsSelectScreen';
 import { useColors } from '@/hooks/useColors';
 import type { GameType } from '@/constants/gameModes';
 import { WEB_BASE_URL } from '@/constants/config';
@@ -64,6 +66,11 @@ export type AppStackParamList = {
     puzzleId?: string;
   };
   WordlinesSelect: undefined;
+  CrossedSignalsGame: {
+    mode: 'daily' | 'random' | 'freeplay';
+    puzzleId?: string;
+  };
+  CrossedSignalsSelect: undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -111,6 +118,8 @@ function AppNavigator() {
       <AppStack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ title: '🏆 Leaderboard' }} />
       <AppStack.Screen name="WordlinesGame" component={WordlinesGameScreen} options={{ headerShown: false }} />
       <AppStack.Screen name="WordlinesSelect" component={WordlinesSelectScreen} options={{ title: 'Next Steps' }} />
+      <AppStack.Screen name="CrossedSignalsGame" component={CrossedSignalsGameScreen} options={{ headerShown: false }} />
+      <AppStack.Screen name="CrossedSignalsSelect" component={CrossedSignalsSelectScreen} options={{ title: 'Crossed Signals' }} />
     </AppStack.Navigator>
   );
 }

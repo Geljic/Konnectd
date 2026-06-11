@@ -78,7 +78,7 @@ export function LeaderboardScreen({ route }: Props) {
             {item.handle}{item.isMe ? ' (you)' : ''}
           </Text>
           <Text style={styles.rowSub}>
-            {gameType === 'word_trails'
+            {gameType !== 'connections'
               ? `${item.puzzlesWon} solved${item.streakCurrent > 0 ? ` · best ${formatTime(item.streakCurrent)}` : ''}`
               : `${item.puzzlesWon}W · 🔥${item.streakCurrent}`}
           </Text>
@@ -111,7 +111,7 @@ export function LeaderboardScreen({ route }: Props) {
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>{tab === 'friends' ? 'No friends yet' : 'Not enough data'}</Text>
           <Text style={styles.emptyBody}>
-            {tab === 'friends' ? 'Add friends to see how you compare.' : gameType === 'word_trails' ? 'Complete a Next Steps puzzle to appear here.' : 'Play 10+ puzzles to appear on the global board.'}
+            {tab === 'friends' ? 'Add friends to see how you compare.' : gameType !== 'connections' ? `Complete a ${GAME_TYPE_LABELS[gameType]} puzzle to appear here.` : 'Play 10+ puzzles to appear on the global board.'}
           </Text>
         </View>
       ) : (

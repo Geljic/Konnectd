@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, View, Text, Pressable, StyleSheet, useWindowDimensions, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Ellipse, G, Path, Line, Rect } from 'react-native-svg';
+import Svg, { Circle, Path, Line } from 'react-native-svg';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { type WordTrail, type WordTrailsPuzzle } from '@/data/wordTrailsPuzzles';
 import { getWordTrails } from '@/api/wordTrails';
@@ -23,6 +23,8 @@ import { WordlinesHelpModal } from '@/components/WordlinesHelpModal';
 import { GameResultModal } from '@/components/GameResultModal';
 import { TrailReveal } from '@/components/TrailReveal';
 import { Confetti } from '@/components/Confetti';
+import { KonnectFace, faceIndexFor } from '@/components/KonnectFace';
+import { ShuffleIcon, DeselectIcon, CheckIcon } from '@/components/GameIcons';
 import { STRIP_CONFIG, useSettingsStore, type TileStripStyle } from '@/store/settingsStore';
 import type { AppStackParamList } from '../App';
 
@@ -69,12 +71,6 @@ function InfoIcon({ color }: { color: string }) {
   );
 }
 
-function faceIndexFor(word: string) {
-  let h = 0;
-  for (let i = 0; i < word.length; i++) h = (h * 31 + word.charCodeAt(i)) & 0xff;
-  return h % 16;
-}
-
 function tileFontSize(word: string, density: TileTextDensity = 'regular') {
   const length = word.length;
   const size =
@@ -94,214 +90,6 @@ function difficultyLabel(level: WordTrailsPuzzle['difficulty']) {
   if (level === 2) return 'Medium';
   if (level === 3) return 'Hard';
   return 'Expert';
-}
-
-function WordlineFace({
-  expression,
-  faceIndex,
-  blink,
-  color,
-  stateOverride,
-}: {
-  expression: 'idle' | 'selected' | 'sad';
-  faceIndex: number;
-  blink: boolean;
-  color: string;
-  stateOverride?: number | null;
-}) {
-  const state =
-    stateOverride != null
-      ? stateOverride
-      : expression === 'sad'
-        ? [8, 10, 12][faceIndex % 3]
-        : expression === 'selected'
-          ? [2, 11, 13, 14, 15][faceIndex % 5]
-          : faceIndex % 16;
-
-  const ink = color;
-  const cheek = '#F49A8B';
-  const tooth = '#FFF7D8';
-
-  function Cheeks({ strong = false }: { strong?: boolean }) {
-    return (
-      <G opacity={strong ? 0.82 : 0.72}>
-        <Rect x="13" y="22" width={strong ? 10 : 9} height={strong ? 4.3 : 4} rx={2} fill={cheek} />
-        <Rect x="58" y="22" width={strong ? 10 : 9} height={strong ? 4.3 : 4} rx={2} fill={cheek} />
-      </G>
-    );
-  }
-
-  function OpenEyes({ y = 17, small = false }: { y?: number; small?: boolean }) {
-    const rx = small ? 3.7 : 4.1;
-    const ry = small ? 5.3 : 5.9;
-    return (
-      <G>
-        <Ellipse cx="27" cy={y} rx={rx} ry={ry} fill={ink} />
-        <Ellipse cx="53" cy={y} rx={rx} ry={ry} fill={ink} />
-        <Circle cx="25.8" cy={y - 2.2} r={small ? 1.15 : 1.35} fill="#FFFFFF" opacity="0.9" />
-        <Circle cx="51.8" cy={y - 2.2} r={small ? 1.15 : 1.35} fill="#FFFFFF" opacity="0.9" />
-      </G>
-    );
-  }
-
-  function BlinkEyes() {
-    return (
-      <G>
-        <Path d="M22 18 Q27 14 32 18" stroke={ink} strokeWidth="3" fill="none" strokeLinecap="round" />
-        <Path d="M48 18 Q53 14 58 18" stroke={ink} strokeWidth="3" fill="none" strokeLinecap="round" />
-      </G>
-    );
-  }
-
-  function Smile() {
-    return <Path d="M33 26 Q40 31 47 26" stroke={ink} strokeWidth="2.7" fill="none" strokeLinecap="round" />;
-  }
-
-  function BigMouth({ wide = false }: { wide?: boolean }) {
-    return (
-      <G>
-        <Path d={wide ? 'M27 25 Q40 36 53 25 Z' : 'M29 25 Q40 35 51 25 Z'} fill={ink} />
-        <Path d={wide ? 'M30 25 Q40 29 50 25' : 'M32 25 Q40 28 48 25'} fill={tooth} />
-        <Path d="M35 31 Q40 28.5 45 31 Q42 34 40 34 Q38 34 35 31 Z" fill={cheek} />
-      </G>
-    );
-  }
-
-  function TalkO() {
-    return (
-      <G>
-        <Ellipse cx="40" cy="28" rx="4.4" ry="5.6" fill={ink} />
-        <Ellipse cx="40" cy="31" rx="2.2" ry="1.2" fill={cheek} />
-      </G>
-    );
-  }
-
-  const eyes = blink ? <BlinkEyes /> : null;
-
-  return (
-    <Svg width="64" height="32" viewBox="0 0 80 40">
-      {(() => {
-        switch (state) {
-          case 2:
-            return <>
-              <Cheeks />
-              <Path d="M22 18 Q27 12 32 18" stroke={ink} strokeWidth="3.1" fill="none" strokeLinecap="round" />
-              <Path d="M48 18 Q53 12 58 18" stroke={ink} strokeWidth="3.1" fill="none" strokeLinecap="round" />
-              <BigMouth wide />
-            </>;
-          case 3:
-            return <>
-              <Cheeks />
-              {eyes ?? <OpenEyes y={16} />}
-              <TalkO />
-            </>;
-          case 4:
-            return <>
-              <Cheeks />
-              <Path d="M22 18 Q27 21 32 18" stroke={ink} strokeWidth="2.8" fill="none" strokeLinecap="round" />
-              <Path d="M48 18 Q53 21 58 18" stroke={ink} strokeWidth="2.8" fill="none" strokeLinecap="round" />
-              <TalkO />
-            </>;
-          case 5:
-            return <>
-              <Cheeks />
-              <BlinkEyes />
-              <Line x1="36" y1="27" x2="44" y2="27" stroke={ink} strokeWidth="2.5" strokeLinecap="round" />
-            </>;
-          case 6:
-            return <>
-              <Cheeks />
-              {blink ? <BlinkEyes /> : <>
-                <Ellipse cx="27" cy="17" rx="4" ry="5.8" fill={ink} />
-                <Circle cx="25.8" cy="14.8" r="1.35" fill="#FFFFFF" opacity="0.9" />
-                <Path d="M48 17 Q53 21 58 17" stroke={ink} strokeWidth="2.9" fill="none" strokeLinecap="round" />
-              </>}
-              <Smile />
-            </>;
-          case 7:
-            return <>
-              <Cheeks strong />
-              <Path d="M22 11 Q27 8 32 11" stroke={ink} strokeWidth="2.3" fill="none" strokeLinecap="round" />
-              <Path d="M48 11 Q53 8 58 11" stroke={ink} strokeWidth="2.3" fill="none" strokeLinecap="round" />
-              {eyes ?? <OpenEyes y={18} />}
-              <Smile />
-            </>;
-          case 8:
-            return <>
-              <Cheeks />
-              <Path d="M20 12 L32 16" stroke={ink} strokeWidth="3" strokeLinecap="round" />
-              <Path d="M48 16 L60 12" stroke={ink} strokeWidth="3" strokeLinecap="round" />
-              {eyes ?? <OpenEyes y={19} small />}
-              <Path d="M31 31 Q40 25 49 31" stroke={ink} strokeWidth="2.7" fill="none" strokeLinecap="round" />
-            </>;
-          case 9:
-            return <>
-              <Cheeks />
-              <Path d="M22 15 L32 20" stroke={ink} strokeWidth="3.2" strokeLinecap="round" />
-              <Path d="M32 15 L22 20" stroke={ink} strokeWidth="3.2" strokeLinecap="round" />
-              <Line x1="48" y1="18" x2="58" y2="18" stroke={ink} strokeWidth="3.2" strokeLinecap="round" />
-              <Smile />
-            </>;
-          case 10:
-            return <>
-              <Cheeks />
-              <Path d="M28 12 C20 12 20 24 28 24 C35 24 35 14 28 14 C23 14 23 21 28 21" stroke={ink} strokeWidth="2.4" fill="none" strokeLinecap="round" />
-              <Path d="M54 12 C46 12 46 24 54 24 C61 24 61 14 54 14 C49 14 49 21 54 21" stroke={ink} strokeWidth="2.4" fill="none" strokeLinecap="round" />
-              <TalkO />
-            </>;
-          case 11:
-            return <>
-              <Cheeks />
-              <Path d="M23 15 L31 19 L23 23" stroke={ink} strokeWidth="3.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              <Path d="M57 15 L49 19 L57 23" stroke={ink} strokeWidth="3.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              <BigMouth />
-            </>;
-          case 12:
-            return <>
-              <Cheeks />
-              <Path d="M22 12 Q27 8 32 12" stroke={ink} strokeWidth="2.5" fill="none" strokeLinecap="round" />
-              <Path d="M48 12 Q53 8 58 12" stroke={ink} strokeWidth="2.5" fill="none" strokeLinecap="round" />
-              {eyes ?? <OpenEyes y={18} />}
-              <Path d="M34 30 Q37 26 40 30 Q43 34 46 30" stroke={ink} strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            </>;
-          case 13:
-            return <>
-              <Cheeks />
-              {eyes ?? <OpenEyes />}
-              <Path d="M34 25 Q40 33 46 25 Z" fill={ink} />
-              <Path d="M36 25 Q40 27 44 25" fill={tooth} />
-              <Ellipse cx="40" cy="31" rx="3" ry="1.5" fill={cheek} />
-            </>;
-          case 14:
-            return <>
-              <Cheeks />
-              {eyes ?? <OpenEyes />}
-              <TalkO />
-            </>;
-          case 15:
-            return <>
-              <Cheeks />
-              <Path d="M22 17 Q27 21.5 32 17" stroke={ink} strokeWidth="3" fill="none" strokeLinecap="round" />
-              <Path d="M48 17 Q53 21.5 58 17" stroke={ink} strokeWidth="3" fill="none" strokeLinecap="round" />
-              <Smile />
-            </>;
-          case 1:
-            return <>
-              <Cheeks />
-              {eyes ?? <OpenEyes />}
-              <Smile />
-            </>;
-          case 0:
-          default:
-            return <>
-              <Cheeks />
-              {eyes ?? <OpenEyes />}
-              <Path d="M35 27 Q40 29 45 27" stroke={ink} strokeWidth="2.4" fill="none" strokeLinecap="round" />
-            </>;
-        }
-      })()}
-    </Svg>
-  );
 }
 
 function WordlineTile({
@@ -473,7 +261,7 @@ function WordlineTile({
               ],
             }}
           >
-            <WordlineFace
+            <KonnectFace
               expression={expression}
               faceIndex={faceIndex}
               blink={blink}
@@ -505,8 +293,11 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
   const density: TileTextDensity = width <= 390 || height <= 700 ? 'tight' : width <= 480 || height <= 760 ? 'compact' : 'regular';
   const compact = density !== 'regular';
   const tight = density === 'tight';
-  const sparseRowHeight = tight ? 92 : compact ? 104 : 122;
-  const styles = useMemo(() => makeStyles(colors, compact, tight, sparseRowHeight), [colors, compact, tight, sparseRowHeight]);
+  const boardRowHeight = Math.round(Math.max(tight ? 104 : compact ? 116 : 130, Math.min(240, height * 0.2)));
+  const styles = useMemo(
+    () => makeStyles(colors, compact, tight, boardRowHeight),
+    [colors, compact, tight, boardRowHeight],
+  );
   const sound = useSound();
 
   const puzzle = useMemo(
@@ -663,8 +454,6 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
   for (let i = 0; i < boardWords.length; i += 4) {
     rows.push(boardWords.slice(i, i + 4));
   }
-  const sparseBoard = rows.length > 0 && rows.length < 4;
-  const sparseBoardHeight = rows.length * sparseRowHeight + (compact ? 10 : 12);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -725,9 +514,9 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
         )}
 
         {status === 'playing' && (
-          <View style={[styles.board, sparseBoard && styles.sparseBoard, sparseBoard && { height: sparseBoardHeight }]}>
+          <View style={styles.board}>
             {rows.map((row, rowIndex) => (
-              <View key={rowIndex} style={[styles.gridRow, sparseBoard && styles.sparseGridRow]}>
+              <View key={rowIndex} style={styles.gridRow}>
                 {row.map((word, colIndex) => {
                   const selectedIndex = selectedWords.indexOf(word);
                   return (
@@ -767,9 +556,11 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
             <>
               <View style={styles.actions}>
                 <Pressable style={styles.btnSecondary} onPress={handleShuffle} disabled={status !== 'playing'}>
+                  <ShuffleIcon color={colors.text1} />
                   <Text style={styles.btnSecondaryText}>Shuffle</Text>
                 </Pressable>
                 <Pressable style={styles.btnSecondary} onPress={resetSelection} disabled={status !== 'playing'}>
+                  <DeselectIcon color={colors.text1} />
                   <Text style={styles.btnSecondaryText}>Deselect</Text>
                 </Pressable>
                 <Pressable
@@ -777,6 +568,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
                   onPress={submitTrail}
                   disabled={status !== 'playing' || selectedWords.length !== 4}
                 >
+                  <CheckIcon color={colors.actionText} />
                   <Text style={styles.btnSubmitText}>Submit</Text>
                 </Pressable>
               </View>
@@ -866,7 +658,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
 
 const trailColors = ['#F5C842', '#3DBE8A', '#4AAEC8', '#9D6EC8'];
 
-function makeStyles(c: ColorTheme, compact: boolean, tight: boolean, sparseRowHeight: number) {
+function makeStyles(c: ColorTheme, compact: boolean, tight: boolean, boardRowHeight: number) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: c.bgScreen },
     container: {
@@ -918,7 +710,6 @@ function makeStyles(c: ColorTheme, compact: boolean, tight: boolean, sparseRowHe
     hintBannerSub: { fontSize: 10, fontFamily: FONTS.bold, color: c.text3 },
     board: {
       flex: 1,
-      minHeight: 0,
       backgroundColor: c.bgBase,
       borderRadius: 16,
       paddingHorizontal: compact ? 5 : 8,
@@ -926,9 +717,7 @@ function makeStyles(c: ColorTheme, compact: boolean, tight: boolean, sparseRowHe
       justifyContent: 'flex-start',
       overflow: 'visible',
     },
-    sparseBoard: { flex: 0 },
-    gridRow: { flex: 1, flexDirection: 'row', overflow: 'visible' },
-    sparseGridRow: { flex: 0, height: sparseRowHeight },
+    gridRow: { flex: 1, maxHeight: boardRowHeight, flexDirection: 'row', overflow: 'visible' },
     tilePressable: { flex: 1, margin: compact ? 3 : 4, overflow: 'visible' },
     tile: {
       flex: 1,
@@ -982,17 +771,25 @@ function makeStyles(c: ColorTheme, compact: boolean, tight: boolean, sparseRowHe
     mistakesWrap: { marginTop: compact ? -1 : 0, gap: compact ? 7 : 10, zIndex: 10, elevation: 10 },
     actions: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
     btnSecondary: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
       borderWidth: 1.5,
       borderColor: c.border,
       borderRadius: 24,
-      paddingHorizontal: compact ? 14 : 18,
+      paddingHorizontal: compact ? 12 : 16,
       paddingVertical: compact ? 8 : 10,
     },
     btnSecondaryText: { fontSize: compact ? 12 : 14, fontFamily: FONTS.bold, color: c.text1 },
     btnSubmit: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
       backgroundColor: c.actionBg,
       borderRadius: 24,
-      paddingHorizontal: compact ? 18 : 24,
+      paddingHorizontal: compact ? 16 : 22,
       paddingVertical: compact ? 8 : 10,
     },
     btnSubmitDisabled: { backgroundColor: c.text3 },

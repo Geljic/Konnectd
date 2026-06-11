@@ -15,14 +15,20 @@ import { fetchMyChallenges, subscribeToChallengeChanges, isMine } from '@/api/ch
 import { fetchDailyPuzzle, getCompletedPuzzleIds } from '@/api/puzzles';
 import { getWordTrails } from '@/api/wordTrails';
 import { getDailyWordTrailsPuzzle, getWordTrailsResult } from '@/utils/wordTrails';
+import {
+  getCrossedSignalsResult,
+  getDailyCrossedSignalsPuzzle,
+  getCrossedSignalsPuzzles,
+} from '@/utils/crossedSignals';
 import type { AppStackParamList } from '../App';
 
 type Props = { navigation: NativeStackNavigationProp<AppStackParamList, 'Home'> };
-type HomeGameType = 'connections' | 'word_trails';
+type HomeGameType = 'connections' | 'word_trails' | 'crossed_signals';
 type CompletedDailyModal = {
   label: string;
   puzzleId?: string;
   preloadedResult?: { durationSeconds: number; mistakes: number };
+  score?: number | null;
 };
 
 function BarChartIcon({ color }: { color: string }) {
@@ -72,6 +78,23 @@ function PeopleIcon({ color }: { color: string }) {
   );
 }
 
+function CrossedSignalsIcon({ colors, active }: { colors: ColorTheme; active: boolean }) {
+  const rail = active ? colors.bgScreen : colors.text3;
+  const center = active ? colors.bgScreen : colors.purple;
+  return (
+    <Svg width="48" height="48" viewBox="0 0 48 48">
+      <Line x1="12" y1="24" x2="36" y2="24" stroke={rail} strokeWidth="3" strokeLinecap="round" opacity={0.7} />
+      <Line x1="24" y1="12" x2="24" y2="36" stroke={rail} strokeWidth="3" strokeLinecap="round" opacity={0.7} />
+      <Path d="M12 12 H20 V20 H12 Z" fill={colors.yellow} />
+      <Path d="M28 12 H36 V20 H28 Z" fill={colors.green} />
+      <Path d="M12 28 H20 V36 H12 Z" fill={colors.blue} />
+      <Path d="M28 28 H36 V36 H28 Z" fill={colors.purple} />
+      <Circle cx="24" cy="24" r="4.5" fill={center} />
+      <Circle cx="24" cy="24" r="2" fill={active ? colors.purple : colors.bgScreen} opacity={0.9} />
+    </Svg>
+  );
+}
+
 export function HomeScreen({ navigation }: Props) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -79,7 +102,7 @@ export function HomeScreen({ navigation }: Props) {
   const { isGuest, guardAction } = useGuestGuard();
   const [openChallengeCount, setOpenChallengeCount] = useState(0);
   const [selectedGame, setSelectedGame] = useState<HomeGameType>('connections');
-  const [dailyDone, setDailyDone] = useState<Record<HomeGameType, boolean>>({ connections: false, word_trails: false });
+  const [dailyDone, setDailyDone] = useState<Record<HomeGameType, boolean>>({ connections: false, word_trails: false, crossed_signals: false });
   const [completedDaily, setCompletedDaily] = useState<CompletedDailyModal | null>(null);
   const actionAnim = useRef(new Animated.Value(1)).current;
 
@@ -98,9 +121,12 @@ export function HomeScreen({ navigation }: Props) {
     const groupsCompleted = groupsDaily ? (await getCompletedPuzzleIds()).has(groupsDaily.id) : false;
     const stepsDaily = getDailyWordTrailsPuzzle(getWordTrails());
     const stepsResult = await getWordTrailsResult(stepsDaily.id);
+    const crossedDaily = getDailyCrossedSignalsPuzzle(getCrossedSignalsPuzzles());
+    const crossedResult = await getCrossedSignalsResult(crossedDaily.id);
     setDailyDone({
       connections: groupsCompleted,
       word_trails: !!stepsResult?.completed,
+      crossed_signals: !!crossedResult?.completed,
     });
   }, []);
 
@@ -145,11 +171,23 @@ export function HomeScreen({ navigation }: Props) {
     }],
   };
 
-  const gameAccent = selectedGame === 'connections' ? colors.tileStrip : colors.blue;
+  const gameAccent = selectedGame === 'connections' ? colors.tileStrip : selectedGame === 'word_trails' ? colors.blue : colors.purple;
   const gamePrimaryBg = colors.text1;
-  const gamePrimaryLabel = selectedGame === 'connections' ? colors.tileStrip : colors.blue;
+  const gamePrimaryLabel = gameAccent;
   const gameSecondaryBg = selectedGame === 'connections' ? colors.bgBase : colors.bgSurface;
   const selectedDailyDone = dailyDone[selectedGame];
+  const modeSubtitle =
+    selectedGame === 'connections' ? 'Find four hidden groups.' :
+    selectedGame === 'word_trails' ? 'Build four ordered paths.' :
+    'Decode crossed meanings.';
+  const dailyLabel =
+    selectedGame === 'connections' ? 'DAILY GROUPS' :
+    selectedGame === 'word_trails' ? 'DAILY STEPS' :
+    'DAILY SIGNALS';
+  const dailyCompletedLabel =
+    selectedGame === 'connections' ? 'DAILY GROUPS · COMPLETED' :
+    selectedGame === 'word_trails' ? 'DAILY STEPS · COMPLETED' :
+    'DAILY SIGNALS · COMPLETED';
 
   async function handleDailyPress() {
     if (selectedGame === 'connections') {
@@ -167,15 +205,32 @@ export function HomeScreen({ navigation }: Props) {
       return;
     }
 
-    const daily = getDailyWordTrailsPuzzle(getWordTrails());
-    const result = await getWordTrailsResult(daily.id);
-    if (result?.completed) {
-      setCompletedDaily({
-        label: `Next Steps · ${daily.title}`,
-        preloadedResult: { durationSeconds: result.durationSeconds, mistakes: result.mistakes },
-      });
-    } else {
-      navigation.navigate('WordlinesGame', { mode: 'daily' });
+    if (selectedGame === 'word_trails') {
+      const daily = getDailyWordTrailsPuzzle(getWordTrails());
+      const result = await getWordTrailsResult(daily.id);
+      if (result?.completed) {
+        setCompletedDaily({
+          label: `Next Steps · ${daily.title}`,
+          preloadedResult: { durationSeconds: result.durationSeconds, mistakes: result.mistakes },
+        });
+      } else {
+        navigation.navigate('WordlinesGame', { mode: 'daily' });
+      }
+      return;
+    }
+
+    if (selectedGame === 'crossed_signals') {
+      const crossedDaily = getDailyCrossedSignalsPuzzle(getCrossedSignalsPuzzles());
+      const crossedResult = await getCrossedSignalsResult(crossedDaily.id);
+      if (crossedResult?.completed) {
+        setCompletedDaily({
+          label: `Crossed Signals · ${crossedDaily.title}`,
+          preloadedResult: { durationSeconds: crossedResult.durationSeconds, mistakes: crossedResult.noise },
+          score: crossedResult.score,
+        });
+      } else {
+        navigation.navigate('CrossedSignalsGame', { mode: 'daily' });
+      }
     }
   }
 
@@ -199,9 +254,7 @@ export function HomeScreen({ navigation }: Props) {
         <View style={styles.buttons}>
           <View style={styles.modeSection}>
             <Text style={styles.modeTitle}>Choose game mode</Text>
-            <Text style={styles.modeSubtitle}>
-              {selectedGame === 'connections' ? 'Find four hidden groups.' : 'Build four ordered paths.'}
-            </Text>
+            <Text style={styles.modeSubtitle}>{modeSubtitle}</Text>
           </View>
 
           <View style={styles.gameCards}>
@@ -260,6 +313,27 @@ export function HomeScreen({ navigation }: Props) {
                 Ordered steps
               </Text>
             </Pressable>
+            <Pressable
+              style={[
+                styles.gameCard,
+                selectedGame === 'crossed_signals' && styles.gameCardSignalsActive,
+              ]}
+              onPress={() => setSelectedGame('crossed_signals')}
+            >
+              <CrossedSignalsIcon colors={colors} active={selectedGame === 'crossed_signals'} />
+              <Text style={[
+                styles.gameCardTitle,
+                selectedGame === 'crossed_signals' && styles.gameCardTitleActive,
+              ]}>
+                Crossed Signals
+              </Text>
+              <Text style={[
+                styles.gameCardSub,
+                selectedGame === 'crossed_signals' && styles.gameCardSubActive,
+              ]}>
+                Meaning grid
+              </Text>
+            </Pressable>
           </View>
 
           <Animated.View style={[styles.actionPanel, actionPanelStyle]}>
@@ -268,12 +342,14 @@ export function HomeScreen({ navigation }: Props) {
               onPress={handleDailyPress}
             >
               <Text style={[styles.btnLabel, { color: gamePrimaryLabel }]}>
-                {selectedDailyDone
-                  ? selectedGame === 'connections' ? 'DAILY GROUPS · COMPLETED' : 'DAILY STEPS · COMPLETED'
-                  : selectedGame === 'connections' ? 'DAILY GROUPS' : 'DAILY STEPS'}
+                {selectedDailyDone ? dailyCompletedLabel : dailyLabel}
               </Text>
               <Text style={styles.btnPrimaryText}>
-                {selectedDailyDone ? "View today's result" : selectedGame === 'connections' ? "Play today's puzzle" : "Find today's path"}
+                {selectedDailyDone
+                  ? "View today's result"
+                  : selectedGame === 'connections' ? "Play today's puzzle"
+                    : selectedGame === 'word_trails' ? "Find today's path"
+                      : "Decode today's grid"}
               </Text>
             </Pressable>
 
@@ -283,7 +359,9 @@ export function HomeScreen({ navigation }: Props) {
                   style={[styles.btnSecondary, { flex: 1, backgroundColor: gameSecondaryBg }]}
                   onPress={() => selectedGame === 'connections'
                     ? navigation.navigate('Game', { mode: 'nyt' })
-                    : navigation.navigate('WordlinesGame', { mode: 'random' })}
+                    : selectedGame === 'word_trails'
+                      ? navigation.navigate('WordlinesGame', { mode: 'random' })
+                      : navigation.navigate('CrossedSignalsGame', { mode: 'random' })}
                 >
                   <Text style={[styles.btnLabel, { color: selectedGame === 'connections' ? colors.text2 : gameAccent }]}>
                     {selectedGame === 'connections' ? 'NYT' : 'RANDOM'}
@@ -295,7 +373,9 @@ export function HomeScreen({ navigation }: Props) {
                 style={[styles.btnTertiary, { flex: 1, backgroundColor: gameSecondaryBg, borderColor: gameAccent }]}
                 onPress={() => selectedGame === 'connections'
                   ? navigation.navigate('PuzzleSelect')
-                  : navigation.navigate('WordlinesSelect')}
+                  : selectedGame === 'word_trails'
+                    ? navigation.navigate('WordlinesSelect')
+                    : navigation.navigate('CrossedSignalsSelect')}
               >
                 <Text style={[styles.btnLabel, { color: selectedGame === 'connections' ? colors.text2 : gameAccent }]}>
                   FREE PLAY
@@ -305,13 +385,15 @@ export function HomeScreen({ navigation }: Props) {
             </View>
 
             <Pressable
-              style={[styles.btnLeaderboard, selectedGame === 'word_trails' && { borderColor: gameAccent }]}
+              style={[styles.btnLeaderboard, selectedGame !== 'connections' && { borderColor: gameAccent }]}
               onPress={() => selectedGame === 'connections'
                 ? guardAction(() => navigation.navigate('Leaderboard', { gameType: 'connections' }))
-                : guardAction(() => navigation.navigate('Leaderboard', { gameType: 'word_trails' }))}
+                : selectedGame === 'word_trails'
+                  ? guardAction(() => navigation.navigate('Leaderboard', { gameType: 'word_trails' }))
+                  : navigation.navigate('Stats')}
             >
               <Text style={styles.btnLeaderboardText}>
-                🏆  Leaderboard
+                {selectedGame === 'crossed_signals' ? '📊  Local Stats' : '🏆  Leaderboard'}
               </Text>
             </Pressable>
           </Animated.View>
@@ -349,7 +431,8 @@ export function HomeScreen({ navigation }: Props) {
         label={completedDaily?.label ?? ''}
         puzzleId={completedDaily?.puzzleId ?? null}
         preloadedResult={completedDaily?.preloadedResult ?? null}
-        gameMode={selectedGame === 'word_trails' ? 'classic' : null}
+        score={completedDaily?.score ?? null}
+        gameMode={selectedGame !== 'connections' ? 'classic' : null}
         onClose={() => setCompletedDaily(null)}
       />
     </SafeAreaView>
@@ -374,10 +457,12 @@ function makeStyles(c: ColorTheme) {
     modeSubtitle: { fontSize: 13, fontFamily: FONTS.bold, color: c.text3 },
     gameCards: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 12,
     },
     gameCard: {
       flex: 1,
+      minWidth: 108,
       minHeight: 118,
       borderRadius: 16,
       backgroundColor: c.bgBase,
@@ -389,6 +474,7 @@ function makeStyles(c: ColorTheme) {
     },
     gameCardActive: { backgroundColor: c.text1, borderColor: c.tileStrip },
     gameCardWordlinesActive: { backgroundColor: c.text1, borderColor: c.blue },
+    gameCardSignalsActive: { backgroundColor: c.text1, borderColor: c.purple },
     connectionsIcon: { width: 42, flexDirection: 'row', flexWrap: 'wrap', gap: 3 },
     iconTile: { width: 19, height: 19, borderRadius: 6 },
     wordlineIcon: { flexDirection: 'row', alignItems: 'center', height: 22 },
