@@ -9,20 +9,20 @@ export type TrailRelation =
   | 'story'
   | 'association';
 
-export interface WordTrail {
+export interface NextStepsTrail {
   words: [string, string, string, string];
   label: string;
   relation: TrailRelation;
 }
 
-export interface WordTrailsPuzzle {
+export interface NextStepsPuzzle {
   id: string;
   title: string;
   difficulty: 1 | 2 | 3 | 4 | 5;
-  trails: [WordTrail, WordTrail, WordTrail, WordTrail];
+  trails: [NextStepsTrail, NextStepsTrail, NextStepsTrail, NextStepsTrail];
 }
 
-export const WORD_TRAILS_PUZZLES: WordTrailsPuzzle[] = [
+export const NEXT_STEPS_PUZZLES: NextStepsPuzzle[] = [
   {
     id: 'wt-001',
     title: 'First Steps',

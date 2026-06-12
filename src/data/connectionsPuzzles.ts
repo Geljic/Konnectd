@@ -3,7 +3,7 @@ import type { CategoryColour } from '@/constants/colors';
 
 /**
  * Hand-authored ORIGINAL Connections puzzles — our own content, not NYT boards.
- * Static source of truth (the Connections analogue of wordTrailsPuzzles.ts).
+ * Static source of truth (the Connections analogue of nextStepsPuzzles.ts).
  * Build into playable `Puzzle`s with src/utils/connectionsPuzzles.ts; push to
  * PocketBase with scripts/import_curated_puzzles.ts.
  *

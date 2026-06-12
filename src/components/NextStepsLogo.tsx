@@ -47,7 +47,7 @@ function Dash({ color, width = 24 }: { color: string; width?: number }) {
   );
 }
 
-export function WordlinesIcon({ size = 36 }: { size?: number }) {
+export function NextStepsIcon({ size = 36 }: { size?: number }) {
   const dashWidth = size * 0.55;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -63,11 +63,11 @@ export function WordlinesIcon({ size = 36 }: { size?: number }) {
   );
 }
 
-export function WordlinesLogo({ nodeSize = 32 }: { nodeSize?: number }) {
+export function NextStepsLogo({ nodeSize = 32 }: { nodeSize?: number }) {
   const colors = useColors();
   return (
     <View style={styles.root}>
-      <WordlinesIcon size={nodeSize} />
+      <NextStepsIcon size={nodeSize} />
       <Text style={[styles.wordmark, { color: colors.text1 }]}>Next Steps</Text>
       <Text style={[styles.tagline, { color: colors.text2 }]}>Ordered word paths</Text>
     </View>

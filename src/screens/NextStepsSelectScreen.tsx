@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, FlatList, StyleSheet, ListRenderItem, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { type WordTrailsPuzzle } from '@/data/wordTrailsPuzzles';
-import { getWordTrails, loadWordTrails } from '@/api/wordTrails';
-import { getCompletedWordTrailsIds, getWordTrailsResult } from '@/utils/wordTrails';
+import { type NextStepsPuzzle } from '@/data/nextStepsPuzzles';
+import { getNextSteps, loadNextSteps } from '@/api/nextSteps';
+import { getCompletedNextStepsIds, getNextStepsResult } from '@/utils/nextSteps';
 import { GameResultModal } from '@/components/GameResultModal';
 import { AdBanner } from '@/components/BannerAd';
 import { useColors } from '@/hooks/useColors';
@@ -12,12 +12,12 @@ import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
 import type { AppStackParamList } from '../App';
 
-type Props = NativeStackScreenProps<AppStackParamList, 'WordlinesSelect'>;
+type Props = NativeStackScreenProps<AppStackParamList, 'NextStepsSelect'>;
 
 const DIFFICULTIES = [1, 2, 3, 4, 5] as const;
 type SortMode = 'title_asc' | 'diff_asc' | 'diff_desc';
 
-const DIFFICULTY_LABELS: Record<WordTrailsPuzzle['difficulty'], string> = {
+const DIFFICULTY_LABELS: Record<NextStepsPuzzle['difficulty'], string> = {
   1: 'Easy',
   2: 'Medium',
   3: 'Hard',
@@ -40,20 +40,20 @@ const DIFFICULTY_COLOURS = (c: ColorTheme) => ({
   5: c.purple,
 } as Record<number, string>);
 
-export function WordlinesSelectScreen({ navigation }: Props) {
+export function NextStepsSelectScreen({ navigation }: Props) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const difficultyColours = useMemo(() => DIFFICULTY_COLOURS(colors), [colors]);
-  const [difficulty, setDifficulty] = useState<WordTrailsPuzzle['difficulty'] | null>(null);
+  const [difficulty, setDifficulty] = useState<NextStepsPuzzle['difficulty'] | null>(null);
   const [search, setSearch] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('title_asc');
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
-  const [allPuzzles, setAllPuzzles] = useState<WordTrailsPuzzle[]>(getWordTrails());
+  const [allPuzzles, setAllPuzzles] = useState<NextStepsPuzzle[]>(getNextSteps());
   const [modalPuzzle, setModalPuzzle] = useState<{ id: string; title: string; result: { durationSeconds: number; mistakes: number } } | null>(null);
 
   useEffect(() => {
-    getCompletedWordTrailsIds().then(setCompletedIds);
-    loadWordTrails().then(setAllPuzzles);
+    getCompletedNextStepsIds().then(setCompletedIds);
+    loadNextSteps().then(setAllPuzzles);
   }, []);
 
   const puzzles = allPuzzles
@@ -76,9 +76,9 @@ export function WordlinesSelectScreen({ navigation }: Props) {
       return a.title.localeCompare(b.title);
     });
 
-  async function openPuzzle(item: WordTrailsPuzzle) {
+  async function openPuzzle(item: NextStepsPuzzle) {
     if (completedIds.has(item.id)) {
-      const result = await getWordTrailsResult(item.id);
+      const result = await getNextStepsResult(item.id);
       if (result?.completed) {
         setModalPuzzle({
           id: item.id,
@@ -88,14 +88,14 @@ export function WordlinesSelectScreen({ navigation }: Props) {
         return;
       }
     }
-    navigation.navigate('WordlinesGame', { mode: 'freeplay', puzzleId: item.id });
+    navigation.navigate('NextStepsGame', { mode: 'freeplay', puzzleId: item.id });
   }
 
   function cycleSortMode() {
     setSortMode(SORT_CYCLE[(SORT_CYCLE.indexOf(sortMode) + 1) % SORT_CYCLE.length]);
   }
 
-  const renderItem: ListRenderItem<WordTrailsPuzzle> = ({ item }) => {
+  const renderItem: ListRenderItem<NextStepsPuzzle> = ({ item }) => {
     const done = completedIds.has(item.id);
     return (
       <Pressable
@@ -162,7 +162,7 @@ export function WordlinesSelectScreen({ navigation }: Props) {
         onPlayAgain={() => {
           const id = modalPuzzle?.id;
           setModalPuzzle(null);
-          if (id) navigation.navigate('WordlinesGame', { mode: 'freeplay', puzzleId: id });
+          if (id) navigation.navigate('NextStepsGame', { mode: 'freeplay', puzzleId: id });
         }}
       />
     </SafeAreaView>

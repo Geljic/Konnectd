@@ -17,7 +17,7 @@ const EXAMPLE_PATHS = [
   { colour: '#4AAEC8', label: 'performance path', words: ['SCRIPT', 'ACTOR', 'STAGE', 'APPLAUSE'] },
 ];
 
-export function WordlinesHelpModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function NextStepsHelpModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const sheetY = useSharedValue(600);

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Validate src/data/wordTrailsPuzzles.ts WITHOUT node.
+Validate src/data/nextStepsPuzzles.ts WITHOUT node.
 
 Each Next Steps puzzle must have: a difficulty 1-5, exactly 4 trails, 4 words per
 trail, 16 unique words total, a valid relation per trail, and a unique id.
@@ -13,7 +13,7 @@ import sys
 from collections import Counter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DATA = os.path.join(HERE, "..", "src", "data", "wordTrailsPuzzles.ts")
+DATA = os.path.join(HERE, "..", "src", "data", "nextStepsPuzzles.ts")
 RELATIONS = {"cause", "sequence", "growth", "process", "place", "phrase", "hierarchy", "story", "association"}
 
 src = open(DATA, encoding="utf-8").read()
@@ -27,7 +27,7 @@ def words_of(raw):
 errors, seen_ids = [], set()
 spread = Counter()
 count = 0
-print("Validating Next Steps puzzles from wordTrailsPuzzles.ts\n")
+print("Validating Next Steps puzzles from nextStepsPuzzles.ts\n")
 
 for i in range(1, len(parts), 2):
     pid = re.search(r"'([^']+)'", parts[i]).group(1)

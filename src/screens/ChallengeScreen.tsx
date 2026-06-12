@@ -73,7 +73,7 @@ export function ChallengeScreen({ route, navigation }: Props) {
   function handlePlay() {
     if (!challenge) return;
     if (challenge.gameType === 'word_trails') {
-      navigation.replace('WordlinesGame', {
+      navigation.replace('NextStepsGame', {
         mode: 'freeplay',
         puzzleId: challenge.puzzleId,
         challengeId: challenge.id,

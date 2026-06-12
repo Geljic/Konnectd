@@ -1,14 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { WordTrail, WordTrailsPuzzle } from '@/data/wordTrailsPuzzles';
+import type { NextStepsTrail, NextStepsPuzzle } from '@/data/nextStepsPuzzles';
 
-const WORD_TRAILS_RESULTS_KEY = 'word_trails_results';
+const NEXT_STEPS_RESULTS_KEY = 'word_trails_results';
 
-export interface WordTrailsValidationResult {
+export interface NextStepsValidationResult {
   valid: boolean;
   errors: string[];
 }
 
-export interface WordTrailsResult {
+export interface NextStepsResult {
   completed: boolean;
   mistakes: number;
   durationSeconds: number;
@@ -16,12 +16,12 @@ export interface WordTrailsResult {
   completedAt: string;
 }
 
-export function createWordTrailsPuzzle(params: {
+export function createNextStepsPuzzle(params: {
   id: string;
   title: string;
-  difficulty: WordTrailsPuzzle['difficulty'];
-  trails: WordTrailsPuzzle['trails'];
-}): WordTrailsPuzzle {
+  difficulty: NextStepsPuzzle['difficulty'];
+  trails: NextStepsPuzzle['trails'];
+}): NextStepsPuzzle {
   return {
     id: params.id,
     title: params.title,
@@ -30,18 +30,18 @@ export function createWordTrailsPuzzle(params: {
   };
 }
 
-export function getWordTrailsBoard(puzzle: WordTrailsPuzzle): string[] {
+export function getNextStepsBoard(puzzle: NextStepsPuzzle): string[] {
   return puzzle.trails.flatMap(trail => trail.words);
 }
 
-export function validateWordTrailsPuzzle(puzzle: WordTrailsPuzzle): WordTrailsValidationResult {
+export function validateNextStepsPuzzle(puzzle: NextStepsPuzzle): NextStepsValidationResult {
   const errors: string[] = [];
   if (!puzzle.id.trim()) errors.push('Puzzle id is required.');
   if (!puzzle.title.trim()) errors.push(`Puzzle ${puzzle.id} needs a title.`);
   if (puzzle.trails.length !== 4) errors.push(`Puzzle ${puzzle.id} must have exactly 4 trails.`);
 
   const seen = new Set<string>();
-  puzzle.trails.forEach((trail: WordTrail, trailIndex: number) => {
+  puzzle.trails.forEach((trail: NextStepsTrail, trailIndex: number) => {
     if (trail.words.length !== 4) {
       errors.push(`Puzzle ${puzzle.id} trail ${trailIndex + 1} must have exactly 4 words.`);
     }
@@ -63,64 +63,64 @@ export function validateWordTrailsPuzzle(puzzle: WordTrailsPuzzle): WordTrailsVa
   return { valid: errors.length === 0, errors };
 }
 
-export function validateWordTrailsPuzzles(puzzles: WordTrailsPuzzle[]): WordTrailsValidationResult {
+export function validateNextStepsPuzzles(puzzles: NextStepsPuzzle[]): NextStepsValidationResult {
   const ids = new Set<string>();
   const errors: string[] = [];
 
   puzzles.forEach(puzzle => {
     if (ids.has(puzzle.id)) errors.push(`Duplicate puzzle id ${puzzle.id}.`);
     ids.add(puzzle.id);
-    errors.push(...validateWordTrailsPuzzle(puzzle).errors);
+    errors.push(...validateNextStepsPuzzle(puzzle).errors);
   });
 
   return { valid: errors.length === 0, errors };
 }
 
-export function getDailyWordTrailsPuzzle(puzzles: WordTrailsPuzzle[], now = new Date()): WordTrailsPuzzle {
+export function getDailyNextStepsPuzzle(puzzles: NextStepsPuzzle[], now = new Date()): NextStepsPuzzle {
   const start = new Date('2026-06-09T00:00:00Z').getTime();
   const dayIndex = Math.max(0, Math.floor((now.getTime() - start) / 86400000));
   return puzzles[dayIndex % puzzles.length];
 }
 
-export function getRandomWordTrailsPuzzle(puzzles: WordTrailsPuzzle[]): WordTrailsPuzzle {
+export function getRandomNextStepsPuzzle(puzzles: NextStepsPuzzle[]): NextStepsPuzzle {
   return puzzles[Math.floor(Math.random() * puzzles.length)];
 }
 
-export async function markWordTrailsCompleted(
+export async function markNextStepsCompleted(
   puzzleId: string,
-  result: Omit<WordTrailsResult, 'completedAt'>,
+  result: Omit<NextStepsResult, 'completedAt'>,
 ): Promise<void> {
   try {
-    const raw = await AsyncStorage.getItem(WORD_TRAILS_RESULTS_KEY);
-    const map: Record<string, WordTrailsResult> = raw ? JSON.parse(raw) : {};
+    const raw = await AsyncStorage.getItem(NEXT_STEPS_RESULTS_KEY);
+    const map: Record<string, NextStepsResult> = raw ? JSON.parse(raw) : {};
     map[puzzleId] = { ...result, completedAt: new Date().toISOString() };
-    await AsyncStorage.setItem(WORD_TRAILS_RESULTS_KEY, JSON.stringify(map));
+    await AsyncStorage.setItem(NEXT_STEPS_RESULTS_KEY, JSON.stringify(map));
   } catch {}
 }
 
-export async function getCompletedWordTrailsIds(): Promise<Set<string>> {
+export async function getCompletedNextStepsIds(): Promise<Set<string>> {
   try {
-    const raw = await AsyncStorage.getItem(WORD_TRAILS_RESULTS_KEY);
+    const raw = await AsyncStorage.getItem(NEXT_STEPS_RESULTS_KEY);
     if (!raw) return new Set();
-    const map: Record<string, WordTrailsResult> = JSON.parse(raw);
+    const map: Record<string, NextStepsResult> = JSON.parse(raw);
     return new Set(Object.entries(map).filter(([, result]) => result.completed).map(([id]) => id));
   } catch {
     return new Set();
   }
 }
 
-export async function getWordTrailsResult(puzzleId: string): Promise<WordTrailsResult | null> {
+export async function getNextStepsResult(puzzleId: string): Promise<NextStepsResult | null> {
   try {
-    const raw = await AsyncStorage.getItem(WORD_TRAILS_RESULTS_KEY);
+    const raw = await AsyncStorage.getItem(NEXT_STEPS_RESULTS_KEY);
     if (!raw) return null;
-    const map: Record<string, WordTrailsResult> = JSON.parse(raw);
+    const map: Record<string, NextStepsResult> = JSON.parse(raw);
     return map[puzzleId] ?? null;
   } catch {
     return null;
   }
 }
 
-export interface WordTrailsSessionItem {
+export interface NextStepsSessionItem {
   id: string;
   puzzle: string;
   completed: boolean;
@@ -129,11 +129,11 @@ export interface WordTrailsSessionItem {
   created: string;
 }
 
-export async function fetchLocalWordTrailsSessions(): Promise<WordTrailsSessionItem[]> {
+export async function fetchLocalNextStepsSessions(): Promise<NextStepsSessionItem[]> {
   try {
-    const raw = await AsyncStorage.getItem(WORD_TRAILS_RESULTS_KEY);
+    const raw = await AsyncStorage.getItem(NEXT_STEPS_RESULTS_KEY);
     if (!raw) return [];
-    const map: Record<string, WordTrailsResult> = JSON.parse(raw);
+    const map: Record<string, NextStepsResult> = JSON.parse(raw);
     return Object.entries(map)
       .map(([puzzleId, result]) => ({
         id: puzzleId,
@@ -149,7 +149,7 @@ export async function fetchLocalWordTrailsSessions(): Promise<WordTrailsSessionI
   }
 }
 
-export function computeWordTrailsStreak(sessions: WordTrailsSessionItem[]): { current: number; best: number } {
+export function computeNextStepsStreak(sessions: NextStepsSessionItem[]): { current: number; best: number } {
   const completedDays = Array.from(
     new Set(sessions.filter(s => s.completed).map(s => s.created.split('T')[0]))
   ).sort().reverse();

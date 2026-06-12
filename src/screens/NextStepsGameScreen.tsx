@@ -3,14 +3,14 @@ import { Animated, View, Text, Pressable, StyleSheet, useWindowDimensions, Modal
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Line } from 'react-native-svg';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { type WordTrail, type WordTrailsPuzzle } from '@/data/wordTrailsPuzzles';
-import { getWordTrails } from '@/api/wordTrails';
+import { type NextStepsTrail, type NextStepsPuzzle } from '@/data/nextStepsPuzzles';
+import { getNextSteps } from '@/api/nextSteps';
 import {
-  getDailyWordTrailsPuzzle,
-  getRandomWordTrailsPuzzle,
-  getWordTrailsBoard,
-  markWordTrailsCompleted,
-} from '@/utils/wordTrails';
+  getDailyNextStepsPuzzle,
+  getRandomNextStepsPuzzle,
+  getNextStepsBoard,
+  markNextStepsCompleted,
+} from '@/utils/nextSteps';
 import { shuffle } from '@/utils/shuffle';
 import { recordPlaySession } from '@/api/puzzles';
 import { useColors } from '@/hooks/useColors';
@@ -20,7 +20,7 @@ import { useChallengeFinish } from '@/hooks/useChallengeFinish';
 import { MAX_MISTAKES } from '@/constants/config';
 import { useSound } from '@/hooks/useSound';
 import { MistakeDots } from '@/components/MistakeDots';
-import { WordlinesHelpModal } from '@/components/WordlinesHelpModal';
+import { NextStepsHelpModal } from '@/components/NextStepsHelpModal';
 import { GameResultModal } from '@/components/GameResultModal';
 import { TrailReveal } from '@/components/TrailReveal';
 import { Confetti } from '@/components/Confetti';
@@ -29,7 +29,7 @@ import { ShuffleIcon, DeselectIcon, CheckIcon } from '@/components/GameIcons';
 import { STRIP_CONFIG, useSettingsStore, type TileStripStyle } from '@/store/settingsStore';
 import type { AppStackParamList } from '../App';
 
-type Props = NativeStackScreenProps<AppStackParamList, 'WordlinesGame'>;
+type Props = NativeStackScreenProps<AppStackParamList, 'NextStepsGame'>;
 type GameStatus = 'playing' | 'won' | 'lost';
 type StepHint = 'same_path' | 'next_step' | 'path_label';
 type TileTextDensity = 'regular' | 'compact' | 'tight';
@@ -49,13 +49,13 @@ function formatTime(seconds: number) {
   return `${m}:${(seconds % 60).toString().padStart(2, '0')}`;
 }
 
-function resolvePuzzle(mode: 'daily' | 'random' | 'freeplay', puzzleId?: string): WordTrailsPuzzle {
-  const puzzles = getWordTrails();
-  if (mode === 'daily') return getDailyWordTrailsPuzzle(puzzles);
+function resolvePuzzle(mode: 'daily' | 'random' | 'freeplay', puzzleId?: string): NextStepsPuzzle {
+  const puzzles = getNextSteps();
+  if (mode === 'daily') return getDailyNextStepsPuzzle(puzzles);
   if (mode === 'freeplay' && puzzleId) {
     return puzzles.find(p => p.id === puzzleId) ?? puzzles[0];
   }
-  return getRandomWordTrailsPuzzle(puzzles);
+  return getRandomNextStepsPuzzle(puzzles);
 }
 
 function BackIcon({ color }: { color: string }) {
@@ -90,7 +90,7 @@ function tileFontSize(word: string, density: TileTextDensity = 'regular') {
   return size;
 }
 
-function difficultyLabel(level: WordTrailsPuzzle['difficulty']) {
+function difficultyLabel(level: NextStepsPuzzle['difficulty']) {
   if (level === 1) return 'Easy';
   if (level === 2) return 'Medium';
   if (level === 3) return 'Hard';
@@ -158,7 +158,7 @@ function SelectionPath({
   );
 }
 
-function WordlineTile({
+function NextStepsTile({
   word,
   selectedIndex,
   disabled,
@@ -399,7 +399,7 @@ function WordlineTile({
   );
 }
 
-export function WordlinesGameScreen({ route, navigation }: Props) {
+export function NextStepsGameScreen({ route, navigation }: Props) {
   const colors = useColors();
   const { width, height } = useWindowDimensions();
   const density: TileTextDensity = width <= 390 || height <= 700 ? 'tight' : width <= 480 || height <= 760 ? 'compact' : 'regular';
@@ -416,9 +416,9 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
     () => resolvePuzzle(route.params.mode, route.params.puzzleId),
     [route.params.mode, route.params.puzzleId],
   );
-  const [boardWords, setBoardWords] = useState(() => shuffle(getWordTrailsBoard(puzzle)));
+  const [boardWords, setBoardWords] = useState(() => shuffle(getNextStepsBoard(puzzle)));
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
-  const [solvedTrails, setSolvedTrails] = useState<WordTrail[]>([]);
+  const [solvedTrails, setSolvedTrails] = useState<NextStepsTrail[]>([]);
   const [mistakes, setMistakes] = useState(0);
   const [status, setStatus] = useState<GameStatus>('playing');
   const [message, setMessage] = useState('Tap four words in step order.');
@@ -453,7 +453,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
     const durationSeconds = Math.max(1, Math.floor((Date.now() - startedAt.current) / 1000));
     const completed = status === 'won';
     const score = completed ? Math.max(0, 1200 - mistakes * 100 - durationSeconds * 2 - hintsUsed * HINT_PENALTY) : undefined;
-    void markWordTrailsCompleted(puzzle.id, {
+    void markNextStepsCompleted(puzzle.id, {
       completed,
       mistakes,
       durationSeconds,
@@ -468,7 +468,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
       gameType: 'word_trails',
       gameMode: 'classic',
       score,
-    }).catch(e => console.error('[WordlinesGameScreen] record session error:', e));
+    }).catch(e => console.error('[NextStepsGameScreen] record session error:', e));
     if (isChallenge) {
       const solvedOrder = solvedTrails.map((_, i) => CATEGORY_ORDER[i % CATEGORY_ORDER.length]);
       const timeout = setTimeout(() => {
@@ -699,7 +699,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
                   const submittedIndex = submittedPathWords?.indexOf(word) ?? -1;
                   const displaySelectedIndex = submittedIndex >= 0 ? submittedIndex : selectedIndex;
                   return (
-                    <WordlineTile
+                    <NextStepsTile
                       key={word}
                       word={word}
                       selectedIndex={displaySelectedIndex}
@@ -771,7 +771,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
               <Pressable style={styles.btnSecondary} onPress={() => navigation.navigate('Home')}>
                 <Text style={styles.btnSecondaryText}>Home</Text>
               </Pressable>
-              <Pressable style={styles.btnSubmit} onPress={() => navigation.replace('WordlinesGame', { mode: 'random' })}>
+              <Pressable style={styles.btnSubmit} onPress={() => navigation.replace('NextStepsGame', { mode: 'random' })}>
                 <Text style={styles.btnSubmitText}>Random Next</Text>
               </Pressable>
             </View>
@@ -779,7 +779,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
         </View>
       </View>
       <Confetti active={status === 'won'} />
-      <WordlinesHelpModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
+      <NextStepsHelpModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
       <Modal visible={hintVisible} transparent animationType="fade" onRequestClose={() => setHintVisible(false)}>
         <Pressable style={styles.hintOverlay} onPress={() => setHintVisible(false)}>
           <Pressable style={styles.hintSheet} onPress={e => e.stopPropagation()}>
@@ -842,7 +842,7 @@ export function WordlinesGameScreen({ route, navigation }: Props) {
         onViewBoard={() => setResultVisible(false)}
         onPlayAgain={() => {
           setResultVisible(false);
-          navigation.replace('WordlinesGame', { mode: 'random' });
+          navigation.replace('NextStepsGame', { mode: 'random' });
         }}
       />
     </SafeAreaView>

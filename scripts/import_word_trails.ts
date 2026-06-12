@@ -1,5 +1,5 @@
 /**
- * Push the static Next Steps puzzles (src/data/wordTrailsPuzzles.ts) into the
+ * Push the static Next Steps puzzles (src/data/nextStepsPuzzles.ts) into the
  * PocketBase `word_trails` collection (created by migration 1781120000).
  *
  * The app still reads the static file today; this gives DB parity with
@@ -15,14 +15,14 @@
  */
 
 import PocketBase from 'pocketbase';
-import { WORD_TRAILS_PUZZLES, type WordTrailsPuzzle } from '../src/data/wordTrailsPuzzles';
+import { NEXT_STEPS_PUZZLES, type NextStepsPuzzle } from '../src/data/nextStepsPuzzles';
 
 const PB_URL = process.env.POCKETBASE_URL ?? 'http://localhost:8092';
 const PUBLISH = process.argv.includes('--publish');
 const REPLACE = process.argv.includes('--replace');
 const pb = new PocketBase(PB_URL);
 
-function validate(p: WordTrailsPuzzle): string | null {
+function validate(p: NextStepsPuzzle): string | null {
   if (p.trails.length !== 4) return '4 trails required';
   const words: string[] = [];
   for (const t of p.trails) {
@@ -33,7 +33,7 @@ function validate(p: WordTrailsPuzzle): string | null {
   return null;
 }
 
-function buildRecord(p: WordTrailsPuzzle) {
+function buildRecord(p: NextStepsPuzzle) {
   return {
     slug: p.id,
     title: p.title,
@@ -53,15 +53,15 @@ async function main() {
 
   if (REPLACE) {
     const existing = await pb.collection('word_trails').getFullList({ fields: 'id,slug', requestKey: null });
-    const slugs = new Set(WORD_TRAILS_PUZZLES.map(p => p.id));
+    const slugs = new Set(NEXT_STEPS_PUZZLES.map(p => p.id));
     const stale = existing.filter(r => slugs.has((r as any).slug));
     console.log(`--replace: deleting ${stale.length} existing puzzle(s)...`);
     for (const r of stale) await pb.collection('word_trails').delete(r.id);
   }
 
-  console.log(`Importing ${WORD_TRAILS_PUZZLES.length} Next Steps puzzles as ${PUBLISH ? 'PUBLISHED' : 'draft'}...`);
+  console.log(`Importing ${NEXT_STEPS_PUZZLES.length} Next Steps puzzles as ${PUBLISH ? 'PUBLISHED' : 'draft'}...`);
   let created = 0, invalid = 0;
-  for (const p of WORD_TRAILS_PUZZLES) {
+  for (const p of NEXT_STEPS_PUZZLES) {
     const err = validate(p);
     if (err) { console.log(`  ✗ ${p.id} invalid — ${err}`); invalid++; continue; }
     try {
@@ -72,7 +72,7 @@ async function main() {
     }
   }
 
-  console.log(`\nDone. ${created}/${WORD_TRAILS_PUZZLES.length} imported${invalid ? `, ${invalid} invalid` : ''}.`);
+  console.log(`\nDone. ${created}/${NEXT_STEPS_PUZZLES.length} imported${invalid ? `, ${invalid} invalid` : ''}.`);
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

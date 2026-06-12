@@ -9,7 +9,7 @@ import { useFonts } from 'expo-font';
 import { useAuthStore } from '@/store/authStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useMonetisationStore } from '@/store/monetisationStore';
-import { loadWordTrails } from '@/api/wordTrails';
+import { loadNextSteps } from '@/api/nextSteps';
 import { WelcomeScreen } from '@/screens/WelcomeScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
 import { SignUpScreen } from '@/screens/SignUpScreen';
@@ -26,8 +26,8 @@ import { ChallengesInboxScreen } from '@/screens/ChallengesInboxScreen';
 import { SocialScreen } from '@/screens/SocialScreen';
 import { FriendDetailScreen } from '@/screens/FriendDetailScreen';
 import { LeaderboardScreen } from '@/screens/LeaderboardScreen';
-import { WordlinesGameScreen } from '@/screens/WordlinesGameScreen';
-import { WordlinesSelectScreen } from '@/screens/WordlinesSelectScreen';
+import { NextStepsGameScreen } from '@/screens/NextStepsGameScreen';
+import { NextStepsSelectScreen } from '@/screens/NextStepsSelectScreen';
 import { CrossedSignalsGameScreen } from '@/screens/CrossedSignalsGameScreen';
 import { CrossedSignalsSelectScreen } from '@/screens/CrossedSignalsSelectScreen';
 import { useColors } from '@/hooks/useColors';
@@ -61,14 +61,14 @@ export type AppStackParamList = {
   Friends: undefined;
   FriendDetail: { friendshipId: string; friendId: string; friendHandle: string; friendDisplayName: string };
   Leaderboard: { gameType?: GameType } | undefined;
-  WordlinesGame: {
+  NextStepsGame: {
     mode: 'daily' | 'random' | 'freeplay';
     puzzleId?: string;
     challengeId?: string;
     recipientId?: string;
     recipientName?: string;
   };
-  WordlinesSelect: undefined;
+  NextStepsSelect: undefined;
   CrossedSignalsGame: {
     mode: 'daily' | 'random' | 'freeplay';
     puzzleId?: string;
@@ -110,7 +110,7 @@ function AppNavigator() {
   return (
     <AppStack.Navigator screenOptions={screenOptions}>
       <AppStack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-      <AppStack.Screen name="PuzzleSelect" component={PuzzleSelectScreen} options={{ title: 'Puzzles' }} />
+      <AppStack.Screen name="PuzzleSelect" component={PuzzleSelectScreen} options={{ title: 'Groups' }} />
       <AppStack.Screen name="Game" component={GameScreen} options={{ headerShown: false }} />
       <AppStack.Screen name="Result" component={ResultScreen} options={{ headerShown: false }} />
       <AppStack.Screen name="Stats" component={StatsScreen} options={{ title: 'Statistics' }} />
@@ -122,8 +122,8 @@ function AppNavigator() {
       <AppStack.Screen name="Friends" component={SocialScreen} options={{ headerShown: false }} />
       <AppStack.Screen name="FriendDetail" component={FriendDetailScreen} options={({ route }) => ({ title: route.params.friendDisplayName })} />
       <AppStack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ title: '🏆 Leaderboard' }} />
-      <AppStack.Screen name="WordlinesGame" component={WordlinesGameScreen} options={{ headerShown: false }} />
-      <AppStack.Screen name="WordlinesSelect" component={WordlinesSelectScreen} options={{ title: 'Next Steps' }} />
+      <AppStack.Screen name="NextStepsGame" component={NextStepsGameScreen} options={{ headerShown: false }} />
+      <AppStack.Screen name="NextStepsSelect" component={NextStepsSelectScreen} options={{ title: 'Next Steps' }} />
       <AppStack.Screen name="CrossedSignalsGame" component={CrossedSignalsGameScreen} options={{ headerShown: false }} />
       <AppStack.Screen name="CrossedSignalsSelect" component={CrossedSignalsSelectScreen} options={{ title: 'Crossed Signals' }} />
     </AppStack.Navigator>
@@ -223,7 +223,7 @@ export default function App() {
     }
     Promise.all([restoreSession(), loadSettings(), loadMonetisation()]).finally(() => setReady(true));
     // Warm the Next Steps cache from the DB (non-blocking; static fallback meanwhile).
-    loadWordTrails();
+    loadNextSteps();
   }, []);
 
   // Once the user is authenticated and pending navigation exists, resolve it

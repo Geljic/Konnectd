@@ -1,8 +1,8 @@
 export type GameType = 'connections' | 'word_trails' | 'crossed_signals';
 export type GroupsRuleset = 'normal' | 'hard';
-export type WordTrailsRuleset = 'classic';
+export type NextStepsRuleset = 'classic';
 export type CrossedSignalsRuleset = 'classic';
-export type Ruleset = GroupsRuleset | WordTrailsRuleset | CrossedSignalsRuleset;
+export type Ruleset = GroupsRuleset | NextStepsRuleset | CrossedSignalsRuleset;
 
 export const DEFAULT_GAME_TYPE: GameType = 'connections';
 export const DEFAULT_GROUPS_RULESET: GroupsRuleset = 'normal';

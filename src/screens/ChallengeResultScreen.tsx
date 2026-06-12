@@ -150,7 +150,7 @@ export function ChallengeResultScreen({ route, navigation }: Props) {
   const gameType = challenge.gameType;
 
   function goToNextPuzzle() {
-    if (gameType === 'word_trails') navigation.navigate('WordlinesSelect');
+    if (gameType === 'word_trails') navigation.navigate('NextStepsSelect');
     else if (gameType === 'crossed_signals') navigation.navigate('CrossedSignalsSelect');
     else navigation.navigate('PuzzleSelect');
   }

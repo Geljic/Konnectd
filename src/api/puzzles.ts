@@ -134,7 +134,10 @@ export async function fetchDailyPuzzlesPage(
     `daily_date >= '${DAILY_PUZZLE_LAUNCH_DATE}'`,
     `daily_date <= '${today}'`,
   ];
-  if (search.trim()) filters.push(`daily_date ~ '${search.trim()}'`);
+  if (search.trim()) {
+    const q = search.trim();
+    filters.push(`(daily_date ~ '${q}' || title ~ '${q}')`);
+  }
 
   try {
     const result = await pb.collection('puzzles').getList(page, 10, {

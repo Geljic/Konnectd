@@ -5,10 +5,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import { fetchRecentSessions, type PlaySessionItem } from '@/api/puzzles';
 import {
-  fetchLocalWordTrailsSessions,
-  computeWordTrailsStreak,
-  type WordTrailsSessionItem,
-} from '@/utils/wordTrails';
+  fetchLocalNextStepsSessions,
+  computeNextStepsStreak,
+  type NextStepsSessionItem,
+} from '@/utils/nextSteps';
 import {
   computeCrossedSignalsStreak,
   fetchLocalCrossedSignalsSessions,
@@ -32,7 +32,7 @@ function formatDate(iso: string) {
 
 type GameTab = 'connections' | 'word_trails' | 'crossed_signals';
 type ConnectionsMode = 'normal' | 'hard';
-type StatsSessionItem = PlaySessionItem | WordTrailsSessionItem | CrossedSignalsSessionItem;
+type StatsSessionItem = PlaySessionItem | NextStepsSessionItem | CrossedSignalsSessionItem;
 
 function getSessionScore(session: StatsSessionItem): number | null {
   if (!('score' in session)) return null;
@@ -45,7 +45,7 @@ export function StatsScreen() {
 
   const user = useAuthStore(s => s.user);
   const [sessions, setSessions] = useState<PlaySessionItem[]>([]);
-  const [wtSessions, setWtSessions] = useState<WordTrailsSessionItem[]>([]);
+  const [wtSessions, setWtSessions] = useState<NextStepsSessionItem[]>([]);
   const [csSessions, setCsSessions] = useState<CrossedSignalsSessionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState<PlaySessionItem | null>(null);
@@ -58,7 +58,7 @@ export function StatsScreen() {
       const { refreshProfile } = useAuthStore.getState();
       Promise.all([
         fetchRecentSessions(500),
-        fetchLocalWordTrailsSessions(),
+        fetchLocalNextStepsSessions(),
         fetchLocalCrossedSignalsSessions(),
         refreshProfile(),
       ]).then(([all, wt, cs]) => {
@@ -105,7 +105,7 @@ export function StatsScreen() {
     streakCurrent = user.streakCurrent ?? 0;
     streakBest = user.streakBest ?? 0;
   } else if (gameTab === 'word_trails') {
-    const wtStreak = computeWordTrailsStreak(wtSessions);
+    const wtStreak = computeNextStepsStreak(wtSessions);
     streakCurrent = wtStreak.current;
     streakBest = wtStreak.best;
   } else {
@@ -148,7 +148,7 @@ export function StatsScreen() {
     );
   }
 
-  function WtRow({ item, index }: { item: WordTrailsSessionItem; index: number }) {
+  function WtRow({ item, index }: { item: NextStepsSessionItem; index: number }) {
     return (
       <View style={styles.sessionRow}>
         <View style={[styles.sessionOutcome, { backgroundColor: item.completed ? colors.green : colors.purple }]}>
@@ -194,7 +194,7 @@ export function StatsScreen() {
         keyExtractor={s => s.id}
         renderItem={({ item, index }) => {
           if (gameTab === 'connections') return <ConnectionsRow item={item as PlaySessionItem} index={index} />;
-          if (gameTab === 'word_trails') return <WtRow item={item as WordTrailsSessionItem} index={index} />;
+          if (gameTab === 'word_trails') return <WtRow item={item as NextStepsSessionItem} index={index} />;
           return <CsRow item={item as CrossedSignalsSessionItem} />;
         }}
         style={{ flex: 1 }}
@@ -210,15 +210,15 @@ export function StatsScreen() {
                 style={[styles.gameTypeBtn, gameTab === 'connections' && styles.gameTypeBtnActive]}
                 onPress={() => setGameTab('connections')}
               >
-                <Text style={[styles.gameTypeBtnText, gameTab === 'connections' && styles.gameTypeBtnTextActive]}>
-                  Connections
+                <Text style={[styles.gameTypeBtnText, gameTab === 'connections' && styles.gameTypeBtnTextActive]} numberOfLines={1} adjustsFontSizeToFit>
+                  Groups
                 </Text>
               </Pressable>
               <Pressable
                 style={[styles.gameTypeBtn, gameTab === 'word_trails' && styles.gameTypeBtnWtActive]}
                 onPress={() => setGameTab('word_trails')}
               >
-                <Text style={[styles.gameTypeBtnText, gameTab === 'word_trails' && styles.gameTypeBtnTextActive]}>
+                <Text style={[styles.gameTypeBtnText, gameTab === 'word_trails' && styles.gameTypeBtnTextActive]} numberOfLines={1} adjustsFontSizeToFit>
                   Next Steps
                 </Text>
               </Pressable>
@@ -226,8 +226,8 @@ export function StatsScreen() {
                 style={[styles.gameTypeBtn, gameTab === 'crossed_signals' && styles.gameTypeBtnCsActive]}
                 onPress={() => setGameTab('crossed_signals')}
               >
-                <Text style={[styles.gameTypeBtnText, gameTab === 'crossed_signals' && styles.gameTypeBtnTextActive]}>
-                  Signals
+                <Text style={[styles.gameTypeBtnText, gameTab === 'crossed_signals' && styles.gameTypeBtnTextActive]} numberOfLines={1} adjustsFontSizeToFit>
+                  Crossed Signals
                 </Text>
               </Pressable>
             </View>

@@ -9,15 +9,15 @@ import { FONTS } from '@/constants/fonts';
 import { useAuthStore } from '@/store/authStore';
 import { useGuestGuard } from '@/hooks/useGuestGuard';
 import { KonnectIcon } from '@/components/KonnectLogo';
-import { WordlinesIcon } from '@/components/WordlinesLogo';
+import { NextStepsIcon } from '@/components/NextStepsLogo';
 import { CrossedSignalsIcon } from '@/components/CrossedSignalsLogo';
 import { BottomNav } from '@/components/BottomNav';
 import { AdBanner } from '@/components/BannerAd';
 import { GameResultModal } from '@/components/GameResultModal';
 import { fetchMyChallenges, subscribeToChallengeChanges, isMine } from '@/api/challenges';
 import { fetchDailyPuzzle, getCompletedPuzzleIds } from '@/api/puzzles';
-import { getWordTrails } from '@/api/wordTrails';
-import { getDailyWordTrailsPuzzle, getWordTrailsResult } from '@/utils/wordTrails';
+import { getNextSteps } from '@/api/nextSteps';
+import { getDailyNextStepsPuzzle, getNextStepsResult } from '@/utils/nextSteps';
 import {
   getCrossedSignalsResult,
   getDailyCrossedSignalsPuzzle,
@@ -179,8 +179,8 @@ export function HomeScreen({ navigation }: Props) {
   const refreshDailyDone = useCallback(async () => {
     const groupsDaily = await fetchDailyPuzzle();
     const groupsCompleted = groupsDaily ? (await getCompletedPuzzleIds()).has(groupsDaily.id) : false;
-    const stepsDaily = getDailyWordTrailsPuzzle(getWordTrails());
-    const stepsResult = await getWordTrailsResult(stepsDaily.id);
+    const stepsDaily = getDailyNextStepsPuzzle(getNextSteps());
+    const stepsResult = await getNextStepsResult(stepsDaily.id);
     const crossedDaily = getDailyCrossedSignalsPuzzle(getCrossedSignalsPuzzles());
     const crossedResult = await getCrossedSignalsResult(crossedDaily.id);
     setDailyDone({
@@ -271,15 +271,15 @@ export function HomeScreen({ navigation }: Props) {
     }
 
     if (selectedGame === 'word_trails') {
-      const daily = getDailyWordTrailsPuzzle(getWordTrails());
-      const result = await getWordTrailsResult(daily.id);
+      const daily = getDailyNextStepsPuzzle(getNextSteps());
+      const result = await getNextStepsResult(daily.id);
       if (result?.completed) {
         setCompletedDaily({
           label: `Next Steps · ${daily.title}`,
           preloadedResult: { durationSeconds: result.durationSeconds, mistakes: result.mistakes },
         });
       } else {
-        navigation.navigate('WordlinesGame', { mode: 'daily' });
+        navigation.navigate('NextStepsGame', { mode: 'daily' });
       }
       return;
     }
@@ -301,7 +301,7 @@ export function HomeScreen({ navigation }: Props) {
 
   function handleFreePlay() {
     if (selectedGame === 'connections') navigation.navigate('PuzzleSelect');
-    else if (selectedGame === 'word_trails') navigation.navigate('WordlinesSelect');
+    else if (selectedGame === 'word_trails') navigation.navigate('NextStepsSelect');
     else navigation.navigate('CrossedSignalsSelect');
   }
 
@@ -434,7 +434,7 @@ export function HomeScreen({ navigation }: Props) {
             sub="Ordered steps"
             done={dailyDone.word_trails}
             onPress={() => setSelectedGame('word_trails')}
-            icon={<WordlinesIcon size={11} />}
+            icon={<NextStepsIcon size={11} />}
           />
           <ModeCard
             styles={styles}

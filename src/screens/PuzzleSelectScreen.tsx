@@ -16,8 +16,8 @@ import { GameResultModal } from '@/components/GameResultModal';
 import { AdBanner } from '@/components/BannerAd';
 import { useAuthStore } from '@/store/authStore';
 import { FONTS } from '@/constants/fonts';
-import { getWordTrails, loadWordTrails } from '@/api/wordTrails';
-import { getCompletedWordTrailsIds, getDailyWordTrailsPuzzle } from '@/utils/wordTrails';
+import { getNextSteps, loadNextSteps } from '@/api/nextSteps';
+import { getCompletedNextStepsIds, getDailyNextStepsPuzzle } from '@/utils/nextSteps';
 import {
   getCompletedCrossedSignalsIds,
   getCrossedSignalsPuzzles,
@@ -51,7 +51,7 @@ const SORT_LABELS: Record<PuzzleSortMode, string> = {
   date_desc: '↓ Newest', date_asc: '↑ Oldest', diff_asc: '↑ Easiest', diff_desc: '↓ Hardest', top_rated: '⭐ Top Rated',
 };
 const DAILY_ARCHIVE_DAYS = 14;
-const WORD_TRAILS_DAILY_START = '2026-06-09';
+const NEXT_STEPS_DAILY_START = '2026-06-09';
 const CROSSED_SIGNALS_DAILY_START = '2026-06-11';
 const NUMERIC_DIFFICULTY_COLOURS = ['#F5C842', '#3DBE8A', '#4AAEC8', '#9D6EC8', '#7B5FB5'];
 const MODE_LABELS: Record<DailyMode, string> = {
@@ -105,9 +105,9 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
   const [dailySortAsc, setDailySortAsc] = useState(false);
   const [nytSortAsc, setNytSortAsc] = useState(true);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
-  const [completedWordTrailIds, setCompletedWordTrailIds] = useState<Set<string>>(new Set());
+  const [completedNextStepsTrailIds, setCompletedNextStepsTrailIds] = useState<Set<string>>(new Set());
   const [completedCrossedSignalIds, setCompletedCrossedSignalIds] = useState<Set<string>>(new Set());
-  const [wordTrailPuzzles, setWordTrailPuzzles] = useState(() => getWordTrails());
+  const [nextStepsPuzzles, setNextStepsPuzzles] = useState(() => getNextSteps());
 
   const [modalPuzzleId, setModalPuzzleId] = useState<string | null>(null);
   const [modalLabel, setModalLabel] = useState('');
@@ -160,9 +160,9 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
     loadDaily(1, dailySortAsc, '', true);
     loadGenerated(1, null, sortMode, true);
     getCompletedPuzzleIds().then(setCompletedIds);
-    getCompletedWordTrailsIds().then(setCompletedWordTrailIds);
+    getCompletedNextStepsIds().then(setCompletedNextStepsTrailIds);
     getCompletedCrossedSignalsIds().then(setCompletedCrossedSignalIds);
-    loadWordTrails().then(setWordTrailPuzzles);
+    loadNextSteps().then(setNextStepsPuzzles);
   }, []);
 
   useEffect(() => {
@@ -213,7 +213,7 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
       return;
     }
     if (item.mode === 'word_trails') {
-      navigation.push('WordlinesGame', { mode: 'freeplay', puzzleId: item.id, recipientId, recipientName });
+      navigation.push('NextStepsGame', { mode: 'freeplay', puzzleId: item.id, recipientId, recipientName });
       return;
     }
     navigation.push('CrossedSignalsGame', { mode: 'freeplay', puzzleId: item.id, recipientId, recipientName });
@@ -241,8 +241,8 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
 
     dates.forEach(date => {
       const day = new Date(`${date}T12:00:00Z`);
-      if (date >= WORD_TRAILS_DAILY_START && wordTrailPuzzles.length > 0) {
-        const puzzle = getDailyWordTrailsPuzzle(wordTrailPuzzles, day);
+      if (date >= NEXT_STEPS_DAILY_START && nextStepsPuzzles.length > 0) {
+        const puzzle = getDailyNextStepsPuzzle(nextStepsPuzzles, day);
         items.push({
           id: puzzle.id,
           title: puzzle.title,
@@ -266,7 +266,7 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
     });
 
     return items;
-  }, [wordTrailPuzzles]);
+  }, [nextStepsPuzzles]);
 
   const dailyArchiveItems = useMemo<DailyArchiveItem[]>(() => {
     const groupItems = dailyItems.map(item => ({
@@ -327,7 +327,7 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
       item.mode === 'groups'
         ? completedIds.has(item.id)
         : item.mode === 'word_trails'
-          ? completedWordTrailIds.has(item.id)
+          ? completedNextStepsTrailIds.has(item.id)
           : completedCrossedSignalIds.has(item.id);
     return (
       <Pressable style={styles.row} onPress={() => openDailyArchiveItem(item)}>
