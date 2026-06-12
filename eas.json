@@ -15,13 +15,15 @@
       "android": { "buildType": "apk" },
       "ios": { "simulator": true },
       "env": {
-        "EXPO_PUBLIC_IAP_ENABLED": "false"
+        "EXPO_PUBLIC_IAP_ENABLED": "false",
+        "EXPO_PUBLIC_POCKETBASE_URL": "https://konnectd.xyz"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_IAP_ENABLED": "false"
+        "EXPO_PUBLIC_IAP_ENABLED": "false",
+        "EXPO_PUBLIC_POCKETBASE_URL": "https://konnectd.xyz"
       }
     }
   },
