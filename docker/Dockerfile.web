@@ -1,10 +1,13 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY . .
 ENV EXPO_PUBLIC_POCKETBASE_URL=""
 RUN npx expo export --platform web
+# Precompress text assets so nginx (gzip_static) can serve them without
+# re-compressing on every request.
+RUN find dist -type f \( -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.json' -o -name '*.svg' -o -name '*.ttf' \) -exec gzip -k9 {} +
 
 FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
