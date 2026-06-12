@@ -89,15 +89,15 @@ export function GameResultModal({
         {
           text: 'Report',
           onPress: async () => {
-            const ok = await createReport({
+            const result = await createReport({
               targetType: 'puzzle',
               targetId: puzzleId,
               reason: 'Puzzle issue',
               details: `${label} (${collection})`,
             });
-            Alert.alert(ok ? 'Report sent' : 'Report failed', ok
+            Alert.alert(result.ok ? 'Report sent' : 'Report failed', result.ok
               ? 'Thanks. We will review this puzzle.'
-              : 'Please try again in a moment.');
+              : result.error ?? 'Please try again in a moment.');
           },
         },
       ],

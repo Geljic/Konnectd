@@ -1,27 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import pb from '@/api/pb';
 
-const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
-
-export async function sendPushToUser(
-  recipientId: string,
-  title: string,
-  body: string,
-  data?: Record<string, unknown>,
-): Promise<void> {
-  try {
-    const record = await pb.collection('users').getOne(recipientId, { fields: 'push_token' });
-    const token = record['push_token'] as string | undefined;
-    if (!token) return;
-    await fetch(EXPO_PUSH_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ to: token, title, body, data: data ?? {}, sound: 'default' }),
-    });
-  } catch {
-    // non-critical — push failure should never break the caller
-  }
-}
+const CHALLENGE_NOTIFICATIONS_KEY = 'setting_challenge_notifications';
 
 // expo-notifications is native only — no-op on web
 async function getNotifications() {
@@ -33,9 +14,13 @@ async function getNotifications() {
   }
 }
 
-export async function registerPushToken(): Promise<void> {
+export async function registerPushToken(force = false): Promise<void> {
   if (Platform.OS === 'web') return;
   if (!pb.authStore.isValid) return;
+  if (!force) {
+    const challengeNotifications = await AsyncStorage.getItem(CHALLENGE_NOTIFICATIONS_KEY);
+    if (challengeNotifications === 'false') return;
+  }
   const N = await getNotifications();
   if (!N) return;
   try {
@@ -48,6 +33,15 @@ export async function registerPushToken(): Promise<void> {
   } catch (err) {
     // Requires EAS project setup for production builds
     console.log('[registerPushToken]', err);
+  }
+}
+
+export async function clearPushToken(): Promise<void> {
+  if (!pb.authStore.isValid) return;
+  try {
+    await pb.collection('users').update(pb.authStore.model!.id, { push_token: '' });
+  } catch {
+    // non-critical — the user can still disable notifications at OS level
   }
 }
 

@@ -2,6 +2,7 @@ import pb from './pb';
 import { fetchMyChallenges, type Challenge } from './challenges';
 import type { Friendship } from './friends';
 import { normaliseGameType, normaliseRuleset, type GameType, type Ruleset } from '@/constants/gameModes';
+import { addDailyDays, getDailyDate } from '@/utils/dailyDate';
 
 export interface ChallengeMatch {
   id: string;
@@ -80,15 +81,12 @@ function computeChallengeStreak(matchDates: string[]): number {
   if (matchDates.length === 0) return 0;
   const dateSet = new Set(matchDates.map(d => d.slice(0, 10)));
   let streak = 0;
-  const cursor = new Date();
-  cursor.setHours(0, 0, 0, 0);
-  const today = cursor.toISOString().slice(0, 10);
-  if (!dateSet.has(today)) cursor.setDate(cursor.getDate() - 1);
+  const today = getDailyDate();
+  let cursor = dateSet.has(today) ? today : addDailyDays(today, -1);
   while (true) {
-    const d = cursor.toISOString().slice(0, 10);
-    if (!dateSet.has(d)) break;
+    if (!dateSet.has(cursor)) break;
     streak++;
-    cursor.setDate(cursor.getDate() - 1);
+    cursor = addDailyDays(cursor, -1);
   }
   return streak;
 }
@@ -96,16 +94,13 @@ function computeChallengeStreak(matchDates: string[]): number {
 function computeCoStreak(myDates: Set<string>, friendDates: string[]): number {
   const shared = new Set(friendDates.filter(d => myDates.has(d)));
   let streak = 0;
-  const cursor = new Date();
-  cursor.setHours(0, 0, 0, 0);
   // If neither of us played today yet, start checking from yesterday
-  const today = cursor.toISOString().slice(0, 10);
-  if (!shared.has(today)) cursor.setDate(cursor.getDate() - 1);
+  const today = getDailyDate();
+  let cursor = shared.has(today) ? today : addDailyDays(today, -1);
   while (true) {
-    const d = cursor.toISOString().slice(0, 10);
-    if (!shared.has(d)) break;
+    if (!shared.has(cursor)) break;
     streak++;
-    cursor.setDate(cursor.getDate() - 1);
+    cursor = addDailyDays(cursor, -1);
   }
   return streak;
 }

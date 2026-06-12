@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Share, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Share, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchChallenge, subscribeToChallenge, isMine, type Challenge } from '@/api/challenges';
@@ -7,6 +7,7 @@ import { CATEGORY_COLOURS, type CategoryColour, type ColorTheme } from '@/consta
 import { useColors } from '@/hooks/useColors';
 import { FONTS } from '@/constants/fonts';
 import { GAME_TYPE_LABELS } from '@/constants/gameModes';
+import { blockUser, createReport } from '@/api/safety';
 import type { AppStackParamList } from '../App';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ChallengeResult'>;
@@ -112,6 +113,72 @@ export function ChallengeResultScreen({ route, navigation }: Props) {
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  }
+
+  function getReportTarget() {
+    if (!challenge) return null;
+    const mine = isMine(challenge);
+    const id = mine ? challenge.opponent : challenge.challenger;
+    const name = mine ? (challenge.opponentName ?? 'Opponent') : challenge.challengerName;
+    return id ? { id, name } : null;
+  }
+
+  async function handleReportPlayer(reason: string) {
+    if (!challenge) return;
+    const target = getReportTarget();
+    if (!target) {
+      Alert.alert('Report unavailable', 'This challenge does not have a reportable opponent yet.');
+      return;
+    }
+    const result = await createReport({
+      targetType: 'user',
+      targetId: target.id,
+      targetUserId: target.id,
+      reason,
+      details: `Reported from challenge ${challenge.id}: ${challenge.puzzleLabel}`,
+    });
+    Alert.alert(result.ok ? 'Report sent' : 'Report failed', result.ok
+      ? 'Thanks. We will review this account.'
+      : result.error ?? 'Please try again in a moment.');
+  }
+
+  function handleReportPress() {
+    const target = getReportTarget();
+    Alert.alert(
+      'Report Player',
+      `Tell us what is wrong with ${target?.name ?? 'this player'}.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Inappropriate name', onPress: () => handleReportPlayer('Inappropriate name') },
+        { text: 'Behaviour or spam', onPress: () => handleReportPlayer('Behaviour or spam') },
+        { text: 'Cheating or abuse', onPress: () => handleReportPlayer('Cheating or abuse') },
+      ],
+    );
+  }
+
+  function handleBlockPress() {
+    const target = getReportTarget();
+    if (!target) {
+      Alert.alert('Block unavailable', 'This challenge does not have a blockable opponent yet.');
+      return;
+    }
+    Alert.alert(
+      'Block Player',
+      `Block ${target.name}? This stops new direct challenges or friend requests between you.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: async () => {
+            const result = await blockUser(target.id);
+            Alert.alert(result.ok ? 'Player blocked' : 'Block failed', result.ok
+              ? 'They will not be able to send you direct challenges or friend requests.'
+              : result.error ?? 'Please try again in a moment.');
+          },
+        },
+      ],
+    );
   }
 
   if (loading) {
@@ -244,6 +311,14 @@ export function ChallengeResultScreen({ route, navigation }: Props) {
           <Pressable style={styles.btnDone} onPress={() => navigation.navigate('Home')}>
             <Text style={styles.btnDoneText}>Done</Text>
           </Pressable>
+          <View style={styles.safetyRow}>
+            <Pressable style={styles.safetyBtn} onPress={handleReportPress}>
+              <Text style={styles.safetyBtnText}>Report Player</Text>
+            </Pressable>
+            <Pressable style={styles.safetyBtn} onPress={handleBlockPress}>
+              <Text style={styles.safetyBtnText}>Block Player</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -283,6 +358,9 @@ function makeStyles(c: ColorTheme) {
     btnShareText: { fontSize: 15, fontFamily: FONTS.bold, color: c.text2 },
     btnDone: { alignItems: 'center', paddingVertical: 6 },
     btnDoneText: { fontSize: 14, fontFamily: FONTS.bold, color: c.text3 },
+    safetyRow: { flexDirection: 'row', justifyContent: 'center', gap: 18, paddingTop: 2 },
+    safetyBtn: { paddingVertical: 4, paddingHorizontal: 2 },
+    safetyBtnText: { fontSize: 12, fontFamily: FONTS.bold, color: c.text3, textDecorationLine: 'underline' },
     emoji: { fontSize: 52 },
     title: { fontSize: 22, fontFamily: FONTS.extraBold, color: c.text1 },
     subtitle: { fontSize: 15, fontFamily: FONTS.bold, color: c.text2, textAlign: 'center' },

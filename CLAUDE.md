@@ -16,7 +16,7 @@ iOS + Android via Expo managed workflow.
 | Storage | AsyncStorage (puzzle cache) + PocketBase (account, sessions) |
 | Ads | react-native-google-mobile-ads (banner only, menus only) |
 | Backend | PocketBase on ZimaOS via Docker (port 8094) |
-| Tunnel | Cloudflare → connections.gigglebooth.online |
+| Tunnel | Cloudflare → konnectd.xyz |
 | Puzzle AI | Claude API claude-sonnet-4-6 (batch generation script) |
 
 ## Phases

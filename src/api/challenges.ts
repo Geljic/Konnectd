@@ -1,8 +1,6 @@
 import pb from './pb';
 import type { CategoryColour } from '@/constants/colors';
 import { WEB_BASE_URL } from '@/constants/config';
-import { sendPushToUser } from '@/utils/notifications';
-import { useSettingsStore } from '@/store/settingsStore';
 import { hasBlockBetween } from './safety';
 import {
   DEFAULT_GROUPS_RULESET,
@@ -137,14 +135,6 @@ export async function createChallenge(params: {
       expires_at: expiresAt,
     });
     const challenge = mapChallenge(record as unknown as Record<string, unknown>);
-    if (params.recipientId && useSettingsStore.getState().challengeNotificationsEnabled) {
-      sendPushToUser(
-        params.recipientId,
-        '⚡ New Challenge!',
-        `${challengerName} challenged you to ${params.puzzleLabel}`,
-        { screen: 'ChallengesInbox' },
-      );
-    }
     return challenge;
   } catch (e) {
     console.error('[createChallenge] error:', e);
@@ -186,20 +176,7 @@ export async function submitChallengeResult(
       opponent_score: result.score ?? null,
       status: 'complete',
     });
-    const challenge = mapChallenge(record as unknown as Record<string, unknown>);
-    if (
-      challenge.challenger &&
-      challenge.challenger !== pb.authStore.model?.id &&
-      useSettingsStore.getState().challengeNotificationsEnabled
-    ) {
-      sendPushToUser(
-        challenge.challenger,
-        '🏁 Challenge completed!',
-        `${opponentName} just finished your challenge — see who won!`,
-        { screen: 'ChallengesInbox', challengeId: challenge.id },
-      );
-    }
-    return challenge;
+    return mapChallenge(record as unknown as Record<string, unknown>);
   } catch (e) {
     console.error('[submitChallengeResult] error:', e);
     return null;
@@ -211,7 +188,7 @@ export async function fetchMyChallenges(): Promise<Challenge[]> {
   const myId = pb.authStore.model?.id;
   try {
     const result = await pb.collection('challenges').getList(1, 50, {
-      filter: `challenger = '${myId}' || opponent = '${myId}' || recipient = '${myId}'`,
+      filter: pb.filter('challenger = {:myId} || opponent = {:myId} || recipient = {:myId}', { myId }),
       sort: '-created',
     });
     return result.items.map(r => mapChallenge(r as unknown as Record<string, unknown>));
@@ -226,7 +203,7 @@ export async function fetchPendingChallengesForMe(): Promise<Challenge[]> {
   const myId = pb.authStore.model?.id;
   try {
     const result = await pb.collection('challenges').getList(1, 20, {
-      filter: `recipient = '${myId}' && status = 'pending'`,
+      filter: pb.filter('recipient = {:myId} && status = {:status}', { myId, status: 'pending' }),
       sort: '-created',
     });
     return result.items.map(r => mapChallenge(r as unknown as Record<string, unknown>));
@@ -242,10 +219,10 @@ export async function fetchActiveChallengesWithFriend(friendId: string): Promise
   if (!myId) return [];
   try {
     const result = await pb.collection('challenges').getList(1, 20, {
-      filter: `status = 'pending' && (` +
-        `(challenger = '${myId}' && (opponent = '${friendId}' || recipient = '${friendId}')) ||` +
-        `(challenger = '${friendId}' && (opponent = '${myId}' || recipient = '${myId}'))` +
-        `)`,
+      filter: pb.filter(
+        'status = {:status} && ((challenger = {:myId} && (opponent = {:friendId} || recipient = {:friendId})) || (challenger = {:friendId} && (opponent = {:myId} || recipient = {:myId})))',
+        { myId, friendId, status: 'pending' },
+      ),
       sort: '-created',
       requestKey: `active-challenges-${friendId}`,
     });

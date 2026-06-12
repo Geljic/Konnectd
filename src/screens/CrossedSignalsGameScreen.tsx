@@ -503,6 +503,21 @@ export function CrossedSignalsGameScreen({ navigation, route }: Props) {
     });
   }
 
+  function revealSolvedLinesForBoard() {
+    const solved = getSolvedBoard(puzzle);
+    const correctRows = Array.from({ length: 4 }, (_, row) => row)
+      .filter(row => Array.from({ length: 4 }, (_, column) => row * 4 + column)
+        .every(index => board[index] === solved[index]));
+    const correctColumns = Array.from({ length: 4 }, (_, column) => column)
+      .filter(column => Array.from({ length: 4 }, (_, row) => row * 4 + column)
+        .every(index => board[index] === solved[index]));
+
+    setSolvedRows(new Set(correctRows));
+    setSolvedColumns(new Set(correctColumns));
+    setReadyRows(new Set());
+    setReadyColumns(new Set());
+  }
+
   function performScan(index: number) {
     if (status !== 'playing') return;
     if (scansUsed >= MAX_SCANS) {
@@ -526,6 +541,11 @@ export function CrossedSignalsGameScreen({ navigation, route }: Props) {
       scansUsed,
       durationSeconds,
     });
+    if (nextStatus === 'won') {
+      revealSolvedLinesForBoard();
+      setLastScanNote('All signals solved.');
+      setLastCorrectCount(null);
+    }
     setElapsed(durationSeconds);
     setScore(nextScore);
     setStatus(nextStatus);

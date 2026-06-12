@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Text, Switch, StyleSheet, Alert, Pressable, ScrollView, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Line, Ellipse } from 'react-native-svg';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { useSettingsStore, STRIP_CONFIG, type TileStripStyle, type CosmeticTheme } from '@/store/settingsStore';
@@ -10,6 +9,8 @@ import { useMonetisationStore } from '@/store/monetisationStore';
 import { IAP_ENABLED, LEGAL_URLS, MONETISATION_PRODUCTS } from '@/constants/config';
 import { FONTS } from '@/constants/fonts';
 import {
+  clearPushToken,
+  registerPushToken,
   requestNotificationPermission,
   scheduleDailyStreakReminder,
   cancelDailyStreakReminder,
@@ -208,8 +209,6 @@ export function SettingsScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const [hapticsOn, setHapticsOn] = useState(true);
-
   const { hardMode, notificationsEnabled, challengeNotificationsEnabled, darkMode, soundEnabled, load, setHardMode, setNotificationsEnabled, setChallengeNotificationsEnabled, setDarkMode, setSoundEnabled, setCosmeticTheme } = useSettingsStore();
   const { buyProduct, restore, isCosmeticPackOwned, isSupporter, purchasingProductId } = useMonetisationStore();
   const cosmeticPackOwned = !IAP_ENABLED || isCosmeticPackOwned();
@@ -217,13 +216,7 @@ export function SettingsScreen() {
 
   useEffect(() => {
     load();
-    AsyncStorage.getItem('setting_haptics').then(v => { if (v !== null) setHapticsOn(v === 'true'); });
   }, []);
-
-  async function toggleHaptics(val: boolean) {
-    setHapticsOn(val);
-    await AsyncStorage.setItem('setting_haptics', String(val));
-  }
 
   async function toggleNotifications(val: boolean) {
     if (val) {
@@ -348,7 +341,6 @@ export function SettingsScreen() {
         <Text style={styles.sectionHeader}>AUDIO</Text>
         <View style={styles.section}>
           <Row label="Sound effects" value={soundEnabled} onChange={setSoundEnabled} colors={colors} />
-          <Row label="Haptic feedback" value={hapticsOn} onChange={toggleHaptics} colors={colors} />
         </View>
 
         <Text style={styles.sectionHeader}>NOTIFICATIONS</Text>
@@ -368,8 +360,12 @@ export function SettingsScreen() {
               if (val) {
                 const granted = await requestNotificationPermission();
                 if (!granted) return;
+                await setChallengeNotificationsEnabled(true);
+                await registerPushToken(true);
+              } else {
+                await setChallengeNotificationsEnabled(false);
+                await clearPushToken();
               }
-              await setChallengeNotificationsEnabled(val);
             }}
             colors={colors}
           />

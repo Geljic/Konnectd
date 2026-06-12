@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NextStepsTrail, NextStepsPuzzle } from '@/data/nextStepsPuzzles';
+import { addDailyDays, getDailyDate, getDailyIndexFrom } from '@/utils/dailyDate';
 
 const NEXT_STEPS_RESULTS_KEY = 'word_trails_results';
 
@@ -77,8 +78,7 @@ export function validateNextStepsPuzzles(puzzles: NextStepsPuzzle[]): NextStepsV
 }
 
 export function getDailyNextStepsPuzzle(puzzles: NextStepsPuzzle[], now = new Date()): NextStepsPuzzle {
-  const start = new Date('2026-06-09T00:00:00Z').getTime();
-  const dayIndex = Math.max(0, Math.floor((now.getTime() - start) / 86400000));
+  const dayIndex = getDailyIndexFrom('2026-06-09T00:00:00Z', now);
   return puzzles[dayIndex % puzzles.length];
 }
 
@@ -157,14 +157,12 @@ export function computeNextStepsStreak(sessions: NextStepsSessionItem[]): { curr
   if (completedDays.length === 0) return { current: 0, best: 0 };
 
   let current = 0;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getDailyDate();
   let checking = today;
   for (const day of completedDays) {
     if (day === checking) {
       current++;
-      const d = new Date(checking);
-      d.setDate(d.getDate() - 1);
-      checking = d.toISOString().split('T')[0];
+      checking = addDailyDays(checking, -1);
     } else if (day < checking) {
       break;
     }
@@ -172,15 +170,11 @@ export function computeNextStepsStreak(sessions: NextStepsSessionItem[]): { curr
 
   // If today wasn't played, also allow yesterday to start streak
   if (current === 0 && completedDays[0]) {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    checking = yesterday.toISOString().split('T')[0];
+    checking = addDailyDays(today, -1);
     for (const day of completedDays) {
       if (day === checking) {
         current++;
-        const d = new Date(checking);
-        d.setDate(d.getDate() - 1);
-        checking = d.toISOString().split('T')[0];
+        checking = addDailyDays(checking, -1);
       } else if (day < checking) {
         break;
       }
@@ -191,10 +185,7 @@ export function computeNextStepsStreak(sessions: NextStepsSessionItem[]): { curr
   let best = 0;
   let run = 1;
   for (let i = 1; i < completedDays.length; i++) {
-    const prev = new Date(completedDays[i - 1]);
-    const curr = new Date(completedDays[i]);
-    prev.setDate(prev.getDate() - 1);
-    if (prev.toISOString().split('T')[0] === completedDays[i]) {
+    if (addDailyDays(completedDays[i - 1], -1) === completedDays[i]) {
       run++;
     } else {
       best = Math.max(best, run);

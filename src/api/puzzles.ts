@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import pb from './pb';
 import type { CategoryColour } from '@/constants/colors';
 import { DAILY_PUZZLE_LAUNCH_DATE } from '@/constants/config';
+import { getDailyDate, getPreviousDailyDate, MS_PER_DAY } from '@/utils/dailyDate';
 import {
   DEFAULT_GAME_TYPE,
   normaliseGameType,
@@ -56,7 +57,7 @@ export interface PageResult<T> {
 }
 
 export async function fetchDailyPuzzle(): Promise<Puzzle | null> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getDailyDate();
   try {
     // Any puzzle with today's daily_date — no status filter so admin can set up
     // puzzles in advance without needing to also flip status to 'published'
@@ -76,7 +77,7 @@ export async function fetchDailyPuzzle(): Promise<Puzzle | null> {
         requestKey: null,
       });
       if (allPuzzles.length === 0) return null;
-      const dayIndex = Math.floor(Date.now() / 86400000) % allPuzzles.length;
+      const dayIndex = Math.floor(Date.now() / MS_PER_DAY) % allPuzzles.length;
       return allPuzzles[dayIndex] as unknown as Puzzle;
     } catch (e) {
       console.error('[fetchDailyPuzzle] fallback error:', e);
@@ -93,7 +94,7 @@ export async function fetchPuzzlesPage(
   sortMode: PuzzleSortMode = 'date_desc',
   source?: PuzzleSource,
 ): Promise<PageResult<PuzzleListItem>> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getDailyDate();
   // Include published puzzles plus any past daily puzzles (regardless of status)
   const clauses = [`(status = 'published' || (daily_date != '' && daily_date <= '${today}'))`];
   if (difficulty) clauses.push(`difficulty_min = '${difficulty}'`);
@@ -127,21 +128,25 @@ export async function fetchDailyPuzzlesPage(
   sortAsc = false,
   search = '',
 ): Promise<PageResult<DailyPuzzleListItem>> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getDailyDate();
   // No status filter — any puzzle with a daily_date is a valid past daily puzzle
   const filters = [
     `daily_date != ''`,
-    `daily_date >= '${DAILY_PUZZLE_LAUNCH_DATE}'`,
-    `daily_date <= '${today}'`,
+    'daily_date >= {:launchDate}',
+    'daily_date <= {:today}',
   ];
+  const filterParams: Record<string, unknown> = {
+    launchDate: DAILY_PUZZLE_LAUNCH_DATE,
+    today,
+  };
   if (search.trim()) {
-    const q = search.trim();
-    filters.push(`(daily_date ~ '${q}' || title ~ '${q}')`);
+    filterParams.search = search.trim();
+    filters.push('(daily_date ~ {:search} || title ~ {:search})');
   }
 
   try {
     const result = await pb.collection('puzzles').getList(page, 10, {
-      filter: filters.join(' && '),
+      filter: pb.filter(filters.join(' && '), filterParams),
       sort: sortAsc ? 'daily_date' : '-daily_date',
       fields: 'id,title,difficulty_min,play_count,daily_date',
       requestKey: null,
@@ -165,8 +170,8 @@ export async function fetchNytPuzzlesPage(
   const num = parseInt(search);
   const filter = search
     ? isNaN(num)
-      ? `nyt_date ~ '${search}'`
-      : `nyt_id = ${num}`
+      ? pb.filter('nyt_date ~ {:search}', { search: search.trim() })
+      : pb.filter('nyt_id = {:num}', { num })
     : '';
   try {
     const result = await pb.collection('nyt_puzzles').getList(page, 10, {
@@ -419,8 +424,8 @@ export async function updateUserStats(won: boolean): Promise<void> {
     const played = sessions.length;
     const wonCount = sessions.filter((s: any) => s.completed).length;
 
-    const today = new Date().toISOString().slice(0, 10);
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const today = getDailyDate();
+    const yesterday = getPreviousDailyDate();
     const lastWinDate = (user['last_win_date'] as string) ?? '';
 
     let streakCurrent = (user['streak_current'] as number) || 0;

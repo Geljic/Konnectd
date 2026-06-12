@@ -57,14 +57,14 @@ export async function searchUsers(query: string): Promise<FriendUser[]> {
   const hashIdx = query.lastIndexOf('#');
   let filter: string;
   if (hashIdx > 0) {
-    const name = query.slice(0, hashIdx).replace(/'/g, "''");
+    const name = query.slice(0, hashIdx).trim();
     const tag = parseInt(query.slice(hashIdx + 1));
     filter = isNaN(tag)
-      ? `display_name ~ '${name}' && id != '${myId}'`
-      : `display_name ~ '${name}' && username_tag = ${tag} && id != '${myId}'`;
+      ? pb.filter('display_name ~ {:name} && id != {:myId}', { name, myId })
+      : pb.filter('display_name ~ {:name} && username_tag = {:tag} && id != {:myId}', { name, tag, myId });
   } else {
-    const q = query.replace(/'/g, "''");
-    filter = `display_name ~ '${q}' && id != '${myId}'`;
+    const q = query.trim();
+    filter = pb.filter('display_name ~ {:q} && id != {:myId}', { q, myId });
   }
   try {
     const result = await pb.collection('users').getList(1, 20, {
@@ -196,7 +196,10 @@ export async function getFriendshipWith(userId: string): Promise<Friendship | nu
   const myId = pb.authStore.model?.id!;
   try {
     const r = await pb.collection('friendships').getFirstListItem(
-      `(requester = '${myId}' && addressee = '${userId}') || (requester = '${userId}' && addressee = '${myId}')`,
+      pb.filter(
+        '(requester = {:myId} && addressee = {:userId}) || (requester = {:userId} && addressee = {:myId})',
+        { myId, userId },
+      ),
       { requestKey: null }
     );
     return mapFriendship(r as unknown as Record<string, unknown>, myId);

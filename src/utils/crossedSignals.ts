@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CROSSED_SIGNALS_PUZZLES, type CrossedSignalsPuzzle } from '@/data/crossedSignalsPuzzles';
+import { addDailyDays, getDailyDate, getDailyIndexFrom } from '@/utils/dailyDate';
 
 const CROSSED_SIGNALS_RESULTS_KEY = 'crossed_signals_results';
-const DAILY_START = new Date('2026-06-11T00:00:00Z').getTime();
+const DAILY_START = '2026-06-11T00:00:00Z';
 
 export type ScanFeedback = 'locked' | 'row' | 'column' | 'static';
 
@@ -40,7 +41,7 @@ export function getSolvedBoard(puzzle: CrossedSignalsPuzzle): string[] {
 }
 
 export function getDailyCrossedSignalsPuzzle(puzzles = CROSSED_SIGNALS_PUZZLES, now = new Date()): CrossedSignalsPuzzle {
-  const dayIndex = Math.max(0, Math.floor((now.getTime() - DAILY_START) / 86400000));
+  const dayIndex = getDailyIndexFrom(DAILY_START, now);
   return puzzles[dayIndex % puzzles.length];
 }
 
@@ -152,28 +153,23 @@ export function computeCrossedSignalsStreak(sessions: CrossedSignalsSessionItem[
   if (completedDays.length === 0) return { current: 0, best: 0 };
 
   let current = 0;
-  let checking = new Date().toISOString().split('T')[0];
+  const today = getDailyDate();
+  let checking = today;
   for (const day of completedDays) {
     if (day === checking) {
       current++;
-      const d = new Date(checking);
-      d.setDate(d.getDate() - 1);
-      checking = d.toISOString().split('T')[0];
+      checking = addDailyDays(checking, -1);
     } else if (day < checking) {
       break;
     }
   }
 
   if (current === 0 && completedDays[0]) {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    checking = yesterday.toISOString().split('T')[0];
+    checking = addDailyDays(today, -1);
     for (const day of completedDays) {
       if (day === checking) {
         current++;
-        const d = new Date(checking);
-        d.setDate(d.getDate() - 1);
-        checking = d.toISOString().split('T')[0];
+        checking = addDailyDays(checking, -1);
       } else if (day < checking) {
         break;
       }
@@ -183,9 +179,7 @@ export function computeCrossedSignalsStreak(sessions: CrossedSignalsSessionItem[
   let best = 0;
   let run = 1;
   for (let i = 1; i < completedDays.length; i++) {
-    const prev = new Date(completedDays[i - 1]);
-    prev.setDate(prev.getDate() - 1);
-    if (prev.toISOString().split('T')[0] === completedDays[i]) {
+    if (addDailyDays(completedDays[i - 1], -1) === completedDays[i]) {
       run++;
     } else {
       best = Math.max(best, run);

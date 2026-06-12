@@ -23,7 +23,7 @@ If deploying with the Docker web container, rebuild the `web` image after editin
 - Apply PocketBase migrations on a clean data directory.
 - Apply PocketBase migrations on a production-like data copy.
 - Confirm password reset SMTP and HTTPS reset URL.
-- Confirm report/block records are visible to admin in PocketBase.
+- Confirm report/block records from friend profiles, challenge results and puzzle review are visible to admin in PocketBase.
 - Confirm account deletion succeeds for users with sessions, friends, challenges, reports, and blocks.
 - Confirm AdMob test ads in dev and production IDs in release.
 - Confirm no paid purchase buttons appear in release builds.
@@ -97,7 +97,7 @@ word game, daily puzzle, brain game, connections, friends, challenge, vocabulary
 - Paid purchases are disabled for v1.
 - The app includes optional ads/rewarded ads.
 - Account deletion is available from Profile.
-- Reporting/blocking is available from friend profiles; puzzle issue reporting is available from completed puzzle review.
+- Reporting/blocking is available from friend profiles and challenge results; puzzle issue reporting is available from completed puzzle review.
 
 ## Screenshot Set Needed
 
@@ -127,24 +127,20 @@ deeper work).
 
 ### Before launch (blocking or high risk)
 
-1. **Move challenge push notifications server-side.** `src/utils/notifications.ts`
-   sends pushes from the client: it reads the *recipient's* `push_token` from the
-   `users` collection and posts directly to Expo's push API. That means API rules
-   must expose every user's push token to any logged-in user — a privacy/abuse
-   hole. Move this into a PocketBase hook (`docker/pb_hooks`) that fires on
-   challenge create/update, and lock `push_token` down to owner-only.
+1. **Done: move challenge push notifications server-side.** Challenge-created
+   and challenge-completed pushes are sent from `docker/pb_hooks/challenges.pb.js`.
+   The app only registers the signed-in user's token; `push_token` is hidden from
+   API responses by migration `1781140000_hide_users_push_token.js`.
 2. **Audit PocketBase API rules.** Client-side leaderboards/stats read other
    users' records, and `play_count`/user stats are written from the client, so a
    motivated user can inflate stats via the raw API. Acceptable for a soft
    launch; verify rules at minimum prevent writing other users' records.
-3. **Use `pb.filter()` for user-supplied search strings.** `searchUsers` escapes
-   quotes as `''` (not PocketBase's escape), and other filters interpolate raw
-   input. Names with apostrophes will break search; use the SDK's `pb.filter()`
-   placeholder syntax everywhere a user-typed string enters a filter.
-4. **Decide the daily-reset timezone.** Daily puzzles, streaks and "done today"
-   all use the UTC date, so for NSW players the day flips at ~10 am local time.
-   Either accept (NYT-style fixed reset) and document it, or switch to local
-   dates consistently (app + any server logic).
+3. **Done: use `pb.filter()` for user-supplied search strings.** Friend search
+   and puzzle archive searches now use the SDK placeholder syntax, so apostrophes
+   and other special characters are escaped consistently.
+4. **Done: daily reset is UTC by design.** Daily puzzles, streaks and "done
+   today" use the shared `src/utils/dailyDate.ts` helper. This is an NYT-style
+   fixed reset at 00:00 UTC, which is about 10 am in NSW during AEST.
 
 ### Soon after launch
 
@@ -153,13 +149,12 @@ deeper work).
    new puzzles don't require an app release. Its results are also local-only
    (AsyncStorage), so progress doesn't sync across devices and there's no
    Crossed Signals leaderboard.
-6. **Account deletion is incomplete.** It deletes sessions, friendships and
-   challenges *created* by the user, but not challenges where they're the
-   opponent/recipient, nor reports/blocks; their handle also lives on in
-   denormalised `challenger_name`/`opponent_name` fields. Fine for v1 if
-   documented, but tighten before scale (store-policy relevant).
-7. **Haptics toggle does nothing.** There is no expo-haptics usage anywhere in
-   the app; either implement haptic feedback or remove the Settings row.
+6. **Done: account deletion uses server-side cascade.** The client deletes
+   text-field friendships, then deletes the user record. PocketBase cascade
+   relations remove play sessions, challenges, reports and blocks, including
+   opponent/recipient-side challenge rows.
+7. **Done: removed the haptics toggle.** There is no haptics implementation in
+   v1, so Settings no longer exposes a no-op control.
 8. **Add crash/error reporting** (e.g. Sentry for Expo) before real users hit
    edge cases you can't reproduce.
 9. **Monetisation is a stub.** `purchaseProduct` fake-grants products after a
@@ -175,6 +170,5 @@ deeper work).
 - Optional later: route-level code splitting (needs expo-router or manual
   `import()` boundaries), and verifying Cloudflare edge caching picks up the
   new Cache-Control headers.
-- Domain check: `WEB_BASE_URL` defaults to `https://konnectd.xyz` while infra
-  docs reference `connections.gigglebooth.online` — make sure share links and
-  deep-link prefixes match the domain you actually launch on.
+- Domain check: launch URL is `https://konnectd.xyz`; `WEB_BASE_URL` and project
+  guidance now match that public domain.

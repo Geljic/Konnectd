@@ -210,22 +210,16 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (!userId) return;
     set({ isLoading: true, error: null });
     try {
-      const [sessions, friendships, ownedChallenges] = await Promise.all([
-        pb.collection('play_sessions').getFullList({ filter: `user = '${userId}'` }),
-        pb.collection('friendships').getFullList({
-          filter: `requester = '${userId}' || addressee = '${userId}'`,
-        }),
-        pb.collection('challenges').getFullList({ filter: `challenger = '${userId}'` }),
-      ]);
+      const friendships = await pb.collection('friendships').getFullList({
+        filter: pb.filter('requester = {:userId} || addressee = {:userId}', { userId }),
+      });
 
-      await Promise.all([
-        ...sessions.map(s => pb.collection('play_sessions').delete(s.id)),
-        ...friendships.map(f => pb.collection('friendships').delete(f.id)),
-        ...ownedChallenges.map(c => pb.collection('challenges').delete(c.id)),
-      ]);
+      await Promise.all(friendships.map(f => pb.collection('friendships').delete(f.id)));
 
-      // Delete the user record
+      // Relation fields on play_sessions, challenges, reports and blocks are configured
+      // with cascadeDelete, so deleting the user record clears those server-side.
       await pb.collection('users').delete(userId);
+
       pb.authStore.clear();
       set({ user: null, isLoading: false });
     } catch (e: unknown) {

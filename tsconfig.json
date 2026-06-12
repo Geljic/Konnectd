@@ -3,6 +3,11 @@
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
+    // Set explicitly so dynamic import() typechecks regardless of what the
+    // Expo SDK's tsconfig.base pins for `module` (metro/babel handle the
+    // actual transpile — this only affects `tsc --noEmit`).
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "paths": {
       "@/*": ["src/*"]
     }

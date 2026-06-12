@@ -185,16 +185,16 @@ export function FriendDetailScreen({ navigation, route }: Props) {
   }
 
   async function handleReportUser(reason: string) {
-    const ok = await createReport({
+    const result = await createReport({
       targetType: 'user',
       targetId: friendId,
       targetUserId: friendId,
       reason,
       details: `Reported from friend profile: ${friendHandle}`,
     });
-    Alert.alert(ok ? 'Report sent' : 'Report failed', ok
+    Alert.alert(result.ok ? 'Report sent' : 'Report failed', result.ok
       ? 'Thanks. We will review this account.'
-      : 'Please try again in a moment.');
+      : result.error ?? 'Please try again in a moment.');
   }
 
   function handleReportPress() {
@@ -219,12 +219,12 @@ export function FriendDetailScreen({ navigation, route }: Props) {
           text: 'Block',
           style: 'destructive',
           onPress: async () => {
-            const ok = await blockUser(friendId);
-            if (ok) {
+            const result = await blockUser(friendId);
+            if (result.ok) {
               await removeFriendship(friendshipId);
               navigation.goBack();
             } else {
-              Alert.alert('Block failed', 'Please try again in a moment.');
+              Alert.alert('Block failed', result.error ?? 'Please try again in a moment.');
             }
           },
         },
