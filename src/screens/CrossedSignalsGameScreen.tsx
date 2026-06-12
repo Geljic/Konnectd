@@ -8,7 +8,6 @@ import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
 import { useSound } from '@/hooks/useSound';
 import { useChallengeFinish } from '@/hooks/useChallengeFinish';
-import { AdBanner } from '@/components/BannerAd';
 import { Confetti } from '@/components/Confetti';
 import { ShuffleIcon, ScanIcon, CheckIcon } from '@/components/GameIcons';
 import { CrossedSignalsHelpModal } from '@/components/CrossedSignalsHelpModal';
@@ -52,8 +51,23 @@ function pickPuzzle(mode: Props['route']['params']['mode'], puzzleId?: string): 
   return getDailyCrossedSignalsPuzzle(puzzles);
 }
 
-function tileFontSize(word: string) {
-  return word.length >= 10 ? 10 : word.length >= 8 ? 11 : word.length >= 7 ? 12 : 13;
+function tileFontSize(word: string, tileWidth = 0) {
+  const length = word.length;
+  const lengthSize =
+    length >= 13 ? 6.5 :
+    length >= 12 ? 7 :
+    length >= 11 ? 7.5 :
+    length >= 10 ? 8.25 :
+    length >= 9 ? 9 :
+    length >= 8 ? 10 :
+    length >= 7 ? 11.5 :
+    13;
+
+  if (tileWidth <= 0) return lengthSize;
+
+  const availableWidth = Math.max(34, tileWidth - 18);
+  const measuredSize = Math.floor((availableWidth / Math.max(length, 1)) * 1.12);
+  return Math.max(6, Math.min(lengthSize, measuredSize));
 }
 
 function difficultyLabel(level: CrossedSignalsPuzzle['difficulty']) {
@@ -170,6 +184,8 @@ function SignalTile({
   const drag = useRef(new RNAnimated.ValueXY()).current;
   const lift = useRef(new RNAnimated.Value(1)).current;
   const [dragging, setDragging] = useState(false);
+  const [tileWidth, setTileWidth] = useState(0);
+  const fittedFontSize = tileFontSize(word, tileWidth);
   const webDragStyle = Platform.OS === 'web'
     ? ({
       cursor: tileLocked || lineState === 'solved' ? 'not-allowed' : 'pointer',
@@ -240,7 +256,11 @@ function SignalTile({
   return (
     <RNAnimated.View
       {...panResponder.panHandlers}
-      onLayout={event => onLayout(event.nativeEvent.layout)}
+      onLayout={event => {
+        const layout = event.nativeEvent.layout;
+        setTileWidth(layout.width);
+        onLayout(layout);
+      }}
       style={[
         styles.tile,
         selected && styles.tileSelected,
@@ -278,7 +298,7 @@ function SignalTile({
         {moved && <View style={styles.movedDot} />}
         {lineState === 'solved' && <Text style={[styles.lockPill, lineColour ? { backgroundColor: lineColour } : null]}>Solved</Text>}
         {tileLocked && <Text style={styles.tileLockPill}>Locked</Text>}
-        {lineState && (
+        {lineState === 'ready' && (
           <View pointerEvents="none" style={styles.tileFace}>
             <KonnectFace
               expression={revealState === 'incorrect' ? 'sad' : selected ? 'selected' : 'idle'}
@@ -290,7 +310,15 @@ function SignalTile({
             />
           </View>
         )}
-        <Text style={[styles.tileText, { fontSize: tileFontSize(word) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} selectable={false}>
+        <Text
+          style={[styles.tileText, { fontSize: fittedFontSize, lineHeight: Math.ceil(fittedFontSize + 3) }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit={false}
+          minimumFontScale={1}
+          maxFontSizeMultiplier={1}
+          ellipsizeMode="clip"
+          selectable={false}
+        >
           {word}
         </Text>
       </Pressable>
@@ -800,16 +828,16 @@ export function CrossedSignalsGameScreen({ navigation, route }: Props) {
 
         <View style={styles.legend}>
           <View style={styles.legendItem}>
-            <View style={styles.legendTab} />
-            <Text style={styles.legendText}>Row marked</Text>
+            <View style={styles.legendReady}><Text style={styles.legendReadyText}>READY</Text></View>
+            <Text style={styles.legendText}>Clue marked — Submit checks it</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={styles.legendPill} />
-            <Text style={styles.legendText}>Column marked</Text>
+            <View style={styles.legendSolved}><Text style={styles.legendSolvedText}>SOLVED</Text></View>
+            <Text style={styles.legendText}>Correct &amp; locked</Text>
           </View>
           <View style={styles.legendItem}>
             <KonnectFace expression="idle" faceIndex={3} blink={false} color={colors.text2} width={26} height={14} />
-            <Text style={styles.legendText}>Ready to submit</Text>
+            <Text style={styles.legendText}>Tiles in a marked line</Text>
           </View>
         </View>
 
@@ -849,7 +877,6 @@ export function CrossedSignalsGameScreen({ navigation, route }: Props) {
             </>
           )}
         </View>
-        <AdBanner />
       </View>
 
       <Confetti active={status === 'won'} />
@@ -1013,14 +1040,14 @@ function makeStyles(c: ColorTheme) {
       backgroundColor: c.tileDefault,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingHorizontal: 4,
+      paddingHorizontal: 2,
     },
     tilePress: {
       width: '100%',
       minHeight: 66,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingHorizontal: 4,
+      paddingHorizontal: 1,
       overflow: 'hidden',
       borderRadius: 8,
     },
@@ -1086,11 +1113,20 @@ function makeStyles(c: ColorTheme) {
       paddingVertical: 2,
     },
     tileFace: { marginBottom: 3 },
-    tileText: { fontFamily: FONTS.extraBold, color: c.text1, textAlign: 'center' },
-    legend: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 16 },
+    tileText: {
+      width: '100%',
+      fontFamily: FONTS.extraBold,
+      color: c.text1,
+      textAlign: 'center',
+      includeFontPadding: false,
+      letterSpacing: 0,
+    },
+    legend: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', columnGap: 14, rowGap: 6 },
     legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    legendTab: { width: 16, height: 18, borderRadius: 5, borderWidth: 2, borderColor: c.tileStrip, backgroundColor: c.bgBase },
-    legendPill: { width: 22, height: 13, borderRadius: 5, borderWidth: 2, borderColor: c.tileStrip, backgroundColor: c.bgBase },
+    legendReady: { borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: c.blue + '26' },
+    legendReadyText: { fontSize: 8.5, fontFamily: FONTS.extraBold, letterSpacing: 0.6, color: c.blue },
+    legendSolved: { borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: c.green },
+    legendSolvedText: { fontSize: 8.5, fontFamily: FONTS.extraBold, letterSpacing: 0.6, color: c.categoryText },
     legendText: { fontSize: 11, fontFamily: FONTS.bold, color: c.text2 },
     noiseBlock: { alignItems: 'center', gap: 2 },
     noiseLabel: { fontSize: 13, fontFamily: FONTS.bold, color: c.text2 },

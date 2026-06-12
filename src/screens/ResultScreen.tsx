@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Share, Platform, Clipboard, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Share, Platform, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -235,8 +235,8 @@ function makeStyles(c: ColorTheme, compact: boolean, tight: boolean) {
     buttons: { flexDirection: 'row', gap: 10, paddingHorizontal: 20 },
     btnShare: { flex: 1, borderWidth: 1.5, borderColor: c.border, borderRadius: 12, padding: tight ? 10 : compact ? 12 : 14, alignItems: 'center' },
     btnShareText: { fontSize: tight ? 13 : compact ? 14 : 15, fontFamily: FONTS.bold, color: c.text1 },
-    btnNext: { flex: 1, backgroundColor: c.text1, borderRadius: 12, padding: tight ? 10 : compact ? 12 : 14, alignItems: 'center' },
-    btnNextText: { fontSize: tight ? 13 : compact ? 14 : 15, fontFamily: FONTS.extraBold, color: c.bgScreen },
+    btnNext: { flex: 1, backgroundColor: c.green, borderRadius: 12, padding: tight ? 10 : compact ? 12 : 14, alignItems: 'center' },
+    btnNextText: { fontSize: tight ? 13 : compact ? 14 : 15, fontFamily: FONTS.extraBold, color: '#162219' },
     btnHome: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
       backgroundColor: c.bgBase, borderRadius: 20,

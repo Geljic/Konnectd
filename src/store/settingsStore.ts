@@ -16,6 +16,7 @@ interface SettingsState {
   notificationsEnabled: boolean;
   challengeNotificationsEnabled: boolean;
   darkMode: boolean;
+  soundEnabled: boolean;
   tileStripStyle: TileStripStyle;
   cosmeticTheme: CosmeticTheme;
   loaded: boolean;
@@ -25,6 +26,7 @@ interface SettingsState {
   setNotificationsEnabled: (val: boolean) => Promise<void>;
   setChallengeNotificationsEnabled: (val: boolean) => Promise<void>;
   setDarkMode: (val: boolean) => Promise<void>;
+  setSoundEnabled: (val: boolean) => Promise<void>;
   setTileStripStyle: (val: TileStripStyle) => Promise<void>;
   setCosmeticTheme: (val: CosmeticTheme) => Promise<void>;
 }
@@ -34,17 +36,19 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   notificationsEnabled: false,
   challengeNotificationsEnabled: true,
   darkMode: false,
+  soundEnabled: true,
   tileStripStyle: 'big',
   cosmeticTheme: 'gardenPop',
   loaded: false,
 
   async load() {
     try {
-      const [hard, notif, challengeNotif, dark, strip, cosmeticTheme] = await Promise.all([
+      const [hard, notif, challengeNotif, dark, sound, strip, cosmeticTheme] = await Promise.all([
         AsyncStorage.getItem('setting_hard_mode'),
         AsyncStorage.getItem('setting_notifications'),
         AsyncStorage.getItem('setting_challenge_notifications'),
         AsyncStorage.getItem('setting_dark_mode'),
+        AsyncStorage.getItem('setting_sound'),
         AsyncStorage.getItem('setting_tile_strip'),
         AsyncStorage.getItem('setting_cosmetic_theme'),
       ]);
@@ -54,6 +58,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         // default true — new installs get challenge notifications on
         challengeNotificationsEnabled: challengeNotif === null ? true : challengeNotif === 'true',
         darkMode: dark === 'true',
+        soundEnabled: sound === null ? true : sound === 'true',
         tileStripStyle: (strip as TileStripStyle) ?? 'big',
         cosmeticTheme: cosmeticTheme === 'classic' ? 'classic' : 'gardenPop',
         loaded: true,
@@ -81,6 +86,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   async setDarkMode(val) {
     set({ darkMode: val });
     await AsyncStorage.setItem('setting_dark_mode', String(val));
+  },
+
+  async setSoundEnabled(val) {
+    set({ soundEnabled: val });
+    await AsyncStorage.setItem('setting_sound', String(val));
   },
 
   async setTileStripStyle(val) {

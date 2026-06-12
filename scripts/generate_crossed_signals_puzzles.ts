@@ -82,6 +82,13 @@ interface Judgement {
   difficulty_fit: number;
   originality: number;
   overall: number;
+  // Hard gates — any failure rejects the puzzle regardless of overall score.
+  unique_solution: boolean;
+  alternate_solution: string;   // describe a 2nd valid arrangement, or "" if none
+  magnet_words: string[];       // words that also fit another cell
+  forced_cells: string[];       // cells where the word only loosely fits
+  mis_themed_words: string[];   // words that don't belong to their column domain
+  synonym_axes: boolean;        // rows or columns are near-synonyms of each other
   verdict: string;
   issues: string[];
 }
@@ -186,13 +193,22 @@ ${JSON.stringify({
     construction_checklist: style.construction_checklist,
   }, null, 1)}
 
+FAIRNESS & UNIQUENESS (the puzzle must have EXACTLY ONE solution):
+- Unique placement: every word must fit its own cell and NO other cell. Before finalising, mentally place each word against all 16 cells; if a word fits two cells, the puzzle is broken — rewrite it.
+- No swappable pairs: if two words could trade places and both arrangements still read correctly (e.g. RIVER/STREAM both "flow" and "flood"; CASH/FUNDS both "deposit" and "withdraw"), the solution is not unique. Reject.
+- Strongest-reading rule: a word's intended cell must be its single MOST OBVIOUS reading. Never park a word in a weak cell because its obvious cell is taken (e.g. BALL under "deposit" when everyone reads BALL as "bounce").
+- Discriminating axes: the 4 row signals must NOT be near-synonyms of each other, and likewise the 4 columns. Banking verbs like deposit/withdraw/balance/bounce, or link verbs like bridge/cross/span/connect, fail this — they do not separate the words.
+- Full column support: every column domain must contain a genuine, natural word for ALL FOUR row signals. If a domain only supports 2-3 of the rows, do not force a 4th — choose a different domain.
+- No theme bleed: every word must belong unambiguously to its column's domain. A word that fits two different columns (e.g. CURRENT = River AND Money) is disqualifying.
+
 Hard rejection rules:
 - No phrases.
 - No duplicate words.
 - No obscure trivia-only answers.
 - No proper nouns unless extremely common.
 - No row/column labels that are synonyms of each other.
-- No repeated answer stem like LOCK/LOCKED/LOCKER.`;
+- No repeated answer stem like LOCK/LOCKED/LOCKER.
+- No forced or "filler" cells where the word only loosely fits to complete the grid.`;
 }
 
 function buildUserPrompt(difficulty: Exclude<DifficultyLabel, 'mixed'>) {
@@ -223,10 +239,12 @@ Return ONLY valid JSON:
   "cells": [
     { "rowId": "row_id", "columnId": "column_id", "word": "WORD", "explanation": "WORD fits row because ... and column because ..." }
   ],
-  "editor_notes": "Why this puzzle is fun and fair"
+  "editor_notes": "Why this puzzle is fun and fair",
+  "uniqueness_audit": "For each word, name the other cells it might plausibly fit and confirm none actually work. Then state: solution is unique because ..."
 }
 
-The cells array must contain exactly every row/column intersection once, in row-major order.`;
+The cells array must contain exactly every row/column intersection once, in row-major order.
+Do the uniqueness_audit honestly: if you cannot rule out a second valid arrangement, redesign the grid before answering.`;
 }
 
 function validateGenerated(puzzle: GenPuzzle): string[] {
@@ -321,9 +339,17 @@ function toAppPuzzle(puzzle: GenPuzzle, id: string): CrossedSignalsPuzzle {
   };
 }
 
-const JUDGE_SYSTEM = `You are a ruthless Crossed Signals editor. Grade the puzzle 0-10 per axis.
+const JUDGE_SYSTEM = `You are a ruthless Crossed Signals editor. Grade the puzzle 0-10 per axis AND run the hard-gate checks below.
 Reject loose intersections, real ambiguity, phrase answers, obscure trivia, weak explanations, and fake cleverness.
-A score of 7.5+ should mean worth playtesting.`;
+
+The hard gates matter more than the score. Test them like a solver trying to break the puzzle:
+- unique_solution: Is there EXACTLY ONE valid full arrangement? Try to find a second one by swapping words between cells. If any swap still reads correctly, set unique_solution=false and describe it in alternate_solution.
+- magnet_words: List any word whose strongest reading points at a DIFFERENT cell than where it sits (e.g. MIRROR placed under "flash" when it screams "reflect"; BALL under "deposit" when it screams "bounce").
+- forced_cells: List cells where the word only loosely fits, placed just to complete the grid.
+- mis_themed_words: List words that don't genuinely belong to their column's domain (e.g. TICKER under "Transport", ADVERT under "Food").
+- synonym_axes: true if the 4 rows (or 4 columns) are near-synonyms that fail to separate the words (e.g. deposit/withdraw/balance/bounce; bridge/cross/span/connect).
+
+A score of 7.5+ should mean worth playtesting, but ONLY if every hard gate passes.`;
 
 async function judge(puzzle: GenPuzzle): Promise<Judgement | null> {
   const response = await client.messages.create({
@@ -343,6 +369,12 @@ Return ONLY JSON:
   "difficulty_fit": 0-10,
   "originality": 0-10,
   "overall": 0-10,
+  "unique_solution": true,
+  "alternate_solution": "describe a second valid arrangement, or empty string",
+  "magnet_words": ["WORD — also fits <other cell>"],
+  "forced_cells": ["<row>/<column> — WORD only loosely fits"],
+  "mis_themed_words": ["WORD — not really <column domain>"],
+  "synonym_axes": false,
   "verdict": "one sentence",
   "issues": ["..."]
 }`,
@@ -350,6 +382,17 @@ Return ONLY JSON:
   });
   const text = response.content[0].type === 'text' ? response.content[0].text : '';
   return extractJson(text) as Judgement | null;
+}
+
+// Hard gates: a fatal flaw rejects the puzzle no matter how high `overall` is.
+function gateFailures(j: Judgement): string[] {
+  const fails: string[] = [];
+  if (j.unique_solution === false) fails.push(`not unique${j.alternate_solution ? `: ${j.alternate_solution}` : ''}`);
+  if (Array.isArray(j.magnet_words) && j.magnet_words.length) fails.push(`magnet words: ${j.magnet_words.join(', ')}`);
+  if (Array.isArray(j.forced_cells) && j.forced_cells.length) fails.push(`forced cells: ${j.forced_cells.join(', ')}`);
+  if (Array.isArray(j.mis_themed_words) && j.mis_themed_words.length) fails.push(`mis-themed: ${j.mis_themed_words.join(', ')}`);
+  if (j.synonym_axes === true) fails.push('synonym axes');
+  return fails;
 }
 
 async function generate(system: string, difficulty: Exclude<DifficultyLabel, 'mixed'>): Promise<GenPuzzle | null> {
@@ -428,6 +471,11 @@ async function main() {
       const judgement = await judge(generated);
       if (!judgement) {
         console.log('judge failed');
+        continue;
+      }
+      const gateFails = gateFailures(judgement);
+      if (gateFails.length > 0) {
+        console.log(`gate rejected: ${gateFails.join(' | ')}`);
         continue;
       }
       if (judgement.overall < MIN_SCORE) {

@@ -174,7 +174,9 @@ export async function submitChallengeResult(
 ): Promise<Challenge | null> {
   if (!pb.authStore.isValid) return null;
   try {
-    const opponentName = pb.authStore.model?.name || pb.authStore.model?.email || 'Your opponent';
+    const opponentName = pb.authStore.model?.display_name
+      ? `${pb.authStore.model.display_name}#${pb.authStore.model.username_tag ?? '????'}`
+      : pb.authStore.model?.name || pb.authStore.model?.email || 'Your opponent';
     const record = await pb.collection('challenges').update(challengeId, {
       opponent: pb.authStore.model?.id,
       opponent_name: opponentName,

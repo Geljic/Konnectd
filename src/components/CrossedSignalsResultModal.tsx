@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { type ColorTheme } from '@/constants/colors';
 import { FONTS } from '@/constants/fonts';
 import { getSolvedBoard } from '@/utils/crossedSignals';
 import type { CrossedSignalsPuzzle } from '@/data/crossedSignalsPuzzles';
+import { getUserRatingForPuzzle, ratePuzzle } from '@/api/puzzles';
 
 function formatTime(s: number) {
   const m = Math.floor(s / 60);
@@ -36,9 +37,31 @@ export function CrossedSignalsResultModal({
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const solved = useMemo(() => getSolvedBoard(puzzle), [puzzle]);
+  const [userRating, setUserRating] = useState<1 | -1 | null>(null);
   const won = status === 'won';
   const correctCount = solved.filter((word, i) => board[i] === word).length;
   const perfect = won && noise === 0 && scansUsed === 0;
+
+  useEffect(() => {
+    if (!visible) {
+      setUserRating(null);
+      return;
+    }
+    let cancelled = false;
+    getUserRatingForPuzzle(puzzle.id, 'crossed_signals')
+      .then(rating => {
+        if (!cancelled) setUserRating(rating);
+      })
+      .catch(() => {
+        if (!cancelled) setUserRating(null);
+      });
+    return () => { cancelled = true; };
+  }, [puzzle.id, visible]);
+
+  async function handleRate(value: 1 | -1) {
+    setUserRating(value);
+    await ratePuzzle(puzzle.id, value, 'puzzles', 'crossed_signals');
+  }
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -129,6 +152,28 @@ export function CrossedSignalsResultModal({
               </View>
             </View>
 
+            <View style={styles.ratingRow}>
+              <Text style={styles.ratingLabel}>
+                {userRating === null
+                  ? 'How was this puzzle?'
+                  : userRating === 1 ? 'Thanks for rating! 👍' : 'Thanks for the feedback! 👎'}
+              </Text>
+              <View style={styles.ratingBtns}>
+                <Pressable
+                  style={[styles.ratingBtn, userRating === 1 && styles.ratingBtnActive]}
+                  onPress={() => handleRate(1)}
+                >
+                  <Text style={styles.ratingBtnText}>👍</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.ratingBtn, userRating === -1 && styles.ratingBtnActive]}
+                  onPress={() => handleRate(-1)}
+                >
+                  <Text style={styles.ratingBtnText}>👎</Text>
+                </Pressable>
+              </View>
+            </View>
+
             <View style={styles.actions}>
               <Pressable style={styles.btnSecondary} onPress={onClose}>
                 <Text style={styles.btnSecondaryText}>Close</Text>
@@ -189,6 +234,21 @@ function makeStyles(c: ColorTheme) {
     legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     legendDot: { width: 10, height: 10, borderRadius: 5 },
     legendText: { fontSize: 11, fontFamily: FONTS.bold, color: c.text3 },
+    ratingRow: { alignItems: 'center', gap: 10, paddingVertical: 4 },
+    ratingLabel: { fontSize: 14, fontFamily: FONTS.bold, color: c.text2, textAlign: 'center' },
+    ratingBtns: { flexDirection: 'row', gap: 16 },
+    ratingBtn: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: c.bgBase,
+      borderWidth: 1.5,
+      borderColor: c.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    ratingBtnActive: { borderColor: c.green, backgroundColor: c.green + '33' },
+    ratingBtnText: { fontSize: 24 },
     actions: { flexDirection: 'row', gap: 10 },
     btnSecondary: { flex: 1, borderWidth: 1.5, borderColor: c.border, borderRadius: 12, padding: 14, alignItems: 'center' },
     btnSecondaryText: { fontSize: 15, fontFamily: FONTS.bold, color: c.text1 },

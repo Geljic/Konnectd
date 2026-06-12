@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Linking, Platform, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Linking, Platform, View, useWindowDimensions } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -240,9 +240,16 @@ export default function App() {
 
   const { width: windowWidth } = useWindowDimensions();
 
-  if (!ready || !fontsLoaded) return null;
-
   const isWeb = Platform.OS === 'web';
+
+  if (!ready || !fontsLoaded) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: isWeb ? '#0A120D' : '#CAE0D5' }}>
+        <ActivityIndicator color={isWeb ? '#FFFFFF' : '#162219'} />
+      </View>
+    );
+  }
+
   const webMaxWidth = windowWidth >= 900
     ? Math.min(Math.round(windowWidth * 0.44), 960)
     : 430;

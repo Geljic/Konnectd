@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAudioPlayer } from 'expo-audio';
+import { useSettingsStore } from '@/store/settingsStore';
 
 const SOUND_FILES = {
   tap:       require('../../assets/sounds/tap.m4a'),
@@ -25,6 +26,7 @@ const CATEGORY_SOUND: Record<string, SoundName> = {
 };
 
 export function useSound(enabled = true) {
+  const soundEnabled = useSettingsStore(s => s.soundEnabled);
   const players = useRef<Partial<Record<SoundName, ReturnType<typeof useAudioPlayer>>>>({});
 
   // Preload all players
@@ -44,7 +46,7 @@ export function useSound(enabled = true) {
   }, [tap, deselect, wrong, oneaway, c1, c2, c3, c4, win, lose]);
 
   function play(name: SoundName) {
-    if (!enabled) return;
+    if (!enabled || !soundEnabled) return;
     const player = players.current[name];
     if (!player) return;
     player.volume = 0.35;

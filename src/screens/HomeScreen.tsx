@@ -208,7 +208,8 @@ export function HomeScreen({ navigation }: Props) {
       if (cancelled) fn();
       else unsubscribe = fn;
     });
-    const interval = setInterval(refreshOpenChallengeCount, 10000);
+    // Realtime subscription handles updates; this is only a fallback poll.
+    const interval = setInterval(refreshOpenChallengeCount, 60000);
     return () => {
       cancelled = true;
       unsubscribe?.();

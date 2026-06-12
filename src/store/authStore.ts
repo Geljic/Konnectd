@@ -42,22 +42,33 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   async restoreSession() {
     if (!pb.authStore.isValid) return;
-    try {
-      await pb.collection('users').authRefresh();
-      const model = pb.authStore.model;
-      if (model) {
+    // Show the app immediately from the cached token/profile; verify in the
+    // background so a slow or offline network never blocks first render.
+    const cached = pb.authStore.model;
+    if (cached) {
+      set({ user: mapModel(cached as unknown as Record<string, unknown>) });
+    }
+    pb.collection('users').authRefresh()
+      .then(() => {
+        const model = pb.authStore.model;
+        if (!model) return;
         const profile = mapModel(model as unknown as Record<string, unknown>);
         set({ user: profile });
         // Backfill tag for pre-migration accounts — refreshProfile handles it
         if (!profile.usernameTag) {
-          const store = useAuthStore.getState();
-          store.refreshProfile();
+          useAuthStore.getState().refreshProfile();
         }
         registerPushToken();
-      }
-    } catch {
-      pb.authStore.clear();
-    }
+      })
+      .catch((e: unknown) => {
+        // Only log out on a definitive auth rejection (401/403/404) — a network
+        // failure should not destroy a valid offline session.
+        const status = (e as { status?: number })?.status ?? 0;
+        if (status === 401 || status === 403 || status === 404) {
+          pb.authStore.clear();
+          set({ user: null });
+        }
+      });
   },
 
   async login(email, password) {

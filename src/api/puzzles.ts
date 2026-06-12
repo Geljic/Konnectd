@@ -55,9 +55,6 @@ export interface PageResult<T> {
   totalItems: number;
 }
 
-const CACHE_KEY = 'cached_puzzles';
-const CACHE_TTL = 1000 * 60 * 60 * 6;
-
 export async function fetchDailyPuzzle(): Promise<Puzzle | null> {
   const today = new Date().toISOString().slice(0, 10);
   try {
@@ -143,7 +140,7 @@ export async function fetchDailyPuzzlesPage(
     const result = await pb.collection('puzzles').getList(page, 10, {
       filter: filters.join(' && '),
       sort: sortAsc ? 'daily_date' : '-daily_date',
-      fields: 'id,difficulty_min,play_count,daily_date',
+      fields: 'id,title,difficulty_min,play_count,daily_date',
       requestKey: null,
     });
     return {
@@ -323,11 +320,14 @@ export async function recordPlaySession(params: {
   } catch { /* non-critical */ }
 }
 
-export async function getUserRatingForPuzzle(puzzleId: string): Promise<1 | -1 | null> {
+export async function getUserRatingForPuzzle(
+  puzzleId: string,
+  gameType: 'connections' | 'word_trails' | 'crossed_signals' = 'connections',
+): Promise<1 | -1 | null> {
   if (!pb.authStore.isValid) return null;
   try {
     const session = await pb.collection('play_sessions').getFirstListItem(
-      `user = '${pb.authStore.model?.id}' && puzzle = '${puzzleId}' && game_type = 'connections'`,
+      `user = '${pb.authStore.model?.id}' && puzzle = '${puzzleId}' && game_type = '${gameType}'`,
       { fields: 'rating' },
     );
     const r = session['rating'];
@@ -341,11 +341,12 @@ export async function ratePuzzle(
   puzzleId: string,
   rating: 1 | -1,
   _collection: 'puzzles' | 'nyt_puzzles' = 'puzzles',
+  gameType: 'connections' | 'word_trails' | 'crossed_signals' = 'connections',
 ): Promise<void> {
   if (!pb.authStore.isValid) return;
   try {
     const session = await pb.collection('play_sessions').getFirstListItem(
-      `user = '${pb.authStore.model?.id}' && puzzle = '${puzzleId}' && game_type = 'connections'`,
+      `user = '${pb.authStore.model?.id}' && puzzle = '${puzzleId}' && game_type = '${gameType}'`,
       { fields: 'id' },
     );
     await pb.collection('play_sessions').update(session.id, { rating });
@@ -600,16 +601,4 @@ export async function clearGameProgress(): Promise<void> {
   try {
     await AsyncStorage.removeItem(PROGRESS_KEY);
   } catch {}
-}
-
-async function getCachedPuzzles(): Promise<PuzzleListItem[]> {
-  try {
-    const raw = await AsyncStorage.getItem(CACHE_KEY);
-    if (!raw) return [];
-    const { ts, puzzles } = JSON.parse(raw);
-    if (Date.now() - ts > CACHE_TTL) return [];
-    return puzzles;
-  } catch {
-    return [];
-  }
 }

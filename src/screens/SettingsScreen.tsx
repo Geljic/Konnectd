@@ -208,24 +208,17 @@ export function SettingsScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const [soundOn, setSoundOn] = useState(true);
   const [hapticsOn, setHapticsOn] = useState(true);
 
-  const { hardMode, notificationsEnabled, challengeNotificationsEnabled, darkMode, load, setHardMode, setNotificationsEnabled, setChallengeNotificationsEnabled, setDarkMode, setCosmeticTheme } = useSettingsStore();
+  const { hardMode, notificationsEnabled, challengeNotificationsEnabled, darkMode, soundEnabled, load, setHardMode, setNotificationsEnabled, setChallengeNotificationsEnabled, setDarkMode, setSoundEnabled, setCosmeticTheme } = useSettingsStore();
   const { buyProduct, restore, isCosmeticPackOwned, isSupporter, purchasingProductId } = useMonetisationStore();
   const cosmeticPackOwned = !IAP_ENABLED || isCosmeticPackOwned();
   const supporter = isSupporter();
 
   useEffect(() => {
     load();
-    AsyncStorage.getItem('setting_sound').then(v => { if (v !== null) setSoundOn(v === 'true'); });
     AsyncStorage.getItem('setting_haptics').then(v => { if (v !== null) setHapticsOn(v === 'true'); });
   }, []);
-
-  async function toggleSound(val: boolean) {
-    setSoundOn(val);
-    await AsyncStorage.setItem('setting_sound', String(val));
-  }
 
   async function toggleHaptics(val: boolean) {
     setHapticsOn(val);
@@ -354,7 +347,7 @@ export function SettingsScreen() {
 
         <Text style={styles.sectionHeader}>AUDIO</Text>
         <View style={styles.section}>
-          <Row label="Sound effects" value={soundOn} onChange={toggleSound} colors={colors} />
+          <Row label="Sound effects" value={soundEnabled} onChange={setSoundEnabled} colors={colors} />
           <Row label="Haptic feedback" value={hapticsOn} onChange={toggleHaptics} colors={colors} />
         </View>
 

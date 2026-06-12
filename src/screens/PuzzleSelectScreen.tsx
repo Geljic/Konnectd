@@ -16,10 +16,26 @@ import { GameResultModal } from '@/components/GameResultModal';
 import { AdBanner } from '@/components/BannerAd';
 import { useAuthStore } from '@/store/authStore';
 import { FONTS } from '@/constants/fonts';
+import { getWordTrails, loadWordTrails } from '@/api/wordTrails';
+import { getCompletedWordTrailsIds, getDailyWordTrailsPuzzle } from '@/utils/wordTrails';
+import {
+  getCompletedCrossedSignalsIds,
+  getCrossedSignalsPuzzles,
+  getDailyCrossedSignalsPuzzle,
+} from '@/utils/crossedSignals';
 import type { AppStackParamList } from '../App';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'PuzzleSelect'>;
 type Collection = 'generated' | 'daily' | 'nyt';
+type DailyMode = 'groups' | 'word_trails' | 'crossed_signals';
+type DailyArchiveItem = {
+  id: string;
+  title: string;
+  date: string;
+  mode: DailyMode;
+  difficultyLabel: string;
+  difficultyColour: string;
+};
 
 const DIFFICULTY_LABELS: Record<CategoryColour, string> = {
   yellow: 'Easy', green: 'Medium', blue: 'Hard', purple: 'Expert',
@@ -34,6 +50,44 @@ const SORT_CYCLE: PuzzleSortMode[] = ['date_desc', 'date_asc', 'diff_asc', 'diff
 const SORT_LABELS: Record<PuzzleSortMode, string> = {
   date_desc: '↓ Newest', date_asc: '↑ Oldest', diff_asc: '↑ Easiest', diff_desc: '↓ Hardest', top_rated: '⭐ Top Rated',
 };
+const DAILY_ARCHIVE_DAYS = 14;
+const WORD_TRAILS_DAILY_START = '2026-06-09';
+const CROSSED_SIGNALS_DAILY_START = '2026-06-11';
+const NUMERIC_DIFFICULTY_COLOURS = ['#F5C842', '#3DBE8A', '#4AAEC8', '#9D6EC8', '#7B5FB5'];
+const MODE_LABELS: Record<DailyMode, string> = {
+  groups: 'Groups',
+  word_trails: 'Next Steps',
+  crossed_signals: 'Crossed Signals',
+};
+
+function toIsoDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function numericDifficultyLabel(level: number) {
+  if (level <= 1) return 'Easy';
+  if (level === 2) return 'Medium';
+  if (level === 3) return 'Hard';
+  if (level === 4) return 'Expert';
+  return 'Master';
+}
+
+function numericDifficultyColour(level: number) {
+  const index = Math.min(Math.max(level - 1, 0), NUMERIC_DIFFICULTY_COLOURS.length - 1);
+  return NUMERIC_DIFFICULTY_COLOURS[index];
+}
+
+function recentDailyDates(days: number) {
+  const today = new Date();
+  return Array.from({ length: days }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() - index);
+    return toIsoDate(date);
+  });
+}
 
 export function PuzzleSelectScreen({ navigation, route }: Props) {
   const recipientId = route.params?.recipientId;
@@ -51,6 +105,9 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
   const [dailySortAsc, setDailySortAsc] = useState(false);
   const [nytSortAsc, setNytSortAsc] = useState(true);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [completedWordTrailIds, setCompletedWordTrailIds] = useState<Set<string>>(new Set());
+  const [completedCrossedSignalIds, setCompletedCrossedSignalIds] = useState<Set<string>>(new Set());
+  const [wordTrailPuzzles, setWordTrailPuzzles] = useState(() => getWordTrails());
 
   const [modalPuzzleId, setModalPuzzleId] = useState<string | null>(null);
   const [modalLabel, setModalLabel] = useState('');
@@ -103,6 +160,9 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
     loadDaily(1, dailySortAsc, '', true);
     loadGenerated(1, null, sortMode, true);
     getCompletedPuzzleIds().then(setCompletedIds);
+    getCompletedWordTrailsIds().then(setCompletedWordTrailIds);
+    getCompletedCrossedSignalsIds().then(setCompletedCrossedSignalIds);
+    loadWordTrails().then(setWordTrailPuzzles);
   }, []);
 
   useEffect(() => {
@@ -147,6 +207,18 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
     }
   }
 
+  function openDailyArchiveItem(item: DailyArchiveItem) {
+    if (item.mode === 'groups') {
+      openPuzzle(item.id, `${item.title} · ${formatNytDate(item.date)}`, 'puzzles');
+      return;
+    }
+    if (item.mode === 'word_trails') {
+      navigation.push('WordlinesGame', { mode: 'freeplay', puzzleId: item.id, recipientId, recipientName });
+      return;
+    }
+    navigation.push('CrossedSignalsGame', { mode: 'freeplay', puzzleId: item.id, recipientId, recipientName });
+  }
+
   function handlePlayAgain() {
     setModalPuzzleId(null);
     if (modalPuzzleId) {
@@ -161,6 +233,65 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
     : isDaily
     ? dailyPage < dailyTotalPages
     : genPage < genTotalPages;
+
+  const localDailyItems = useMemo<DailyArchiveItem[]>(() => {
+    const dates = recentDailyDates(DAILY_ARCHIVE_DAYS);
+    const crossedSignals = getCrossedSignalsPuzzles();
+    const items: DailyArchiveItem[] = [];
+
+    dates.forEach(date => {
+      const day = new Date(`${date}T12:00:00Z`);
+      if (date >= WORD_TRAILS_DAILY_START && wordTrailPuzzles.length > 0) {
+        const puzzle = getDailyWordTrailsPuzzle(wordTrailPuzzles, day);
+        items.push({
+          id: puzzle.id,
+          title: puzzle.title,
+          date,
+          mode: 'word_trails',
+          difficultyLabel: numericDifficultyLabel(puzzle.difficulty),
+          difficultyColour: numericDifficultyColour(puzzle.difficulty),
+        });
+      }
+      if (date >= CROSSED_SIGNALS_DAILY_START && crossedSignals.length > 0) {
+        const puzzle = getDailyCrossedSignalsPuzzle(crossedSignals, day);
+        items.push({
+          id: puzzle.id,
+          title: puzzle.title,
+          date,
+          mode: 'crossed_signals',
+          difficultyLabel: numericDifficultyLabel(puzzle.difficulty),
+          difficultyColour: numericDifficultyColour(puzzle.difficulty),
+        });
+      }
+    });
+
+    return items;
+  }, [wordTrailPuzzles]);
+
+  const dailyArchiveItems = useMemo<DailyArchiveItem[]>(() => {
+    const groupItems = dailyItems.map(item => ({
+      id: item.id,
+      title: item.title?.trim() || 'Daily Puzzle',
+      date: item.daily_date,
+      mode: 'groups' as const,
+      difficultyLabel: DIFFICULTY_LABELS[item.difficulty_min],
+      difficultyColour: CATEGORY_COLOURS[item.difficulty_min],
+    }));
+    const q = search.trim().toLowerCase();
+    const merged = [...groupItems, ...localDailyItems].filter(item => {
+      if (!q) return true;
+      return (
+        item.title.toLowerCase().includes(q) ||
+        item.date.includes(q) ||
+        MODE_LABELS[item.mode].toLowerCase().includes(q)
+      );
+    });
+    return merged.sort((a, b) => {
+      const dateCompare = dailySortAsc ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      return MODE_LABELS[a.mode].localeCompare(MODE_LABELS[b.mode]);
+    });
+  }, [dailyItems, dailySortAsc, localDailyItems, search]);
 
   function loadMore() {
     if (isNyt) loadNyt(nytPage + 1, nytSortAsc, search);
@@ -191,16 +322,24 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
     );
   };
 
-  const renderDailyItem: ListRenderItem<DailyPuzzleListItem> = ({ item }) => {
-    const done = completedIds.has(item.id);
+  const renderDailyArchiveItem: ListRenderItem<DailyArchiveItem> = ({ item }) => {
+    const done =
+      item.mode === 'groups'
+        ? completedIds.has(item.id)
+        : item.mode === 'word_trails'
+          ? completedWordTrailIds.has(item.id)
+          : completedCrossedSignalIds.has(item.id);
     return (
-      <Pressable style={styles.row} onPress={() => openPuzzle(item.id, `Daily Puzzle · ${formatNytDate(item.daily_date)}`, 'puzzles')}>
-        <View style={[styles.diffBadge, { backgroundColor: CATEGORY_COLOURS[item.difficulty_min] }]}>
-          <Text style={styles.diffBadgeText}>{DIFFICULTY_LABELS[item.difficulty_min]}</Text>
+      <Pressable style={styles.row} onPress={() => openDailyArchiveItem(item)}>
+        <View style={[styles.diffBadge, { backgroundColor: item.difficultyColour }]}>
+          <Text style={styles.diffBadgeText}>{item.difficultyLabel}</Text>
         </View>
         <View style={styles.rowContent}>
-          <Text style={styles.rowTitle}>Daily Puzzle</Text>
-          <Text style={styles.rowMeta}>{formatNytDate(item.daily_date)}</Text>
+          <View style={styles.rowTitleLine}>
+            <Text style={styles.rowTitle} numberOfLines={1}>{item.title}</Text>
+            <View style={styles.modePill}><Text style={styles.modePillText}>{MODE_LABELS[item.mode]}</Text></View>
+          </View>
+          <Text style={styles.rowMeta}>{formatNytDate(item.date)}</Text>
         </View>
         {done && <View style={styles.donePill}><Text style={styles.donePillText}>✓ Done</Text></View>}
       </Pressable>
@@ -248,7 +387,7 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
         <View style={styles.searchRow}>
           <TextInput
             style={styles.searchInput}
-            placeholder={isNyt ? 'Search by date or #' : isDaily ? 'Search by date' : 'Search...'}
+            placeholder={isNyt ? 'Search by date or #' : isDaily ? 'Search title, mode, or date' : 'Search...'}
             placeholderTextColor={colors.text3}
             value={search}
             onChangeText={handleSearch}
@@ -305,7 +444,7 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        {(isNyt ? nytLoading : isDaily ? dailyLoading : genLoading) && (isNyt ? nytItems : isDaily ? dailyItems : genItems).length === 0 ? (
+        {(isNyt ? nytLoading : isDaily ? dailyLoading : genLoading) && (isNyt ? nytItems.length : isDaily ? dailyArchiveItems.length : genItems.length) === 0 ? (
           <ActivityIndicator style={styles.loader} color={colors.text2} />
         ) : isNyt ? (
           <FlatList
@@ -322,9 +461,9 @@ export function PuzzleSelectScreen({ navigation, route }: Props) {
           />
         ) : isDaily ? (
           <FlatList
-            data={dailyItems}
-            keyExtractor={p => p.id}
-            renderItem={renderDailyItem}
+            data={dailyArchiveItems}
+            keyExtractor={p => `${p.mode}-${p.date}-${p.id}`}
+            renderItem={renderDailyArchiveItem}
             contentContainerStyle={styles.list}
             ListEmptyComponent={<Text style={styles.empty}>No daily puzzles found.</Text>}
             ListFooterComponent={hasMore ? (
@@ -390,12 +529,15 @@ function makeStyles(c: ColorTheme) {
     empty: { textAlign: 'center', color: c.text3, marginTop: 40, fontFamily: FONTS.bold },
     row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: c.border, gap: 10 },
     rowContent: { flex: 1 },
+    rowTitleLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     diffBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, minWidth: 58, alignItems: 'center' },
     diffBadgeText: { fontSize: 11, fontFamily: FONTS.extraBold, color: '#162219', letterSpacing: 0.3 },
     nytBadge: { backgroundColor: '#162219', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
     nytBadgeText: { fontSize: 10, fontFamily: FONTS.extraBold, color: '#FFF', letterSpacing: 0.5 },
     rowTitle: { flex: 1, fontSize: 16, fontFamily: FONTS.bold, color: c.text1 },
     rowMeta: { fontSize: 13, fontFamily: FONTS.bold, color: c.text3 },
+    modePill: { borderRadius: 20, borderWidth: 1, borderColor: c.border, paddingHorizontal: 8, paddingVertical: 3 },
+    modePillText: { fontSize: 11, fontFamily: FONTS.extraBold, color: c.text2 },
     donePill: { backgroundColor: c.green, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
     donePillText: { fontSize: 12, fontFamily: FONTS.extraBold, color: '#162219' },
     curatedPill: { backgroundColor: '#E7B43A', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },

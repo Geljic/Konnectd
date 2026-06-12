@@ -11,7 +11,6 @@ import { type ColorTheme } from '@/constants/colors';
 import { fetchDailyPuzzle, fetchPuzzleById, fetchNytPuzzleById, fetchRandomNytPuzzle, recordPlaySession, updateUserStats, markPuzzleCompleted, saveGameProgress, loadGameProgress, clearGameProgress, getCompletedPuzzleIds } from '@/api/puzzles';
 import { submitChallengeResult, createChallenge } from '@/api/challenges';
 import { calculateScore } from '@/utils/scoring';
-import { DEV_PUZZLE } from '@/data/devPuzzle';
 import { GameBoard } from '@/components/GameBoard';
 import { MistakeDots } from '@/components/MistakeDots';
 import { OneAwayToast } from '@/components/OneAwayToast';
