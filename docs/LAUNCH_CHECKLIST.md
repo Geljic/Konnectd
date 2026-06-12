@@ -118,3 +118,63 @@ word game, daily puzzle, brain game, connections, friends, challenge, vocabulary
 - Ads declaration: Yes if AdMob remains in native builds.
 - Data Safety / App Privacy: include account info, identifiers/push token, gameplay data, friends/social data, reports/blocks, diagnostics if added, and AdMob SDK data.
 - App access: provide demo account if login-gated screens need review.
+
+## Audit Findings — 12 June 2026
+
+Prioritised follow-ups from the full codebase audit (bugs found during the
+audit were fixed directly; these are the items that need a decision or
+deeper work).
+
+### Before launch (blocking or high risk)
+
+1. **Move challenge push notifications server-side.** `src/utils/notifications.ts`
+   sends pushes from the client: it reads the *recipient's* `push_token` from the
+   `users` collection and posts directly to Expo's push API. That means API rules
+   must expose every user's push token to any logged-in user — a privacy/abuse
+   hole. Move this into a PocketBase hook (`docker/pb_hooks`) that fires on
+   challenge create/update, and lock `push_token` down to owner-only.
+2. **Audit PocketBase API rules.** Client-side leaderboards/stats read other
+   users' records, and `play_count`/user stats are written from the client, so a
+   motivated user can inflate stats via the raw API. Acceptable for a soft
+   launch; verify rules at minimum prevent writing other users' records.
+3. **Use `pb.filter()` for user-supplied search strings.** `searchUsers` escapes
+   quotes as `''` (not PocketBase's escape), and other filters interpolate raw
+   input. Names with apostrophes will break search; use the SDK's `pb.filter()`
+   placeholder syntax everywhere a user-typed string enters a filter.
+4. **Decide the daily-reset timezone.** Daily puzzles, streaks and "done today"
+   all use the UTC date, so for NSW players the day flips at ~10 am local time.
+   Either accept (NYT-style fixed reset) and document it, or switch to local
+   dates consistently (app + any server logic).
+
+### Soon after launch
+
+5. **Crossed Signals content is bundled in the app.** Next Steps already loads
+   from PocketBase with a static fallback; mirror that for Crossed Signals so
+   new puzzles don't require an app release. Its results are also local-only
+   (AsyncStorage), so progress doesn't sync across devices and there's no
+   Crossed Signals leaderboard.
+6. **Account deletion is incomplete.** It deletes sessions, friendships and
+   challenges *created* by the user, but not challenges where they're the
+   opponent/recipient, nor reports/blocks; their handle also lives on in
+   denormalised `challenger_name`/`opponent_name` fields. Fine for v1 if
+   documented, but tighten before scale (store-policy relevant).
+7. **Haptics toggle does nothing.** There is no expo-haptics usage anywhere in
+   the app; either implement haptic feedback or remove the Settings row.
+8. **Add crash/error reporting** (e.g. Sentry for Expo) before real users hit
+   edge cases you can't reproduce.
+9. **Monetisation is a stub.** `purchaseProduct` fake-grants products after a
+   delay and web rewarded ads always "succeed". Hidden while
+   `EXPO_PUBLIC_IAP_ENABLED=false`; integrate RevenueCat/expo-iap before ever
+   flipping it on.
+
+### Web performance (done + optional next steps)
+
+- Done in this audit: gzip + build-time precompression (main bundle
+  2.03 MB → 479 KB), immutable caching for hashed assets, no-cache
+  index.html, non-blocking session restore, loading indicator at boot.
+- Optional later: route-level code splitting (needs expo-router or manual
+  `import()` boundaries), and verifying Cloudflare edge caching picks up the
+  new Cache-Control headers.
+- Domain check: `WEB_BASE_URL` defaults to `https://konnectd.xyz` while infra
+  docs reference `connections.gigglebooth.online` — make sure share links and
+  deep-link prefixes match the domain you actually launch on.
